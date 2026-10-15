@@ -3,6 +3,8 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 
+import Button from '../../../components/Common/Button';
+import CardGrid from '../../../components/Common/CardGrid';
 const API_BASE_URL = 'http://localhost:8000';
 const WISHLISTS_API = `${API_BASE_URL}/employee/course-wishlists/`;
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
@@ -121,42 +123,26 @@ const EmployeeCourseWishlist = () => {
 
     return (
         <div className="space-y-6">
-            <div className="panel border-0 shadow-sm rounded-xl p-5 bg-white dark:bg-[#0e1726]">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h2 className="text-xl font-extrabold text-gray-800 dark:text-white-light">My Starred Wishlist</h2>
-                        <p className="text-xs text-gray-450 mt-1">Manage all course collections you intend to enroll and complete.</p>
-                    </div>
-                    <div className="w-full sm:w-auto">
-                        <input
-                            type="text"
-                            placeholder="Search wishlisted courses..."
-                            className="form-input text-xs rounded-lg w-full sm:w-72"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <span className="animate-spin border-4 border-primary border-l-transparent w-9 h-9 rounded-full inline-block"></span>
-                </div>
-            ) : wishlist.length === 0 ? (
-                <div className="panel text-center py-16 bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl">
-                    <span className="text-5xl block mb-3">⭐</span>
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">No wishlisted courses found</h3>
-                    <p className="text-xs text-gray-450 mt-1.5 max-w-xs mx-auto">
-                        Navigate to the Course Catalog to bookmark courses that you find interesting!
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlist.map((item) => {
+<CardGrid
+    items={wishlist}
+    loading={loading}
+    page={page}
+    pageSize={limit}
+    totalCount={totalCount}
+    pageSizeOptions={[6, 9, 12, 24]}
+    onPageChange={setPage}
+    onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+    searchValue={search}
+    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+    searchPlaceholder="Search wishlisted courses..."
+    emptyMessage="No wishlisted courses found"
+    entityLabel="courses"
+    cols={3}
+    onRefresh={() => fetchData(page)}
+    renderCard={(item) => {
                         const isEnrolled = enrollments.some((e: any) => e.course === item.course);
                         return (
-                            <div key={item.id} className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col justify-between p-0">
+                            <div className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col justify-between p-0">
                                 <div>
                                     <div className="relative h-44 bg-gray-100 dark:bg-black/25 flex items-center justify-center">
                                         {item.course_image ? (
@@ -190,86 +176,23 @@ const EmployeeCourseWishlist = () => {
                                 </div>
                                 <div className="p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-black/10 flex gap-3">
                                     {isEnrolled ? (
-                                        <button disabled className="btn btn-success flex-1 rounded-lg text-xs py-2">
+                                        <Button variant="success" className="flex-1 text-xs !py-2" disabled>
                                             ✓ Enrolled
-                                        </button>
+                                        </Button>
                                     ) : (
-                                        <button
+                                        <Button className="flex-1 text-xs !py-2"
                                             onClick={() => handleEnroll(item.course)}
-                                            className="btn btn-primary flex-1 rounded-lg text-xs py-2 shadow-sm"
+                                            
                                         >
                                             Enroll Now
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             </div>
                         );
-                    })}
-                </div>
-            )}
+                    }}
+/>
 
-            {totalCount > 0 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="flex items-center gap-4">
-                        <div className="text-xs text-gray-500">
-                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> wishlisted courses
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                            <select
-                                className="form-select w-20 text-xs font-semibold py-1"
-                                value={limit}
-                                onChange={(e) => {
-                                    const newLimit = Number(e.target.value);
-                                    setLimit(newLimit);
-                                    setPage(1);
-                                    setPageInput('1');
-                                    fetchData(1, newLimit);
-                                }}
-                            >
-                                <option value="3">3</option>
-                                <option value="6">6</option>
-                                <option value="9">9</option>
-                                <option value="12">12</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm rounded-lg"
-                            onClick={() => {
-                                const nextPage = Math.max(1, page - 1);
-                                setPage(nextPage);
-                                fetchData(nextPage);
-                            }}
-                            disabled={page <= 1}
-                        >
-                            Previous
-                        </button>
-                        <input
-                            type="number"
-                            min="1"
-                            max={totalPages}
-                            value={pageInput}
-                            onChange={(e) => setPageInput(e.target.value)}
-                            className="form-input w-16 rounded-lg text-xs"
-                        />
-                        <button
-                            type="button"
-                            className="btn btn-outline-primary btn-sm rounded-lg"
-                            onClick={() => {
-                                const nextPage = Math.min(totalPages, page + 1);
-                                setPage(nextPage);
-                                fetchData(nextPage);
-                            }}
-                            disabled={page >= totalPages}
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

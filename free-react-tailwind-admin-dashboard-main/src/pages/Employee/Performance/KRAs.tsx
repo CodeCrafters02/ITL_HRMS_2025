@@ -3,6 +3,14 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { brandHex } from '../../../theme/brandColors';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
+import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import IconAward from '../../../components/Icon/IconAward';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const headers = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -110,7 +118,7 @@ const KRAs = () => {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-4 border-teal-500 border-t-transparent animate-spin" />
+                <div className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin" />
                 <span className="text-xs font-bold text-gray-400">Loading your KRAs...</span>
             </div>
         </div>
@@ -134,61 +142,42 @@ const KRAs = () => {
                 </div>
             )}
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl font-black text-gray-800 dark:text-white">My Key Result Areas</h1>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">KRAs assigned to your role — defining your core performance expectations.</p>
+            <PageHeader title="My Key Result Areas" subtitle="KRAs assigned to your role — defining your core performance expectations." icon={<IconListCheck />} />
+
+            <StatGrid cols={4} className="!mb-0">
+                <StatCard label="KRAs assigned" value={kras.length} icon={<IconListCheck />} tone="primary" />
+                <StatCard label="Total weight" value={`${totalWeight}%`} icon={<IconTrendingUp />} tone={totalWeight === 100 ? 'success' : 'warning'} progress={Math.min(totalWeight, 100)} />
+                <StatCard label="Evaluated" value={`${evaluatedCount}/${kras.length}`} icon={<IconCircleCheck />} tone="info" progress={kras.length ? (evaluatedCount / kras.length) * 100 : 0} />
+                {weightedPerfScore !== null && <StatCard label="KRA score /5" value={weightedPerfScore.toFixed(2)} icon={<IconAward />} tone="purple" />}
+            </StatGrid>
+
+            {kras.length > 0 && (
+                <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-700">Weightage distribution</span>
+                        <span className={`text-xs font-bold ${totalWeight === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>{totalWeight}/100%</span>
                     </div>
-                    <div className="flex gap-3 shrink-0">
-                        <div className="text-center bg-teal-50 dark:bg-teal-950/30 border border-teal-100 dark:border-teal-900/40 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-teal-600 dark:text-teal-400">{kras.length}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-teal-500 mt-0.5">KRAs Assigned</span>
-                        </div>
-                        <div className={`text-center rounded-2xl px-5 py-3 border ${totalWeight === 100 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-100 dark:border-emerald-900/40' : 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/40'}`}>
-                            <span className={`block text-2xl font-black ${totalWeight === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>{totalWeight}%</span>
-                            <span className={`block text-[10px] font-bold uppercase tracking-wider mt-0.5 ${totalWeight === 100 ? 'text-emerald-500' : 'text-amber-500'}`}>Total Weight</span>
-                        </div>
-                        <div className="text-center bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-indigo-600 dark:text-indigo-400">{evaluatedCount}/{kras.length}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-500 mt-0.5">Evaluated</span>
-                        </div>
-                        {weightedPerfScore !== null && (
-                            <div className="text-center bg-violet-50 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/40 rounded-2xl px-5 py-3">
-                                <span className="block text-2xl font-black text-violet-600 dark:text-violet-400">{weightedPerfScore.toFixed(2)}</span>
-                                <span className="block text-[10px] font-bold uppercase tracking-wider text-violet-500 mt-0.5">KRA Score /5</span>
-                            </div>
-                        )}
+                    <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        {kras.map((k, i) => {
+                            const colors = ['bg-brand', 'bg-brand-500', 'bg-brand-accent', 'bg-amber-500', 'bg-rose-500', 'bg-brand-mid'];
+                            return <div key={k.id} className={`h-full ${colors[i % colors.length]} transition-all`} style={{ width: `${k.weightage}%` }} title={`${k.kra_title}: ${k.weightage}%`} />;
+                        })}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+                        {kras.map((k, i) => {
+                            const colors = ['bg-brand', 'bg-brand-500', 'bg-brand-accent', 'bg-amber-500', 'bg-rose-500', 'bg-brand-mid'];
+                            return (
+                                <div key={k.id} className="flex items-center gap-1.5">
+                                    <div className={`h-2 w-2 rounded-full ${colors[i % colors.length]}`} />
+                                    <span className="text-[11px] font-semibold text-slate-500">
+                                        {k.kra_title} ({k.weightage}%)
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
-
-                {/* Weight distribution bar */}
-                {kras.length > 0 && (
-                    <div className="mt-5">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Weightage Distribution</span>
-                            <span className={`text-[10px] font-black ${totalWeight === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>{totalWeight}/100%</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
-                            {kras.map((k, i) => {
-                                const colors = ['bg-teal-500','bg-indigo-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500'];
-                                return <div key={k.id} className={`h-full ${colors[i % colors.length]} transition-all`} style={{ width: `${k.weightage}%` }} title={`${k.kra_title}: ${k.weightage}%`} />;
-                            })}
-                        </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            {kras.map((k, i) => {
-                                const colors = ['bg-teal-500','bg-indigo-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-cyan-500'];
-                                return (
-                                    <div key={k.id} className="flex items-center gap-1.5">
-                                        <div className={`w-2 h-2 rounded-full ${colors[i % colors.length]}`} />
-                                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{k.kra_title} ({k.weightage}%)</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
 
             {/* KRA Cards */}
             {kras.length === 0 ? (
@@ -205,12 +194,12 @@ const KRAs = () => {
                         const linkedKPIs = kpis.filter(k => k.kra_master === (kra as any).kra_master);
                         const isExpanded = expandedId === kra.id;
                         const colors = [
-                            { ring: '#14b8a6', bg: 'from-teal-500/5 to-teal-500/0', badge: 'bg-teal-500/10 text-teal-700 dark:text-teal-300', border: 'border-teal-100 dark:border-teal-900/40' },
-                            { ring: '#6366f1', bg: 'from-indigo-500/5 to-indigo-500/0', badge: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300', border: 'border-indigo-100 dark:border-indigo-900/40' },
-                            { ring: '#8b5cf6', bg: 'from-violet-500/5 to-violet-500/0', badge: 'bg-violet-500/10 text-violet-700 dark:text-violet-300', border: 'border-violet-100 dark:border-violet-900/40' },
+                            { ring: '#14b8a6', bg: 'from-brand/5 to-brand/0', badge: 'bg-brand/10 text-brand-dark dark:text-brand-300', border: 'border-brand-100 dark:border-brand-900/40' },
+                            { ring: brandHex('brand'), bg: 'from-brand-500/5 to-brand-500/0', badge: 'bg-brand-500/10 text-brand-700 dark:text-brand-300', border: 'border-brand-100 dark:border-brand-900/40' },
+                            { ring: brandHex('accent'), bg: 'from-brand-accent/5 to-brand-accent/0', badge: 'bg-brand-accent/10 text-brand-700 dark:text-brand-300', border: 'border-brand-100 dark:border-brand-900/40' },
                             { ring: '#f59e0b', bg: 'from-amber-500/5 to-amber-500/0', badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-300', border: 'border-amber-100 dark:border-amber-900/40' },
                             { ring: '#f43f5e', bg: 'from-rose-500/5 to-rose-500/0', badge: 'bg-rose-500/10 text-rose-700 dark:text-rose-300', border: 'border-rose-100 dark:border-rose-900/40' },
-                            { ring: '#06b6d4', bg: 'from-cyan-500/5 to-cyan-500/0', badge: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300', border: 'border-cyan-100 dark:border-cyan-900/40' },
+                            { ring: brandHex('mid'), bg: 'from-brand-mid/5 to-brand-mid/0', badge: 'bg-brand-mid/10 text-brand-700 dark:text-brand-300', border: 'border-brand-100 dark:border-brand-900/40' },
                         ];
                         const c = colors[idx % colors.length];
                         const circumference = 2 * Math.PI * 18;
@@ -264,15 +253,15 @@ const KRAs = () => {
                                     {/* Meta row */}
                                     <div className="flex items-center gap-3 mt-4 flex-wrap">
                                         {kra.reviewer_name && (
-                                            <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/20 px-3 py-1.5 rounded-xl">
-                                                <svg className="w-3 h-3 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">Reviewer: {kra.reviewer_name}</span>
+                                            <div className="flex items-center gap-1.5 bg-brand-50 dark:bg-brand-950/20 px-3 py-1.5 rounded-xl">
+                                                <svg className="w-3 h-3 text-brand-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                <span className="text-[10px] font-bold text-brand-600 dark:text-brand-400">Reviewer: {kra.reviewer_name}</span>
                                             </div>
                                         )}
                                         {linkedKPIs.length > 0 && (
-                                            <div className="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-950/20 px-3 py-1.5 rounded-xl">
-                                                <svg className="w-3 h-3 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                                <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400">{linkedKPIs.length} KPI{linkedKPIs.length !== 1 ? 's' : ''}</span>
+                                            <div className="flex items-center gap-1.5 bg-brand-50 dark:bg-brand-950/20 px-3 py-1.5 rounded-xl">
+                                                <svg className="w-3 h-3 text-brand-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                                <span className="text-[10px] font-bold text-brand-accent dark:text-brand-accent">{linkedKPIs.length} KPI{linkedKPIs.length !== 1 ? 's' : ''}</span>
                                             </div>
                                         )}
                                         <span className="text-[10px] font-semibold text-gray-400 ml-auto">
@@ -294,27 +283,27 @@ const KRAs = () => {
                                                     {ev && !isEditingEval && isReviewer && (
                                                         <button
                                                             onClick={() => setEvalForm(p => ({ ...p, [kra.id]: { score: String(ev.score), remarks: ev.remarks } }))}
-                                                            className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 transition"
+                                                            className="text-[10px] font-bold text-brand-500 hover:text-brand-700 transition"
                                                         >Edit</button>
                                                     )}
                                                 </div>
 
                                                 {ev && !isEditingEval ? (
                                                     /* Submitted evaluation display */
-                                                    <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-xl p-3 space-y-2">
+                                                    <div className="bg-brand-50 dark:bg-brand-950/20 rounded-xl p-3 space-y-2">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{Number(ev.score).toFixed(1)}</span>
-                                                                <span className="text-[10px] text-indigo-400 font-bold">/ 5.00</span>
+                                                                <span className="text-xl font-black text-brand-600 dark:text-brand-400">{Number(ev.score).toFixed(1)}</span>
+                                                                <span className="text-[10px] text-brand-400 font-bold">/ 5.00</span>
                                                                 <div className="flex gap-0.5 ml-1">
                                                                     {[1,2,3,4,5].map(s => (
-                                                                        <div key={s} className={`w-4 h-1.5 rounded-full ${s <= Math.round(ev.score) ? 'bg-indigo-500' : 'bg-indigo-100 dark:bg-indigo-900/40'}`} />
+                                                                        <div key={s} className={`w-4 h-1.5 rounded-full ${s <= Math.round(ev.score) ? 'bg-brand-500' : 'bg-brand-100 dark:bg-brand-900/40'}`} />
                                                                     ))}
                                                                 </div>
                                                             </div>
                                                             <span className="text-[9px] text-gray-400 font-semibold">by {ev.reviewer_name || 'Reviewer'} · {new Date(ev.evaluated_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>
                                                         </div>
-                                                        {ev.remarks && <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-semibold leading-relaxed">"{ev.remarks}"</p>}
+                                                        {ev.remarks && <p className="text-[11px] text-brand-700 dark:text-brand-300 font-semibold leading-relaxed">"{ev.remarks}"</p>}
                                                     </div>
                                                 ) : isReviewer || !ev ? (
                                                     /* Evaluation form — shown to reviewer or when pending */
@@ -328,7 +317,7 @@ const KRAs = () => {
                                                                         value={f?.score ?? ''}
                                                                         onChange={e => setEvalForm(p => ({ ...p, [kra.id]: { ...p[kra.id], score: e.target.value } }))}
                                                                         placeholder="e.g. 4.2"
-                                                                        className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 transition"
+                                                                        className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-400 transition"
                                                                     />
                                                                 </div>
                                                                 <div className="col-span-2">
@@ -338,7 +327,7 @@ const KRAs = () => {
                                                                         value={f?.remarks ?? ''}
                                                                         onChange={e => setEvalForm(p => ({ ...p, [kra.id]: { ...p[kra.id], remarks: e.target.value } }))}
                                                                         placeholder="Add reviewer remarks..."
-                                                                        className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 transition"
+                                                                        className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-brand-400 transition"
                                                                     />
                                                                 </div>
                                                             </div>
@@ -349,7 +338,7 @@ const KRAs = () => {
                                                                 <button
                                                                     onClick={() => handleSubmitEval(kra.id)}
                                                                     disabled={submitting === kra.id}
-                                                                    className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm disabled:opacity-60 transition flex items-center gap-1.5"
+                                                                    className={buttonClasses('primary', 'sm')}
                                                                 >
                                                                     {submitting === kra.id && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                                     {ev ? 'Update' : 'Submit'} Evaluation

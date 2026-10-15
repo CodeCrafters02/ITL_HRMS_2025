@@ -5,6 +5,9 @@ import ReactApexChart from 'react-apexcharts';
 import axios from 'axios';
 import { NavLink } from 'react-router-dom';
 
+import HeroBanner, { HeroPill } from '../../../components/Common/HeroBanner';
+import { brandHex } from '../../../theme/brandColors';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const getHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -25,29 +28,29 @@ interface PerfData {
 
 const PROF_COLOR: Record<string, string> = {
     beginner: 'bg-amber-500',
-    intermediate: 'bg-teal-500',
-    expert: 'bg-indigo-500',
+    intermediate: 'bg-brand',
+    expert: 'bg-brand-500',
 };
 const PROF_SCORE: Record<string, number> = { beginner: 40, intermediate: 70, expert: 100 };
 
 const BOX_COLOR: Record<string, string> = {
-    'Star Performer': 'from-violet-500 to-indigo-600',
-    'High Performer': 'from-teal-500 to-emerald-600',
-    'High Potential': 'from-cyan-500 to-teal-600',
+    'Star Performer': 'from-brand-accent to-brand-600',
+    'High Performer': 'from-brand to-emerald-600',
+    'High Potential': 'from-brand-mid to-brand',
     'Solid Performer': 'from-emerald-500 to-green-600',
-    'Core Player': 'from-blue-500 to-indigo-500',
+    'Core Player': 'from-brand-500 to-brand-500',
     'Average Performer': 'from-amber-400 to-orange-500',
-    'Potential Gem': 'from-purple-500 to-violet-600',
+    'Potential Gem': 'from-brand-accent to-brand-accent',
     'Inconsistent Player': 'from-orange-400 to-amber-500',
     'Risk': 'from-rose-500 to-red-600',
 };
 
 const FEEDBACK_BADGE: Record<string, string> = {
-    'Peer Recognition': 'bg-violet-500/10 text-violet-600',
+    'Peer Recognition': 'bg-brand-accent/10 text-brand-accent',
     'Appreciation': 'bg-emerald-500/10 text-emerald-600',
-    'Manager Coaching': 'bg-blue-500/10 text-blue-600',
+    'Manager Coaching': 'bg-brand-500/10 text-brand-600',
     'Constructive': 'bg-amber-500/10 text-amber-600',
-    'Goal Progress': 'bg-teal-500/10 text-teal-600',
+    'Goal Progress': 'bg-brand/10 text-brand',
 };
 
 const NAV_LINKS = [
@@ -141,7 +144,7 @@ const PerformanceDashboard = () => {
     const donutOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'donut', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
         labels: (data?.kras || []).map(k => k.kra_name || 'KRA'),
-        colors: ['#14b8a6', '#6366f1', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4'],
+        colors: ['#14b8a6', brandHex('brand'), '#f59e0b', '#10b981', brandHex('accent'), '#ef4444', brandHex('mid')],
         legend: { position: 'bottom', fontSize: '11px' },
         plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total Weight', fontSize: '11px', color: '#6b7280', formatter: () => `${totalWeight}%` } } } } },
         stroke: { width: 2 },
@@ -152,7 +155,7 @@ const PerformanceDashboard = () => {
     // Bar chart — Appraisal ratings per cycle
     const barOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false }, stacked: false },
-        colors: ['#14b8a6', '#6366f1', '#f59e0b'],
+        colors: ['#14b8a6', brandHex('brand'), '#f59e0b'],
         plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
         dataLabels: { enabled: false },
         stroke: { show: true, width: 2, colors: ['transparent'] },
@@ -189,14 +192,14 @@ const PerformanceDashboard = () => {
     }], [data]);
 
     const box = data?.nine_box;
-    const gradient = BOX_COLOR[box?.box_title ?? ''] || 'from-teal-500 to-emerald-600';
+    const gradient = BOX_COLOR[box?.box_title ?? ''] || 'from-brand to-emerald-600';
     const initials = empName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
     if (loading) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs text-gray-400 font-semibold">Loading your performance data...</span>
                 </div>
             </div>
@@ -206,60 +209,45 @@ const PerformanceDashboard = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
 
-            {/* ── Hero Banner ── */}
-            <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${gradient} text-white p-7 shadow-xl`}>
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
-                <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-extrabold shadow-lg shrink-0">
-                            {initials || '?'}
-                        </div>
-                        <div>
-                            <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-0.5">My Performance</p>
-                            <h1 className="text-2xl font-extrabold leading-tight">{empName || 'Employee'}</h1>
-                            {box && (
-                                <span className="inline-block mt-1.5 text-[10px] font-black uppercase tracking-wider bg-white/20 backdrop-blur px-3 py-0.5 rounded-full">
-                                    {box.box_title}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    {box && (
-                        <div className="flex gap-4 shrink-0">
-                            <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+            {/* ── Hero Banner (company brand theme) ── */}
+            <HeroBanner
+                eyebrow="My Performance"
+                title={empName || 'Employee'}
+                leading={<span className="text-xl font-extrabold">{initials || '?'}</span>}
+                subtitle={box ? <span className="inline-block rounded-full bg-white/20 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider">{box.box_title}</span> : undefined}
+                aside={
+                    box && (
+                        <>
+                            <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                                 <div className="text-2xl font-extrabold">{box.performance_score.toFixed(1)}</div>
-                                <div className="text-[10px] font-bold text-white/70 uppercase">Perf Score</div>
-                                <div className="text-[9px] font-black text-white/90 uppercase mt-0.5">{box.performance_label}</div>
+                                <div className="text-[10px] font-bold uppercase text-white/70">Perf Score</div>
+                                <div className="mt-0.5 text-[9px] font-black uppercase text-white/90">{box.performance_label}</div>
                             </div>
-                            <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+                            <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                                 <div className="text-2xl font-extrabold">{box.potential_score.toFixed(1)}</div>
-                                <div className="text-[10px] font-bold text-white/70 uppercase">Potential</div>
-                                <div className="text-[9px] font-black text-white/90 uppercase mt-0.5">{box.potential_label}</div>
+                                <div className="text-[10px] font-bold uppercase text-white/70">Potential</div>
+                                <div className="mt-0.5 text-[9px] font-black uppercase text-white/90">{box.potential_label}</div>
                             </div>
-                        </div>
-                    )}
-                </div>
-                {/* Quick Nav */}
-                <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/20">
-                    {NAV_LINKS.map(l => (
-                        <NavLink key={l.to} to={l.to}
-                            className="text-[10px] font-bold uppercase tracking-wider bg-white/15 hover:bg-white/25 transition px-3 py-1.5 rounded-full">
-                            {l.label}
-                        </NavLink>
-                    ))}
-                </div>
-            </div>
+                        </>
+                    )
+                }
+            >
+                {NAV_LINKS.map((l) => (
+                    <HeroPill key={l.to} as={NavLink} to={l.to} className="!rounded-full !px-3 !py-1.5 !text-[10px] font-bold uppercase tracking-wider">
+                        {l.label}
+                    </HeroPill>
+                ))}
+            </HeroBanner>
 
             {/* ── Date Range Filter ── */}
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-end gap-3">
                 <div className="flex items-center gap-2 shrink-0">
-                    <svg className="w-4 h-4 text-teal-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className="text-xs font-black text-gray-700 dark:text-white uppercase tracking-wider">Date Range</span>
                     {isFiltered && (
-                        <span className="text-[9px] font-black bg-teal-500 text-white px-2 py-0.5 rounded-full animate-pulse">Active</span>
+                        <span className="text-[9px] font-black bg-brand text-white px-2 py-0.5 rounded-full animate-pulse">Active</span>
                     )}
                 </div>
 
@@ -271,7 +259,7 @@ const PerformanceDashboard = () => {
                             value={startDate}
                             max={endDate || undefined}
                             onChange={e => setStartDate(e.target.value)}
-                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand/30"
                         />
                     </div>
                     <div className="flex flex-col gap-1 flex-1">
@@ -281,7 +269,7 @@ const PerformanceDashboard = () => {
                             value={endDate}
                             min={startDate || undefined}
                             onChange={e => setEndDate(e.target.value)}
-                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500/30"
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand/30"
                         />
                     </div>
                 </div>
@@ -290,7 +278,7 @@ const PerformanceDashboard = () => {
                     <button
                         onClick={handleApplyFilter}
                         disabled={filtering || (!startDate && !endDate)}
-                        className="px-4 py-2 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/10 transition disabled:cursor-not-allowed"
+                        className={buttonClasses('primary', 'sm')}
                     >
                         {filtering ? (
                             <span className="flex items-center gap-1.5">
@@ -306,7 +294,7 @@ const PerformanceDashboard = () => {
                         <button
                             onClick={handleClearFilter}
                             disabled={filtering}
-                            className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition"
+                            className={buttonClasses('secondary', 'sm')}
                         >
                             Clear
                         </button>
@@ -314,7 +302,7 @@ const PerformanceDashboard = () => {
                 </div>
 
                 {isFiltered && (
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-3 py-1.5 rounded-xl shrink-0">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-brand dark:text-brand-400 bg-brand/10 px-3 py-1.5 rounded-xl shrink-0">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
                         </svg>
@@ -464,10 +452,10 @@ const PerformanceDashboard = () => {
                                 {data?.kras.map((k, i) => (
                                     <tr key={k.id} className="text-xs hover:bg-gray-50/50 dark:hover:bg-gray-800/10">
                                         <td className="p-3 pl-4 font-bold text-gray-800 dark:text-white">{k.kra_name}</td>
-                                        <td className="p-3 font-extrabold text-teal-600 dark:text-teal-400">{k.weightage}%</td>
+                                        <td className="p-3 font-extrabold text-brand dark:text-brand-400">{k.weightage}%</td>
                                         <td className="p-3 w-40">
                                             <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                                                <div className="h-2 rounded-full bg-gradient-to-r from-teal-400 to-emerald-500 transition-all"
+                                                <div className="h-2 rounded-full bg-gradient-to-r from-brand-400 to-emerald-500 transition-all"
                                                     style={{ width: `${Math.min(k.weightage, 100)}%` }} />
                                             </div>
                                         </td>
@@ -486,7 +474,7 @@ const PerformanceDashboard = () => {
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Recent Feedback</h3>
                         <NavLink to="/employee/performance/feedback-received"
-                            className="text-[10px] font-bold text-teal-600 hover:underline">View all →</NavLink>
+                            className="text-[10px] font-bold text-brand hover:underline">View all →</NavLink>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                         {data?.feedbacks.slice(0, 6).map(f => (
@@ -520,7 +508,7 @@ const PerformanceDashboard = () => {
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Appraisal History</h3>
                         <NavLink to="/employee/performance/appraisal-history"
-                            className="text-[10px] font-bold text-teal-600 hover:underline">View all →</NavLink>
+                            className="text-[10px] font-bold text-brand hover:underline">View all →</NavLink>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                         {data?.evaluations.map(ev => {

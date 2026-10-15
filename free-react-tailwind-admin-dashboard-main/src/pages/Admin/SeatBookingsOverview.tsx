@@ -305,7 +305,7 @@ const AdminSeatBookingsOverview = () => {
                 actions={
                     <button 
                         onClick={() => setShowHistoryModal(true)}
-                        className="btn btn-outline-light gap-2 backdrop-blur-md bg-white/10 hover:bg-white/20 border-white/20 text-white font-semibold"
+                        className="btn btn-outline-primary gap-2"
                     >
                         <IconClock className="w-4 h-4" />
                         View History
@@ -575,7 +575,7 @@ const AdminSeatBookingsOverview = () => {
                                                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{b.booking_type}</p>
                                                     </div>
                                                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-blue-100 text-blue-600'
+                                                        b.status === 'pending' ? 'bg-yellow-100 text-yellow-600' : 'bg-brand-100 text-brand-600'
                                                     }`}>
                                                         {b.status}
                                                     </span>

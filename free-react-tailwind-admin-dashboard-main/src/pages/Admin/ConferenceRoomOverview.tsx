@@ -422,8 +422,8 @@ const ConferenceRoomOverview = () => {
                         <div className="animate-fade-in-right">
                             <h5 className="font-bold text-xl mb-4">{selectedRoom.name}</h5>
                             <div className="space-y-4">
-                                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl">
-                                    <p className="text-[10px] font-black uppercase text-blue-500 tracking-wider mb-1">Capacity</p>
+                                <div className="bg-brand-50 dark:bg-brand-900/20 p-3 rounded-xl">
+                                    <p className="text-[10px] font-black uppercase text-brand-500 tracking-wider mb-1">Capacity</p>
                                     <p className="font-bold text-lg">{selectedRoom.capacity || 'N/A'} Persons</p>
                                 </div>
 

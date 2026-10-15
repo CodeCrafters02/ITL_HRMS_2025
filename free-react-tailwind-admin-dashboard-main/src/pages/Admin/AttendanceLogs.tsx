@@ -227,14 +227,14 @@ const AdminAttendanceLogs = () => {
         const base = 'w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center cursor-default select-none transition-all duration-200';
         const s = (status || '-').toLowerCase();
         if (s === 'holiday') {
-            return { cls: `${base} bg-purple-500/15 text-purple-600 dark:text-purple-400 ring-1 ring-purple-500/30`, label: '★' };
+            return { cls: `${base} bg-brand-accent/15 text-brand-accent dark:text-brand-accent ring-1 ring-brand-accent/30`, label: '★' };
         }
         if (isFuture || status === 'Upcoming') {
             return { cls: `${base} bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 border border-dashed border-gray-200 dark:border-gray-700`, label: '—' };
         }
         if (s === 'present') return { cls: `${base} bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/30`, label: 'P' };
         if (s === 'absent') return { cls: `${base} bg-red-500/15 text-red-600 dark:text-red-400 ring-1 ring-red-500/30`, label: 'A' };
-        if (s === 'leave') return { cls: `${base} bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/30`, label: 'L' };
+        if (s === 'leave') return { cls: `${base} bg-brand-500/15 text-brand-600 dark:text-brand-400 ring-1 ring-brand-500/30`, label: 'L' };
         if (s === 'half day') return { cls: `${base} bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/30`, label: 'H' };
         return { cls: `${base} bg-gray-200 dark:bg-gray-700 text-gray-500`, label: '-' };
     };
@@ -372,7 +372,7 @@ const AdminAttendanceLogs = () => {
             key: 'employee_name', title: 'Employee', sticky: true, width: '200px',
             render: (_v, r) => (
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-brand-accent flex items-center justify-center text-white text-xs font-bold shrink-0">
                         {(r.employee_name || '?').charAt(0).toUpperCase()}
                     </div>
                     <span className="font-semibold text-sm truncate max-w-[140px]" title={r.employee_name}>{r.employee_name || '-'}</span>
@@ -402,9 +402,9 @@ const AdminAttendanceLogs = () => {
             className: '!px-0.5 !py-1.5',
             header: (
                 <div className="flex flex-col items-center leading-none gap-0.5">
-                    <span className={`text-[9px] font-semibold uppercase tracking-wider ${d.iso === todayISO ? 'text-blue-500' : 'text-gray-400'}`}>{d.dayName}</span>
-                    <span className={`text-xs font-bold ${d.iso === todayISO ? 'text-blue-600 dark:text-blue-400' : ''}`}>{pad2(d.dayNum)}</span>
-                    {d.iso === todayISO && <span className="w-1 h-1 rounded-full bg-blue-500 mt-0.5"></span>}
+                    <span className={`text-[9px] font-semibold uppercase tracking-wider ${d.iso === todayISO ? 'text-brand-500' : 'text-gray-400'}`}>{d.dayName}</span>
+                    <span className={`text-xs font-bold ${d.iso === todayISO ? 'text-brand-600 dark:text-brand-400' : ''}`}>{pad2(d.dayNum)}</span>
+                    {d.iso === todayISO && <span className="w-1 h-1 rounded-full bg-brand-500 mt-0.5"></span>}
                 </div>
             ),
             render: (_v, r) => renderDayCell(r, d),
@@ -477,9 +477,9 @@ const AdminAttendanceLogs = () => {
                 {[
                     { label: 'Present', cls: 'bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30', char: 'P' },
                     { label: 'Absent', cls: 'bg-red-500/15 text-red-600 ring-1 ring-red-500/30', char: 'A' },
-                    { label: 'Leave', cls: 'bg-blue-500/15 text-blue-600 ring-1 ring-blue-500/30', char: 'L' },
+                    { label: 'Leave', cls: 'bg-brand-500/15 text-brand-600 ring-1 ring-brand-500/30', char: 'L' },
                     { label: 'Half Day', cls: 'bg-amber-500/15 text-amber-600 ring-1 ring-amber-500/30', char: 'H' },
-                    { label: 'Holiday / off day', cls: 'bg-purple-500/15 text-purple-600 ring-1 ring-purple-500/30', char: '★' },
+                    { label: 'Holiday / off day', cls: 'bg-brand-accent/15 text-brand-accent ring-1 ring-brand-accent/30', char: '★' },
                     ...(isCurrentOrFutureMonth ? [{ label: 'Upcoming', cls: 'bg-gray-100 text-gray-300 border border-dashed border-gray-200', char: '—' }] : []),
                 ].map((item) => (
                     <div key={item.label} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">

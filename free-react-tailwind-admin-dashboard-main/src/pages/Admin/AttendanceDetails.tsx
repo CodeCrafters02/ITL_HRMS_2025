@@ -177,7 +177,7 @@ const AdminAttendanceDetails = () => {
         const base = 'px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight';
         const k = s.toLowerCase();
         if (k === 'present') return `${base} ${late ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`;
-        if (k === 'leave') return `${base} bg-blue-100 text-blue-600`;
+        if (k === 'leave') return `${base} bg-brand-100 text-brand-600`;
         if (k === 'absent') return `${base} bg-red-100 text-red-600`;
         return `${base} bg-slate-100 text-slate-500`;
     };
@@ -246,7 +246,7 @@ const AdminAttendanceDetails = () => {
             title: 'Overtime',
             align: 'right',
             render: (_val, r) => (
-                <span className={`text-xs font-black p-1.5 rounded-lg ${Number(r.overtime) > 0 ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800'}`}>
+                <span className={`text-xs font-black p-1.5 rounded-lg ${Number(r.overtime) > 0 ? 'bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800'}`}>
                     {Number(r.overtime) > 0 ? `+${r.overtime}h` : '0.00h'}
                 </span>
             ),

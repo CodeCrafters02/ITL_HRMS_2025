@@ -11,7 +11,7 @@ import {
     apiRequest,
     Column,
     confirmDanger,
-    DataTable,
+    ServerTable,
     FilterSelect,
     FormField,
     FormGrid,
@@ -24,15 +24,13 @@ import {
     notifyError,
     notifySuccess,
     RoleBadge,
-    SearchInput,
-    SectionCard,
     StatCard,
     StatGrid,
     StatusBadge,
-    TableToolbar,
     useServerTable,
 } from '../../components/Master';
 
+import Button from '../../components/Common/Button';
 interface User {
     id: number;
     username: string;
@@ -181,10 +179,10 @@ const MasterUserManagement = () => {
             title="User Management"
             description="Every account on the platform, across all companies and roles."
             actions={
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                <Button type="button" onClick={openAdd}>
                     <IconPlus className="h-4 w-4" />
                     Add user
-                </button>
+                </Button>
             }
         >
             <StatGrid>
@@ -194,35 +192,23 @@ const MasterUserManagement = () => {
                 <StatCard label="Employees" value={summary?.employees} loading={!summary} tone="warning" icon={<IconUser className="h-5 w-5" />} />
             </StatGrid>
 
-            <SectionCard flush>
-                <TableToolbar onReset={table.reset} canReset={table.hasActiveFilters} summary={!table.loading && `${table.total} ${table.total === 1 ? 'user' : 'users'}`}>
-                    <SearchInput value={table.search} onChange={table.setSearch} placeholder="Search name, username, email or company" />
-                    <FilterSelect label="Role" value={table.filters.role} onChange={(value) => table.setFilter('role', value)} options={ROLE_OPTIONS} allLabel="All roles" />
-                    <FilterSelect label="Company" value={table.filters.company} onChange={(value) => table.setFilter('company', value)} options={companyOptions} allLabel="All companies" />
-                    <FilterSelect label="Status" value={table.filters.is_active} onChange={(value) => table.setFilter('is_active', value)} options={STATUS_OPTIONS} allLabel="Any status" />
-                </TableToolbar>
-                <DataTable
-                    columns={columns}
-                    rows={table.rows}
-                    rowKey={(user) => user.id}
-                    loading={table.loading}
-                    error={table.error}
-                    onRetry={reload}
-                    ordering={table.ordering}
-                    onOrderingChange={table.setOrdering}
-                    emptyIcon={<IconUsersGroup className="h-6 w-6" />}
-                    emptyTitle={table.hasActiveFilters ? 'No users match these filters' : 'No users yet'}
-                    emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add the first user to get started.'}
-                    emptyAction={
-                        table.hasActiveFilters && (
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={table.reset}>
-                                Clear filters
-                            </button>
-                        )
-                    }
-                    pagination={{ page: table.page, pageSize: table.pageSize, total: table.total, onPageChange: table.setPage, onPageSizeChange: table.setPageSize, noun: 'users' }}
-                />
-            </SectionCard>
+            <ServerTable
+                table={table}
+                columns={columns}
+                rowKey={(user) => user.id}
+                noun="users"
+                searchPlaceholder="Search name, username, email or company"
+                filters={
+                    <>
+                        <FilterSelect label="Role" value={table.filters.role} onChange={(value) => table.setFilter('role', value)} options={ROLE_OPTIONS} allLabel="All roles" />
+                        <FilterSelect label="Company" value={table.filters.company} onChange={(value) => table.setFilter('company', value)} options={companyOptions} allLabel="All companies" />
+                        <FilterSelect label="Status" value={table.filters.is_active} onChange={(value) => table.setFilter('is_active', value)} options={STATUS_OPTIONS} allLabel="Any status" />
+                    </>
+                }
+                emptyIcon={<IconUsersGroup className="h-6 w-6" />}
+                emptyTitle={table.hasActiveFilters ? 'No users match these filters' : 'No users yet'}
+                emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add the first user to get started.'}
+            />
 
             <MasterModal open={modalOpen} onClose={() => setModalOpen(false)} title="Add user" description="Create an account and assign its role and company.">
                 <form onSubmit={handleSubmit}>
@@ -278,12 +264,12 @@ const MasterUserManagement = () => {
                         </label>
                     </ModalBody>
                     <ModalFooter>
-                        <button type="button" className="btn btn-outline-dark" onClick={() => setModalOpen(false)} disabled={saving}>
+                        <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
                             Cancel
-                        </button>
-                        <button type="submit" className="btn btn-primary" disabled={saving}>
+                        </Button>
+                        <Button type="submit" disabled={saving}>
                             {saving ? 'Saving...' : 'Add user'}
-                        </button>
+                        </Button>
                     </ModalFooter>
                 </form>
             </MasterModal>

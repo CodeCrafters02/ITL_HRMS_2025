@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
-import IconSearch from '../../../components/Icon/IconSearch';
 import IconBell from '../../../components/Icon/IconBell';
 import { EmployeeNotification, NotificationType, fetchEmployeeNotifications } from './api';
 
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import PageHeader from '../../../components/Common/PageHeader';
 type NotificationFilter = 'all' | 'unread' | NotificationType;
 
 const typeBadgeClass = (type: NotificationType) => {
@@ -64,7 +66,6 @@ const Notifications = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
     const [summary, setSummary] = useState({
         total: 0,
         unread: 0,
@@ -84,7 +85,6 @@ const Notifications = () => {
             });
             setItems(data.results);
             setTotalCount(data.count);
-            setTotalPages(data.total_pages);
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Failed to load notifications';
             setError(message);
@@ -151,118 +151,83 @@ const Notifications = () => {
         return () => window.clearInterval(intervalId);
     }, [loadSummary]);
 
-    const groupedItems = useMemo(() => {
-        const sortedItems = [...items].sort((a, b) => {
-            const aTime = new Date(a.date).getTime();
-            const bTime = new Date(b.date).getTime();
-            return (Number.isNaN(bTime) ? 0 : bTime) - (Number.isNaN(aTime) ? 0 : aTime);
-        });
-
-        const groups: { heading: string; items: EmployeeNotification[] }[] = [];
-        const indexByHeading = new Map<string, number>();
-
-        for (const item of sortedItems) {
-            const heading = getDateHeading(item.date);
-            const existingIdx = indexByHeading.get(heading);
-            if (existingIdx !== undefined) {
-                groups[existingIdx].items.push(item);
-                continue;
-            }
-            indexByHeading.set(heading, groups.length);
-            groups.push({ heading, items: [item] });
-        }
-
-        const maxGroupTimestamp = (g: { items: EmployeeNotification[] }) => {
-            const times = g.items.map((i) => new Date(i.date).getTime()).filter((t) => !Number.isNaN(t));
-            return times.length ? Math.max(...times) : 0;
-        };
-        const headingSortRank = (heading: string) => {
-            if (heading === 'Today') return 0;
-            if (heading === 'Yesterday') return 1;
-            return 2;
-        };
-        groups.sort((a, b) => {
-            const ra = headingSortRank(a.heading);
-            const rb = headingSortRank(b.heading);
-            if (ra !== rb) return ra - rb;
-            return maxGroupTimestamp(b) - maxGroupTimestamp(a);
-        });
-
-        return groups;
-    }, [items]);
-
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
+    const columns: Column<EmployeeNotification>[] = [
+        {
+            key: 'title',
+            title: 'Notification',
+            render: (_v, item) => (
+                <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                        <IconBell className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900">{item.title || 'Notification'}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{item.description || '-'}</p>
+                    </div>
+                </div>
+            ),
+        },
+        { key: 'type', title: 'Type', hideBelow: 'sm', render: (_v, item) => <span className={`badge ${typeBadgeClass(item.type)}`}>{typeLabel(item.type)}</span> },
+        {
+            key: 'date',
+            title: 'When',
+            align: 'right',
+            render: (_v, item) => (
+                <div className="text-right">
+                    <p className="text-xs font-bold text-slate-800">{getDateHeading(item.date)}</p>
+                    <p className="text-[11px] text-slate-400">{formatDateTime(item.date)}</p>
+                </div>
+            ),
+        },
+    ];
 
     return (
-        <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-extrabold">Notifications</h1>
-                        <p className="mt-1 text-white/80">Stay updated with company announcements, events, and personal alerts.</p>
-                    </div>
-                    {/* <button type="button" className="btn btn-outline-light w-full md:w-auto" onClick={loadNotifications}>
-                        Refresh
-                    </button> */}
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader title="Notifications" subtitle="Stay updated with company announcements, events, and personal alerts." icon={<IconBell />} />
 
             {error && (
-                <div className="panel border border-danger/30 bg-danger-light text-danger">
-                    <p className="font-semibold">{error}</p>
-                </div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Total Notifications</p>
-                    <p className="text-2xl font-bold mt-2">{summary.total}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Today</p>
-                    <p className="text-2xl font-bold mt-2 text-primary">{summary.today}</p>
-                </div>
-            </div>
+            <StatGrid cols={3} className="!mb-0">
+                <StatCard label="Total notifications" value={summary.total} icon={<IconBell />} tone="primary" active={filter === 'all'} onClick={() => { setFilter('all'); setPage(1); }} />
+                <StatCard label="Unread" value={summary.unread} icon={<IconBell />} tone="warning" active={filter === 'unread'} onClick={() => { setFilter('unread'); setPage(1); }} />
+                <StatCard label="Today" value={summary.today} icon={<IconBell />} tone="success" />
+            </StatGrid>
 
-            <div className="panel">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="md:col-span-2 relative">
-                        <input
-                            type="text"
-                            className="form-input pl-10"
-                            value={search}
-                            placeholder="Search notifications..."
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                setPage(1);
-                            }}
-                        />
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                            <IconSearch className="h-4 w-4" />
-                        </span>
-                    </div>
-
+            <DataTable
+                columns={columns}
+                data={items}
+                rowKey={(n) => n.id}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => {
+                    setPageSize(n);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                }}
+                searchPlaceholder="Search notifications..."
+                onRefresh={loadNotifications}
+                entityLabel="notifications"
+                emptyMessage="No notifications found"
+                emptyIcon={<IconBell className="h-10 w-10" />}
+                filters={
                     <select
-                        className="form-select"
+                        className="form-select h-10 w-44 rounded-xl text-xs"
                         value={filter}
                         onChange={(e) => {
                             setFilter(e.target.value as NotificationFilter);
                             setPage(1);
                         }}
                     >
-                        <option value="all">All Types</option>
+                        <option value="all">All types</option>
                         <option value="unread">Unread</option>
                         <option value="notification">General</option>
                         <option value="admin">Admin</option>
@@ -270,100 +235,8 @@ const Notifications = () => {
                         <option value="learning_corner">Learning</option>
                         <option value="birthday">Birthday</option>
                     </select>
-                </div>
-            </div>
-
-            {totalCount > 0 && (
-                <div className="panel">
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-white-dark">Per page</label>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            <div className="panel">
-                {loading ? (
-                    <div className="py-12 text-center text-white-dark">Loading notifications...</div>
-                ) : items.length === 0 ? (
-                    <div className="py-12 text-center text-white-dark">No notifications found.</div>
-                ) : (
-                    <div className="space-y-3">
-                        {groupedItems.map((group) => (
-                            <div key={group.heading} className="space-y-3">
-                                <h3 className="text-sm font-semibold text-white-dark uppercase tracking-wide">{group.heading}</h3>
-                                {group.items.map((item) => (
-                                    <div key={item.id} className="border border-white-light dark:border-[#1b2e4b] rounded-md p-4">
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-primary-light text-primary flex items-center justify-center mt-1 shrink-0">
-                                                <IconBell className="w-5 h-5" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <h3 className="font-semibold">{item.title || 'Notification'}</h3>
-                                                    <span className={`badge ${typeBadgeClass(item.type)}`}>{typeLabel(item.type)}</span>
-                                                </div>
-                                                <p className="text-sm text-white-dark mt-1">{item.description || '-'}</p>
-                                                <p className="text-xs text-white-dark mt-2">{formatDateTime(item.date)}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
+                }
+            />
         </div>
     );
 };

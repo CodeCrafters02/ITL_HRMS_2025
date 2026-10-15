@@ -894,7 +894,7 @@ const Course = () => {
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-purple-500/10 flex flex-col items-center justify-center p-4 text-center">
+                                            <div className="w-full h-full bg-gradient-to-tr from-primary/10 to-brand-accent/10 flex flex-col items-center justify-center p-4 text-center">
                                                 <span className="font-extrabold text-primary text-xl uppercase tracking-wide">
                                                     {course.title.slice(0, 15)}...
                                                 </span>

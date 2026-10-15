@@ -378,9 +378,9 @@ const ConferenceRoomStructure = () => {
                             </div>
                         )}
                         <h6 className="font-bold uppercase text-xs tracking-widest text-gray-400 mb-4">Add Components</h6>
-                        <button onClick={addRoom} className="w-full flex flex-col items-center gap-2 p-6 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl hover:scale-105 transition-transform group">
-                            <IconMenuComponents className="w-10 h-10 text-indigo-600 group-hover:scale-110 transition-transform" />
-                            <span className="text-sm font-bold text-indigo-700">Add Conf. Room</span>
+                        <button onClick={addRoom} className="w-full flex flex-col items-center gap-2 p-6 bg-brand-50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800 rounded-xl hover:scale-105 transition-transform group">
+                            <IconMenuComponents className="w-10 h-10 text-brand-600 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-bold text-brand-700">Add Conf. Room</span>
                         </button>
                     </div>
 

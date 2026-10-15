@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
 /* ─── Types ─────────────────────────────────────────────── */
 interface Cycle { id: number; name: string; status: string; }
 
@@ -35,21 +36,21 @@ type MainTab  = 'appraisal' | 'direct';
 
 /* ─── Constants ──────────────────────────────────────────── */
 const ROLE_CFG: Record<RoleKey, { label: string; icon: string; text: string; ring: string; border: string; headerBg: string; pill: string }> = {
-    self:    { label:'Self',    icon:'👤', text:'text-violet-600 dark:text-violet-400', ring:'stroke-violet-500', border:'border-violet-100 dark:border-violet-900/40', headerBg:'bg-violet-50 dark:bg-violet-950/20',  pill:'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
-    manager: { label:'Manager', icon:'👔', text:'text-teal-600 dark:text-teal-400',    ring:'stroke-teal-500',   border:'border-teal-100 dark:border-teal-900/40',     headerBg:'bg-teal-50 dark:bg-teal-950/20',     pill:'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
-    peer:    { label:'Peer',    icon:'🤝', text:'text-indigo-600 dark:text-indigo-400', ring:'stroke-indigo-500', border:'border-indigo-100 dark:border-indigo-900/40', headerBg:'bg-indigo-50 dark:bg-indigo-950/20', pill:'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300' },
+    self:    { label:'Self',    icon:'👤', text:'text-brand-accent dark:text-brand-accent', ring:'stroke-brand-accent', border:'border-brand-100 dark:border-brand-900/40', headerBg:'bg-brand-50 dark:bg-brand-950/20',  pill:'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
+    manager: { label:'Manager', icon:'👔', text:'text-brand dark:text-brand-400',    ring:'stroke-brand',   border:'border-brand-100 dark:border-brand-900/40',     headerBg:'bg-brand-50 dark:bg-brand-950/20',     pill:'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-300' },
+    peer:    { label:'Peer',    icon:'🤝', text:'text-brand-600 dark:text-brand-400', ring:'stroke-brand-500', border:'border-brand-100 dark:border-brand-900/40', headerBg:'bg-brand-50 dark:bg-brand-950/20', pill:'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
     hr:      { label:'HR',      icon:'🛡️', text:'text-rose-600 dark:text-rose-400',    ring:'stroke-rose-500',   border:'border-rose-100 dark:border-rose-900/40',     headerBg:'bg-rose-50 dark:bg-rose-950/20',     pill:'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300' },
 };
 
 const CAT_CFG: Record<string, { icon: string; cls: string }> = {
-    peer_recognition: { icon:'🤝', cls:'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300' },
+    peer_recognition: { icon:'🤝', cls:'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
     appreciation:     { icon:'🌟', cls:'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' },
-    manager_coaching: { icon:'💬', cls:'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300' },
+    manager_coaching: { icon:'💬', cls:'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' },
     constructive:     { icon:'🔧', cls:'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' },
-    goal_progress:    { icon:'🎯', cls:'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300' },
+    goal_progress:    { icon:'🎯', cls:'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-300' },
 };
 
-const AVATAR_COLORS = ['bg-indigo-500','bg-teal-500','bg-violet-500','bg-amber-500','bg-rose-500','bg-blue-500','bg-emerald-500','bg-pink-500'];
+const AVATAR_COLORS = ['bg-brand-500','bg-brand','bg-brand-accent','bg-amber-500','bg-rose-500','bg-brand-500','bg-emerald-500','bg-pink-500'];
 const avatarBg = (name: string) => AVATAR_COLORS[(name.charCodeAt(0)+(name.charCodeAt(1)||0))%AVATAR_COLORS.length];
 const initials = (name: string) => name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase()||'?';
 
@@ -65,7 +66,7 @@ const avg5 = (answers: AAnswer[]) => {
 };
 
 /* ─── Sub-components ─────────────────────────────────────── */
-const ScoreRing = ({ score, ringCls='stroke-teal-500', size=52 }: { score:number|null; ringCls?:string; size?:number }) => {
+const ScoreRing = ({ score, ringCls='stroke-brand', size=52 }: { score:number|null; ringCls?:string; size?:number }) => {
     const pct = score !== null ? Math.min((score/5)*100, 100) : 0;
     const r = size*0.38, c = 2*Math.PI*r;
     return (
@@ -230,36 +231,30 @@ const FeedbackReceived = () => {
 
     return (
         <div className="space-y-6 py-2">
-            {/* ── Page Header ── */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="h-2 w-2 rounded-full bg-teal-500" />
-                        <p className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Performance Feedback</p>
-                    </div>
-                    <h2 className="text-xl font-bold text-gray-850 dark:text-white leading-tight">Feedback Hub</h2>
-                    <p className="text-xs text-gray-400 mt-1">View your official appraisal reviews alongside direct continuous coaching notes.</p>
-                </div>
-                
-                {/* Cycle selector — only for appraisal tab */}
-                {mainTab === 'appraisal' && cycles.length > 0 && (
-                    <div className="flex items-center gap-2.5 shrink-0 bg-gray-50 dark:bg-gray-850 border border-gray-200/60 dark:border-gray-800 px-3.5 py-1.5 rounded-2xl">
-                        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Appraisal Cycle</label>
-                        <select 
-                            value={cycleId} 
-                            onChange={e => setCycleId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                            className="bg-transparent border-0 px-1 text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
-                        >
-                            <option value="all">All Cycles</option>
-                            {cycles.map(c => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name} {c.status === 'active' ? ' (Active)' : c.status === 'completed' ? ' (Completed)' : ''}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                )}
-            </div>
+            <PageHeader
+                title="Feedback Hub"
+                subtitle="View your official appraisal reviews alongside direct continuous coaching notes."
+                badge="Performance Feedback"
+                actions={
+        mainTab === 'appraisal' && cycles.length > 0 && (
+        <div className="flex items-center gap-2.5 shrink-0 bg-gray-50 dark:bg-gray-850 border border-gray-200/60 dark:border-gray-800 px-3.5 py-1.5 rounded-2xl">
+        <label className="text-[10px] font-black uppercase tracking-wider text-gray-400">Appraisal Cycle</label>
+        <select
+        value={cycleId}
+        onChange={e => setCycleId(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+        className="bg-transparent border-0 px-1 text-xs font-bold text-gray-800 dark:text-white focus:outline-none cursor-pointer"
+        >
+        <option value="all">All Cycles</option>
+        {cycles.map(c => (
+        <option key={c.id} value={c.id}>
+        {c.name} {c.status === 'active' ? ' (Active)' : c.status === 'completed' ? ' (Completed)' : ''}
+        </option>
+        ))}
+        </select>
+        </div>
+        )
+                }
+            />
 
             {/* ── Main Tab Switcher ── */}
             <div className="flex bg-gray-100/80 dark:bg-gray-800/40 p-1 rounded-2xl w-fit">
@@ -283,7 +278,7 @@ const FeedbackReceived = () => {
                 >
                     💬 Direct Notes
                     {unreadDirect > 0 && (
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-violet-500 text-white animate-pulse">
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-brand-accent text-white animate-pulse">
                             {unreadDirect}
                         </span>
                     )}
@@ -330,12 +325,12 @@ const FeedbackReceived = () => {
                         {/* Combined Overall Score Banner */}
                         {combined !== null && (
                             <div className="relative overflow-hidden bg-gradient-to-r from-gray-950 via-slate-900 to-gray-950 dark:from-black dark:via-slate-950 dark:to-black rounded-3xl p-6 shadow-md border border-gray-800/80">
-                                <div className="absolute -right-16 -top-16 w-36 h-36 bg-teal-500/10 rounded-full blur-2xl" />
-                                <div className="absolute -left-16 -bottom-16 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl" />
+                                <div className="absolute -right-16 -top-16 w-36 h-36 bg-brand/10 rounded-full blur-2xl" />
+                                <div className="absolute -left-16 -bottom-16 w-36 h-36 bg-brand-500/10 rounded-full blur-2xl" />
                                 <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5">
-                                    <ScoreRing score={combined} ringCls="stroke-teal-400" size={68}/>
+                                    <ScoreRing score={combined} ringCls="stroke-brand-400" size={68}/>
                                     <div className="flex-1 text-center sm:text-left">
-                                        <p className="text-[10px] font-bold uppercase tracking-wider text-teal-400 mb-1">Combined Average Performance Rating</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-400 mb-1">Combined Average Performance Rating</p>
                                         <p className="text-3xl font-extrabold text-white leading-none">
                                             {combined.toFixed(2)}
                                             <span className="text-sm text-gray-500 ml-1">/ 5.00</span>
@@ -347,10 +342,10 @@ const FeedbackReceived = () => {
                                     <div className="w-full sm:w-1/3 shrink-0">
                                         <div className="flex justify-between text-[10px] text-gray-400 font-bold mb-1.5">
                                             <span>Combined Index Score</span>
-                                            <span className="text-teal-400">{((combined/5)*100).toFixed(0)}%</span>
+                                            <span className="text-brand-400">{((combined/5)*100).toFixed(0)}%</span>
                                         </div>
                                         <div className="h-2 bg-gray-850 rounded-full overflow-hidden">
-                                            <div className="h-full rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-700 shadow-[0_0_12px_rgba(45,212,191,0.4)]" style={{ width:`${(combined/5)*100}%` }}/>
+                                            <div className="h-full rounded-full bg-gradient-to-r from-brand-400 to-brand transition-all duration-700 shadow-[0_0_12px_rgba(45,212,191,0.4)]" style={{ width:`${(combined/5)*100}%` }}/>
                                         </div>
                                     </div>
                                 </div>
@@ -414,7 +409,7 @@ const FeedbackReceived = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    {rScore !== null && <ScoreRing score={rScore} ringCls="stroke-indigo-500" size={44}/>}
+                                                    {rScore !== null && <ScoreRing score={rScore} ringCls="stroke-brand-500" size={44}/>}
                                                     <div className={`text-gray-400 dark:text-gray-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
                                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                                                     </div>
@@ -536,7 +531,7 @@ const FeedbackReceived = () => {
                                     key={f.id} 
                                     className={`bg-white dark:bg-gray-900 border rounded-3xl shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md ${
                                         !f.acknowledged 
-                                            ? 'border-l-4 border-l-violet-500 border-gray-100 dark:border-gray-800' 
+                                            ? 'border-l-4 border-l-brand-accent border-gray-100 dark:border-gray-800' 
                                             : 'border-gray-100 dark:border-gray-800'
                                     }`}
                                 >
@@ -554,7 +549,7 @@ const FeedbackReceived = () => {
                                                     <p className="text-sm font-bold text-gray-850 dark:text-white truncate">{f.sender_name}</p>
                                                     <span className={`text-[9px] font-black uppercase px-2.5 py-0.5 rounded-full ${cat.cls}`}>{cat.icon} {f.category_display}</span>
                                                     {!f.acknowledged && (
-                                                        <span className="text-[8px] font-extrabold bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-2 py-0.5 rounded-md shadow-sm animate-pulse shrink-0">NEW</span>
+                                                        <span className="text-[8px] font-extrabold bg-gradient-to-r from-brand-accent to-brand-500 text-white px-2 py-0.5 rounded-md shadow-sm animate-pulse shrink-0">NEW</span>
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
@@ -592,7 +587,7 @@ const FeedbackReceived = () => {
                                                     f.visibility === 'public' 
                                                         ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400' 
                                                         : f.visibility === 'team' 
-                                                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400' 
+                                                            ? 'bg-brand-50 text-brand-600 dark:bg-brand-950/20 dark:text-brand-400' 
                                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                                                 }`}>
                                                     {f.visibility === 'public' ? '🌐 Public Visibility' : f.visibility === 'team' ? '👥 Team Visible' : '🔒 Private (Only You)'}
@@ -602,7 +597,7 @@ const FeedbackReceived = () => {
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); handleAck(f.id); }} 
                                                         disabled={ackingId === f.id}
-                                                        className="text-xs font-bold text-violet-600 hover:text-white hover:bg-violet-600 border border-violet-200 hover:border-violet-600 dark:border-violet-850 dark:hover:bg-violet-900 px-4 py-2 rounded-xl transition-all shadow-sm disabled:opacity-50"
+                                                        className="text-xs font-bold text-brand-accent hover:text-white hover:bg-brand-accent border border-brand-200 hover:border-brand-accent dark:border-brand-850 dark:hover:bg-brand-900 px-4 py-2 rounded-xl transition-all shadow-sm disabled:opacity-50"
                                                     >
                                                         {ackingId === f.id ? 'Acknowledging...' : 'Acknowledge Feedback'}
                                                     </button>

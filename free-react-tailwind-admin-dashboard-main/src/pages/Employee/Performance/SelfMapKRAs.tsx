@@ -3,6 +3,12 @@ import { useDispatch } from 'react-redux';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconListCheck from '../../../components/Icon/IconListCheck';
+import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
+import IconClock from '../../../components/Icon/IconClock';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -100,7 +106,7 @@ const SelfMapKRAs = () => {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
             <div className="flex flex-col items-center gap-3">
-                <div className="w-10 h-10 rounded-full border-4 border-indigo-500 border-t-transparent animate-spin" />
+                <div className="w-10 h-10 rounded-full border-4 border-brand-500 border-t-transparent animate-spin" />
                 <span className="text-xs font-bold text-gray-400">Loading KRA catalogue...</span>
             </div>
         </div>
@@ -116,43 +122,20 @@ const SelfMapKRAs = () => {
             )}
 
             {/* Header */}
-            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-xl font-black text-gray-800 dark:text-white">Self Map KRAs</h1>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Browse the KRA catalogue and add relevant key result areas to your profile.</p>
-                    </div>
-                    <div className="flex gap-3 shrink-0">
-                        <div className="text-center bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-2xl px-5 py-3">
-                            <span className="block text-2xl font-black text-indigo-600 dark:text-indigo-400">{mapped.length}</span>
-                            <span className="block text-[10px] font-bold uppercase tracking-wider text-indigo-500 mt-0.5">Mapped</span>
-                        </div>
-                        <div className={`text-center rounded-2xl px-5 py-3 border ${remaining >= 0 ? 'bg-teal-50 dark:bg-teal-950/30 border-teal-100 dark:border-teal-900/40' : 'bg-rose-50 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900/40'}`}>
-                            <span className={`block text-2xl font-black ${remaining >= 0 ? 'text-teal-600 dark:text-teal-400' : 'text-rose-600 dark:text-rose-400'}`}>{remaining}%</span>
-                            <span className={`block text-[10px] font-bold uppercase tracking-wider mt-0.5 ${remaining >= 0 ? 'text-teal-500' : 'text-rose-500'}`}>Remaining</span>
-                        </div>
-                    </div>
-                </div>
+            <PageHeader title="Self Map KRAs" subtitle="Browse the KRA catalogue and add relevant key result areas to your profile." icon={<IconListCheck />} />
 
-                {/* Weight bar */}
-                <div className="mt-5">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">Weightage Used</span>
-                        <span className={`text-[10px] font-black ${usedWeight <= 100 ? 'text-teal-600' : 'text-rose-600'}`}>{usedWeight}% / 100%</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-500 ${usedWeight > 100 ? 'bg-rose-500' : usedWeight === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${Math.min(usedWeight, 100)}%` }} />
-                    </div>
-                </div>
-            </div>
+            <StatGrid cols={3} className="!mb-0">
+                <StatCard label="Mapped KRAs" value={mapped.length} icon={<IconListCheck />} tone="primary" />
+                <StatCard label="Weightage used" value={`${usedWeight}%`} icon={<IconTrendingUp />} tone={usedWeight > 100 ? 'danger' : usedWeight === 100 ? 'success' : 'info'} progress={Math.min(usedWeight, 100)} />
+                <StatCard label="Remaining" value={`${remaining}%`} icon={<IconClock />} tone={remaining >= 0 ? 'primary' : 'danger'} />
+            </StatGrid>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
                 {/* Left: My Mapped KRAs */}
                 <div className="lg:col-span-2 space-y-3">
                     <div className="flex items-center justify-between px-1">
                         <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">My Mapped KRAs</h2>
-                        <span className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold px-2 py-0.5 rounded-full">{mapped.length}</span>
+                        <span className="text-[10px] bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold px-2 py-0.5 rounded-full">{mapped.length}</span>
                     </div>
 
                     {mapped.length === 0 ? (
@@ -181,7 +164,7 @@ const SelfMapKRAs = () => {
                                         </button>
                                     </div>
                                     <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                        <span className="text-[10px] font-black bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2.5 py-1 rounded-full">{m.weightage}% weight</span>
+                                        <span className="text-[10px] font-black bg-brand-500/10 text-brand-600 dark:text-brand-400 px-2.5 py-1 rounded-full">{m.weightage}% weight</span>
                                         {m.reviewer_name && <span className="text-[10px] font-semibold text-gray-400">Reviewer: {m.reviewer_name}</span>}
                                     </div>
                                     {m.target_description && (
@@ -199,7 +182,7 @@ const SelfMapKRAs = () => {
                 <div className="lg:col-span-3 space-y-3">
                     <div className="flex items-center justify-between px-1">
                         <h2 className="text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">KRA Catalogue</h2>
-                        <span className="text-[10px] bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold px-2 py-0.5 rounded-full">{filteredMasters.length} available</span>
+                        <span className="text-[10px] bg-brand/10 text-brand dark:text-brand-400 font-bold px-2 py-0.5 rounded-full">{filteredMasters.length} available</span>
                     </div>
 
                     {/* Search */}
@@ -210,7 +193,7 @@ const SelfMapKRAs = () => {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search KRAs..."
-                            className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:border-indigo-400 dark:focus:border-indigo-600 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 transition"
+                            className="w-full pl-10 pr-4 py-2.5 text-xs font-semibold bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:border-brand-400 dark:focus:border-brand-600 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 transition"
                         />
                     </div>
 
@@ -247,7 +230,7 @@ const SelfMapKRAs = () => {
                                                 {!isAlreadyMapped && (
                                                     <button
                                                         onClick={() => setAddingId(isAdding ? null : master.id)}
-                                                        className={`shrink-0 px-3.5 py-2 rounded-xl text-[10px] font-black transition ${isAdding ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm'}`}
+                                                        className={`shrink-0 px-3.5 py-2 rounded-xl text-[10px] font-black transition ${isAdding ? 'bg-gray-100 dark:bg-gray-800 text-gray-500' : 'bg-brand-500 hover:bg-brand-600 text-white shadow-sm'}`}
                                                     >
                                                         {isAdding ? 'Cancel' : '+ Add'}
                                                     </button>
@@ -265,12 +248,12 @@ const SelfMapKRAs = () => {
                                                                 value={form.target_description}
                                                                 onChange={e => setForm(p => ({ ...p, target_description: e.target.value }))}
                                                                 placeholder="Describe your target for this KRA..."
-                                                                className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-indigo-400 resize-none transition"
+                                                                className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-brand-400 resize-none transition"
                                                             />
                                                         </div>
                                                         <div>
                                                             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1.5">
-                                                                Weight % <span className="text-indigo-500 normal-case font-semibold">(max {remaining}%)</span>
+                                                                Weight % <span className="text-brand-500 normal-case font-semibold">(max {remaining}%)</span>
                                                             </label>
                                                             <input
                                                                 type="number"
@@ -279,7 +262,7 @@ const SelfMapKRAs = () => {
                                                                 value={form.weightage}
                                                                 onChange={e => setForm(p => ({ ...p, weightage: e.target.value }))}
                                                                 placeholder={`0–${remaining}`}
-                                                                className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-indigo-400 transition"
+                                                                className="w-full text-xs font-bold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:border-brand-400 transition"
                                                             />
                                                         </div>
                                                     </div>
@@ -291,7 +274,7 @@ const SelfMapKRAs = () => {
                                                         <button
                                                             onClick={() => handleAdd(master.id)}
                                                             disabled={submitting}
-                                                            className="px-5 py-2 rounded-xl text-[11px] font-black bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm disabled:opacity-60 transition flex items-center gap-2"
+                                                            className={buttonClasses('primary', 'sm')}
                                                         >
                                                             {submitting && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                             Confirm Add

@@ -1,7 +1,8 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { IconButton as CommonIconButton } from '../Common/Button';
 import { Tone, TONES } from './Layout';
 
-const AVATAR_TONES = ['bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700', 'bg-violet-100 text-violet-700', 'bg-amber-100 text-amber-700', 'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700'];
+const AVATAR_TONES = ['bg-brand/10 text-brand', 'bg-emerald-100 text-emerald-700', 'bg-brand-100 text-brand-700', 'bg-amber-100 text-amber-700', 'bg-rose-100 text-rose-700', 'bg-brand-100 text-brand-700'];
 
 interface AvatarProps {
     name: string;
@@ -64,19 +65,7 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** Small square action button for table rows. `label` is the tooltip and the accessible name. */
-export const IconButton = ({ label, tone = 'primary', className = '', children, ...props }: IconButtonProps) => (
-    <button
-        type="button"
-        title={label}
-        aria-label={label}
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 ${
-            tone === 'danger' ? 'hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10' : 'hover:bg-primary/10 hover:text-primary'
-        } ${className}`}
-        {...props}
-    >
-        {children}
-    </button>
-);
+export const IconButton = ({ label, tone = 'primary', ...props }: IconButtonProps) => <CommonIconButton label={label} tone={tone} {...props} />;
 
 interface EmptyStateProps {
     title: string;

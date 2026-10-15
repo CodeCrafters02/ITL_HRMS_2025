@@ -13,6 +13,8 @@ import IconGithub from '../../components/Icon/IconGithub';
 import { authFetch } from '../../utils/authFetch';
 import Swal from 'sweetalert2';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconSettings from '../../components/Icon/IconSettings';
 const AccountSetting = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -180,17 +182,8 @@ const AccountSetting = () => {
 
     return (
         <div>
-            <ul className="flex space-x-2 rtl:space-x-reverse">
-                <li className="before:content-[''] ltr:before:mr-2 rtl:before:ml-2">
-                    <Link to="/users/profile" className="text-primary hover:underline">
-                        Profile
-                    </Link>
-                </li>
-                <li className="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                    <span>Account Settings</span>
-                </li>
-            </ul>
-            <div className="pt-5">
+            <PageHeader title="Account Settings" subtitle="Manage your personal details, security and preferences." icon={<IconSettings />} />
+            <div className="pt-6">
                 <div className="flex items-center justify-between mb-5">
                     <h5 className="font-semibold text-lg dark:text-white-light">Settings</h5>
                 </div>

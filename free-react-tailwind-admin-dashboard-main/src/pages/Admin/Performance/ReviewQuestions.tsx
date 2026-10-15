@@ -4,6 +4,7 @@ import axios from 'axios';
 import IconSearch from '../../../components/Icon/IconSearch';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle {
     id: number;
     name: string;
@@ -29,7 +30,7 @@ type RoleTab = 'self' | 'manager' | 'peer' | 'hr';
 type QType = 'scale' | 'yes_no';
 
 const ROLE_META: Record<RoleTab, { label: string; color: string; badge: string; icon: string }> = {
-    self:    { label: 'Self',    color: 'text-violet-600 dark:text-violet-400', badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', icon: '👤' },
+    self:    { label: 'Self',    color: 'text-brand-accent dark:text-brand-accent', badge: 'bg-brand-accent/10 text-brand-accent dark:text-brand-accent', icon: '👤' },
     manager: { label: 'Manager', color: 'text-brand dark:text-brand-400',     badge: 'bg-brand/10 text-brand dark:text-brand-400',     icon: '👔' },
     peer:    { label: 'Peer',    color: 'text-amber-600 dark:text-amber-400',   badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',   icon: '🤝' },
     hr:      { label: 'Admin/HR', color: 'text-rose-600 dark:text-rose-400',     badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',     icon: '🛡️' },
@@ -43,7 +44,7 @@ const QTYPE_META: Record<QType, { label: string; icon: string; badge: string }> 
 const STATUS_STYLE: Record<string, string> = {
     draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400',
-    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
+    completed: 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400',
 };
 
 const TEMPLATES: Record<RoleTab, string[]> = {
@@ -317,7 +318,7 @@ const ReviewQuestions = () => {
                                     )}
                                     <div className="flex justify-end">
                                         <button onClick={handleAddQuestion} disabled={!newText.trim() || savingQ}
-                                            className="px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-[10px] font-bold">
+                                            className={buttonClasses('primary', 'sm')}>
                                             {savingQ ? 'Saving...' : 'Save Question'}
                                         </button>
                                     </div>
@@ -362,7 +363,7 @@ const ReviewQuestions = () => {
                                                 )}
                                                 <div className="flex justify-end gap-2">
                                                     <button onClick={cancelEdit} className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg text-[10px] font-bold">Cancel</button>
-                                                    <button onClick={() => handleUpdateQuestion(q.id)} className="px-3 py-1 bg-brand text-white rounded-lg text-[10px] font-bold">Save</button>
+                                                    <button onClick={() => handleUpdateQuestion(q.id)} className={buttonClasses('primary', 'sm')}>Save</button>
                                                 </div>
                                             </div>
                                         ) : (

@@ -654,7 +654,7 @@ const AdminEmployeeRegister = () => {
             title: 'Department',
             sortable: true,
             render: (dept) => (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
                     {dept || '-'}
                 </span>
             ),
@@ -664,7 +664,7 @@ const AdminEmployeeRegister = () => {
             title: 'Designation',
             sortable: true,
             render: (desig) => (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
                     {desig || '-'}
                 </span>
             ),

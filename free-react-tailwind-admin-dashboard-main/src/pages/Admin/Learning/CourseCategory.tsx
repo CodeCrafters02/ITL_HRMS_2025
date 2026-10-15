@@ -228,7 +228,7 @@ const CourseCategory = () => {
                             className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] hover:shadow-lg transition-all duration-300 rounded-xl relative overflow-hidden group flex flex-col justify-between"
                         >
                             {/* Decorative gradient top edge */}
-                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 to-brand-600"></div>
 
                             <div>
                                 <div className="flex items-start justify-between mb-4">

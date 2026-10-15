@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface KPI {
     id: number;
     name: string;
@@ -160,7 +162,7 @@ const Goals = () => {
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
                 <button
                     onClick={loadGoalsData}
-                    className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10"
+                    className={buttonClasses('primary', 'sm')}
                 >
                     Retry
                 </button>
@@ -171,32 +173,34 @@ const Goals = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header banner */}
-            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <div className="text-xs font-black uppercase text-teal-600 dark:text-teal-400 mb-1">Target Achievement</div>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">My Goals & targets</h2>
-                    <p className="text-xs text-gray-450 mt-0.5">Track your Key Result Areas (KRAs), linked KPIs, and update your objective milestones progress.</p>
-                </div>
-                <Link
-                    to="/employee/performance"
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-855 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition shrink-0 animate__animated"
-                >
-                    ← Back to Hub
-                </Link>
-            </div>
+            <PageHeader
+                title="My Goals & targets"
+                badge="Target Achievement"
+                subtitle="Track your Key Result Areas (KRAs), linked KPIs, and update your objective milestones progress."
+                actions={
+                    <>
+                        <Link
+                        to="/employee/performance"
+                        className={buttonClasses('secondary', 'sm', 'shrink-0')}
+                        >
+                        ← Back to Hub
+                        </Link>
+                    </>
+                }
+            />
 
             {/* Statistics */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
                     <div>
-                        <div className="text-3xl font-black text-teal-600 dark:text-teal-400 leading-none mb-1">{stats.totalWeight}%</div>
+                        <div className="text-3xl font-black text-brand dark:text-brand-400 leading-none mb-1">{stats.totalWeight}%</div>
                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Weightage Mapped</div>
                     </div>
                     <span className="text-2xl">⚖️</span>
                 </div>
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm flex items-center justify-between">
                     <div>
-                        <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 leading-none mb-1">{stats.avgProgress}%</div>
+                        <div className="text-3xl font-black text-brand-600 dark:text-brand-400 leading-none mb-1">{stats.avgProgress}%</div>
                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Average Goal Progress</div>
                     </div>
                     <span className="text-2xl">📈</span>
@@ -231,7 +235,7 @@ const Goals = () => {
                                     <div>
                                         <h3 className="text-sm font-black text-gray-855 dark:text-white flex flex-wrap items-center gap-2">
                                             {k.kra_title}
-                                            <span className="text-[9px] font-black uppercase text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-0.5 rounded-full shrink-0">
+                                            <span className="text-[9px] font-black uppercase text-brand dark:text-brand-400 bg-brand/10 px-2.5 py-0.5 rounded-full shrink-0">
                                                 {k.weightage}% weightage
                                             </span>
                                         </h3>
@@ -283,7 +287,7 @@ const Goals = () => {
                                                     cx="56"
                                                     cy="56"
                                                     r="44"
-                                                    className="stroke-teal-500 transition-all duration-300"
+                                                    className="stroke-brand transition-all duration-300"
                                                     strokeWidth="8"
                                                     fill="transparent"
                                                     strokeDasharray="276"
@@ -301,9 +305,9 @@ const Goals = () => {
 
                                 {/* Inline Progress Editing Form */}
                                 {isEditing && (
-                                    <div className="bg-teal-500/5 rounded-2xl p-4 border border-teal-500/10 space-y-3 animate__animated animate__fadeIn">
+                                    <div className="bg-brand/5 rounded-2xl p-4 border border-brand/10 space-y-3 animate__animated animate__fadeIn">
                                         <div className="flex justify-between items-center">
-                                            <label className="text-[10px] font-black uppercase tracking-wider text-teal-650 dark:text-teal-400">
+                                            <label className="text-[10px] font-black uppercase tracking-wider text-brand-650 dark:text-brand-400">
                                                 Adjust Progress Percentage: {tempProgress}%
                                             </label>
                                             <div className="flex gap-2">
@@ -315,7 +319,7 @@ const Goals = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => saveProgressUpdate(k.id)}
-                                                    className="px-3 py-1 bg-teal-500 text-white rounded-lg text-[10px] font-bold shadow-sm"
+                                                    className={buttonClasses('primary', 'sm')}
                                                 >
                                                     Save Progress
                                                 </button>
@@ -327,7 +331,7 @@ const Goals = () => {
                                             max="100"
                                             value={tempProgress}
                                             onChange={e => setTempProgress(parseInt(e.target.value))}
-                                            className="w-full accent-teal-500 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none h-1.5 cursor-pointer"
+                                            className="w-full accent-brand bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none h-1.5 cursor-pointer"
                                         />
                                         <p className="text-[9px] text-gray-400">Note: Progress updates will be stored in your browser local storage.</p>
                                     </div>
@@ -347,7 +351,7 @@ const Goals = () => {
                                                 >
                                                     <div className="flex justify-between items-start gap-3">
                                                         <span className="text-xs font-bold text-gray-850 dark:text-white leading-tight">{kpi.name}</span>
-                                                        <span className="text-[9px] font-black text-teal-650 bg-teal-500/10 px-2 py-0.5 rounded-full shrink-0">
+                                                        <span className="text-[9px] font-black text-brand-650 bg-brand/10 px-2 py-0.5 rounded-full shrink-0">
                                                             Target: {kpi.target_value} {kpi.measurement_unit}
                                                         </span>
                                                     </div>

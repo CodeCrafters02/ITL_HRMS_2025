@@ -117,6 +117,7 @@ export const buildAdminNav = (mode: AdminNavMode, t: TFunction): SideNavSection[
                     icon: <IconMenuUsers />,
                     children: [
                         { label: t('Employee Register'), to: '/admin/employee-register' },
+                        { label: t('Microsoft Entra Directory'), to: '/admin/entra-directory' },
                         { label: t('Registration Requests'), to: '/admin/registration-requests' },
                         { label: t('Assign Shifts'), to: '/admin/assign-shifts' },
                         { label: t('Recruitment'), to: '/admin/recruitment' },

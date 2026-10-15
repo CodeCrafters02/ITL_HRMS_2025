@@ -9,6 +9,9 @@ import IconClock from '../../../components/Icon/IconClock';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
 import PageHeader from '../../../components/Common/PageHeader';
 
+import CardGrid from '../../../components/Common/CardGrid';
+import Button from '../../../components/Common/Button';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const COURSES_API = `${API_BASE_URL}/employee/courses/`;
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
@@ -250,7 +253,7 @@ const EmployeeCourseCatalog = () => {
                     </div>
                     <Link
                         to={`/employee/learning-management/course-player/${enr.id}`}
-                        className="btn btn-outline-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                        className={buttonClasses('outline', 'sm', 'w-full')}
                     >
                         Go to Syllabus
                     </Link>
@@ -262,7 +265,7 @@ const EmployeeCourseCatalog = () => {
         if (request && request.final_status === 'pending') {
             return (
                 <div>
-                    <div className="btn btn-outline-warning btn-sm w-full rounded-lg text-xs py-1.5 font-bold cursor-default opacity-90 flex items-center justify-center gap-1.5">
+                    <div className={buttonClasses('outline', 'sm', 'w-full flex items-center justify-center gap-1.5')}>
                         <span className="animate-pulse">⏳</span> Pending Approval
                     </div>
                     <p className="text-[9px] text-gray-400 mt-1 text-center">Awaiting manager/admin review</p>
@@ -286,28 +289,28 @@ const EmployeeCourseCatalog = () => {
                             "{rejectionRemark}"
                         </p>
                     )}
-                    <button
+                    <Button size="sm" className="w-full text-xs !py-1.5"
                         type="button"
-                        className="btn btn-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                        
                         onClick={() => handleRequestEnrollment(course.id)}
                         disabled={requestingId === course.id}
                     >
                         {requestingId === course.id ? 'Submitting...' : '🔄 Re-request Enrollment'}
-                    </button>
+                    </Button>
                 </div>
             );
         }
 
         // No request yet — show "Request Enrollment" button
         return (
-            <button
+            <Button size="sm" className="w-full text-xs !py-1.5"
                 type="button"
-                className="btn btn-primary btn-sm w-full rounded-lg text-xs py-1.5 font-bold"
+                
                 onClick={() => handleRequestEnrollment(course.id)}
                 disabled={requestingId === course.id}
             >
                 {requestingId === course.id ? 'Submitting...' : '📩 Request Enrollment'}
-            </button>
+            </Button>
         );
     };
 
@@ -322,220 +325,94 @@ const EmployeeCourseCatalog = () => {
                 variant="purple"
             />
 
-            {/* Filter and search controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
-                    <button
-                        type="button"
-                        className={`btn btn-sm rounded-lg text-xs py-1.5 px-3 uppercase font-bold tracking-wider transition-all duration-300 ${
-                            selectedCategory === 'all'
-                                ? 'btn-primary'
-                                : 'btn-outline-primary bg-white dark:bg-[#0e1726]/40'
-                        }`}
-                        onClick={() => setSelectedCategory('all')}
-                    >
-                        All
-                    </button>
-                    {categories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            type="button"
-                            className={`btn btn-sm rounded-lg text-xs py-1.5 px-3 uppercase font-bold tracking-wider transition-all duration-300 ${
-                                selectedCategory === String(cat.id)
-                                    ? 'btn-primary'
-                                    : 'btn-outline-primary bg-white dark:bg-[#0e1726]/40'
-                            }`}
-                            onClick={() => setSelectedCategory(String(cat.id))}
-                        >
-                            {cat.name}
-                        </button>
-                    ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <select
-                        className="form-select rounded-lg text-xs w-36"
-                        value={selectedDifficulty}
-                        onChange={(e) => setSelectedDifficulty(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced')}
-                    >
-                        <option value="all">All Levels</option>
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                    </select>
-                    <div className="relative w-72">
-                        <input
-                            type="text"
-                            className="form-input pr-10 rounded-lg text-xs"
-                            placeholder="Search courses..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+<CardGrid
+    items={filteredCourses}
+    loading={loading}
+    page={page}
+    pageSize={limit}
+    totalCount={totalCount}
+    pageSizeOptions={[6, 9, 12, 24]}
+    onPageChange={setPage}
+    onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+    searchValue={search}
+    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+    searchPlaceholder="Search courses..."
+    emptyMessage="No published courses found"
+    entityLabel="courses"
+    cols={3}
+    onRefresh={() => fetchCatalogData(page)}
+    filters={
+        <>
+                        <select className="form-select h-10 w-44 rounded-xl" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                            <option value="all">All Categories</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                            ))}
+                        </select>
+                        <select className="form-select h-10 w-40 rounded-xl" value={selectedDifficulty} onChange={(e) => setSelectedDifficulty(e.target.value as 'all' | 'beginner' | 'intermediate' | 'advanced')}>
+                            <option value="all">All Levels</option>
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="advanced">Advanced</option>
+                        </select>
+        </>
+    }
+    renderCard={(c) => (
+            <div
+                className="group relative rounded-2xl overflow-hidden flex flex-col justify-between bg-white dark:bg-[#0e1726] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-none ring-1 ring-[#e0e6ed] dark:ring-[#1b2e4b] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-12px_rgba(139,92,246,0.25)] hover:ring-brand/40"
+            >
+                <div className="h-44 relative overflow-hidden bg-gradient-to-br from-brand/25 via-brand-mid/15 to-[#0e1726]/10">
+                    {c.course_image ? (
+                        <img
+                            src={c.course_image.startsWith('http') ? c.course_image : `${API_BASE_URL}${c.course_image}`}
+                            alt={c.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <IconSearch className="w-4 h-4" />
-                        </span>
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                            <IconOpenBook className="w-12 h-12 text-white/70" />
+                        </div>
+                    )}
+                    {/* Gradient scrim for badge/text legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/20 pointer-events-none" />
+
+                    <span className="absolute top-3 left-3 backdrop-blur-md bg-white/15 border border-white/25 text-white text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm">
+                        {c.category_name || 'General'}
+                    </span>
+                    <span className={`absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm ring-1 ring-white/20 ${
+                        c.difficulty === 'beginner'
+                            ? 'bg-success/90 text-white'
+                            : c.difficulty === 'intermediate'
+                            ? 'bg-amber-500/90 text-white'
+                            : 'bg-danger/90 text-white'
+                    }`}>
+                        {c.difficulty}
+                    </span>
+
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center gap-1.5 text-white/90 text-[11px] font-semibold drop-shadow">
+                        <IconClock className="w-3.5 h-3.5" />
+                        <span>{c.estimated_hours || 0} hrs &middot; Self-paced</span>
+                    </div>
+                </div>
+
+                <div className="p-5 flex flex-col justify-between flex-grow">
+                    <div>
+                        <h3 className="text-base font-bold text-gray-800 dark:text-white-light line-clamp-1 mb-1.5 group-hover:text-primary transition-colors duration-300">
+                            {c.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-4 min-h-[2rem]">
+                            {c.description || 'No description available for this course.'}
+                        </p>
+                    </div>
+
+                    <div className="border-t border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] pt-4 mt-auto">
+                        {renderCourseAction(c)}
                     </div>
                 </div>
             </div>
 
-            {/* Course Grid */}
-            {loading ? (
-                <div className="panel text-center py-10">
-                    <span className="animate-pulse text-gray-400 font-semibold">Loading catalog...</span>
-                </div>
-            ) : filteredCourses.length === 0 ? (
-                <div className="panel text-center py-10 text-gray-500 font-medium">No published courses found.</div>
-            ) : (
-                <>
-                    <div className="mb-4 text-xs text-gray-500">
-                        Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> courses
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredCourses.map((c) => (
-                        <div
-                            key={c.id}
-                            className="group relative rounded-2xl overflow-hidden flex flex-col justify-between bg-white dark:bg-[#0e1726] shadow-[0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-none ring-1 ring-[#e0e6ed] dark:ring-[#1b2e4b] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_40px_-12px_rgba(139,92,246,0.25)] hover:ring-[#8b5cf6]/40"
-                        >
-                            <div className="h-44 relative overflow-hidden bg-gradient-to-br from-[#8b5cf6]/25 via-[#6366f1]/15 to-[#0e1726]/10">
-                                {c.course_image ? (
-                                    <img
-                                        src={c.course_image.startsWith('http') ? c.course_image : `${API_BASE_URL}${c.course_image}`}
-                                        alt={c.title}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <IconOpenBook className="w-12 h-12 text-white/70" />
-                                    </div>
-                                )}
-                                {/* Gradient scrim for badge/text legibility */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/20 pointer-events-none" />
-
-                                <span className="absolute top-3 left-3 backdrop-blur-md bg-white/15 border border-white/25 text-white text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm">
-                                    {c.category_name || 'General'}
-                                </span>
-                                <span className={`absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full shadow-sm ring-1 ring-white/20 ${
-                                    c.difficulty === 'beginner'
-                                        ? 'bg-success/90 text-white'
-                                        : c.difficulty === 'intermediate'
-                                        ? 'bg-amber-500/90 text-white'
-                                        : 'bg-danger/90 text-white'
-                                }`}>
-                                    {c.difficulty}
-                                </span>
-
-                                <div className="absolute bottom-3 left-4 right-4 flex items-center gap-1.5 text-white/90 text-[11px] font-semibold drop-shadow">
-                                    <IconClock className="w-3.5 h-3.5" />
-                                    <span>{c.estimated_hours || 0} hrs &middot; Self-paced</span>
-                                </div>
-                            </div>
-
-                            <div className="p-5 flex flex-col justify-between flex-grow">
-                                <div>
-                                    <h3 className="text-base font-bold text-gray-800 dark:text-white-light line-clamp-1 mb-1.5 group-hover:text-primary transition-colors duration-300">
-                                        {c.title}
-                                    </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-4 min-h-[2rem]">
-                                        {c.description || 'No description available for this course.'}
-                                    </p>
-                                </div>
-
-                                <div className="border-t border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] pt-4 mt-auto">
-                                    {renderCourseAction(c)}
-                                </div>
-                            </div>
-                        </div>
-                        ))}
-                    </div>
-                    {totalPages >= 1 && (
-                        <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-                            <div className="flex items-center gap-4">
-                                <div className="text-xs text-gray-500">Page {page} of {totalPages}</div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                                    <select
-                                        className="form-select w-20 text-xs font-semibold py-1"
-                                        value={limit}
-                                        onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-                                    >
-                                        <option value="3">3</option>
-                                        <option value="6">6</option>
-                                        <option value="9">9</option>
-                                        <option value="12">12</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <ul className="inline-flex items-center space-x-1 font-semibold">
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                        disabled={page === 1}
-                                    >
-                                        Prev
-                                    </button>
-                                </li>
-                                {(() => {
-                                    const pages: (number | string)[] = [];
-                                    if (totalPages <= 3) {
-                                        for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                    } else {
-                                        if (page <= 2) {
-                                            pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                        } else if (page >= totalPages - 1) {
-                                            pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                        } else {
-                                            pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                        }
-                                    }
-                                    return pages.map((p, idx) => {
-                                        if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                            const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                            return (
-                                                <li key={`${p}-${idx}`}>
-                                                    <button
-                                                        type="button"
-                                                        title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                        onClick={() => setPage(jumpPage)}
-                                                    >
-                                                        ...
-                                                    </button>
-                                                </li>
-                                            );
-                                        }
-                                        return (
-                                            <li key={p}>
-                                                <button
-                                                    type="button"
-                                                    className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                                        page === p
-                                                            ? 'bg-primary text-white shadow-md'
-                                                            : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                                    }`}
-                                                    onClick={() => setPage(p as number)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            </li>
-                                        );
-                                    });
-                                })()}
-                                <li>
-                                    <button
-                                        type="button"
-                                        className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                        onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                        disabled={page === totalPages || totalPages === 0}
-                                    >
-                                        Next
-                                    </button>
-                                </li>
-                            </ul>
-                        </div>
-                    )}
-                </>
-            )}
+        )}
+/>
         </div>
     );
 };

@@ -396,7 +396,7 @@ const PayrollReport = () => {
                             {/* Employee Info + Date Range */}
                             <div className="panel">
                                 <div className="flex flex-wrap items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-md">{sel.first_name?.[0]}{sel.last_name?.[0]}</div>
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-brand-accent flex items-center justify-center text-white font-bold text-lg shadow-md">{sel.first_name?.[0]}{sel.last_name?.[0]}</div>
                                     <div className="flex-1 min-w-[200px]">
                                         <h2 className="text-xl font-bold text-gray-800 dark:text-white">{sel.first_name} {sel.last_name}</h2>
                                         <p className="text-sm text-gray-500">{sel.designation_name} • {sel.department_name} • ID: {sel.employee_id}</p>
@@ -410,7 +410,7 @@ const PayrollReport = () => {
 
                             {/* Attendance Summary */}
                             <div className="panel p-0 overflow-hidden">
-                                <div className="bg-gradient-to-r from-indigo-500 to-blue-500 px-5 py-3"><h3 className="text-white font-bold text-sm">Attendance Summary</h3></div>
+                                <div className="bg-gradient-to-r from-brand-500 to-brand-500 px-5 py-3"><h3 className="text-white font-bold text-sm">Attendance Summary</h3></div>
                                 <div className="p-4">
                                     {attLoading ? <div className="flex justify-center py-12"><span className="animate-spin border-4 border-primary border-l-transparent rounded-full w-12 h-12"></span></div>
                                         : !att ? <div className="flex flex-col items-center justify-center py-12 text-gray-400"><svg className="w-16 h-16 opacity-20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg><p>No attendance data available.</p></div>
@@ -422,9 +422,9 @@ const PayrollReport = () => {
                                                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                                             {[
                                                                 { label: 'Total Days', val: att.total_days, icon: '📅', color: 'from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50', text: 'text-gray-700 dark:text-gray-300' },
-                                                                { label: 'Working Days', val: att.expected_working_days, icon: '💼', color: 'from-blue-50 to-blue-100/50 dark:from-blue-900/20 dark:to-blue-900/10', text: 'text-blue-700 dark:text-blue-400' },
+                                                                { label: 'Working Days', val: att.expected_working_days, icon: '💼', color: 'from-brand-50 to-brand-100/50 dark:from-brand-900/20 dark:to-brand-900/10', text: 'text-brand-700 dark:text-brand-400' },
                                                                 { label: 'Present Days', val: att.present_days, icon: '✅', color: 'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10', text: 'text-emerald-700 dark:text-emerald-400' },
-                                                                { label: 'Overtime (hrs)', val: att.overtime_hours, icon: '🕒', color: 'from-purple-50 to-purple-100/50 dark:from-purple-900/20 dark:to-purple-900/10', text: 'text-purple-700 dark:text-purple-400' },
+                                                                { label: 'Overtime (hrs)', val: att.overtime_hours, icon: '🕒', color: 'from-brand-50 to-brand-100/50 dark:from-brand-900/20 dark:to-brand-900/10', text: 'text-brand-700 dark:text-brand-accent' },
                                                                 { label: 'Reimbursement', val: `₹${att.total_reimbursement}`, icon: '💰', color: 'from-green-50 to-green-100/50 dark:from-green-900/20 dark:to-green-900/10', text: 'text-green-700 dark:text-green-400' },
                                                                 ...(loanDisbAmount > 0 ? [{ label: 'Loan Credit', val: `₹${loanDisbAmount.toLocaleString('en-IN')}`, icon: '🏦', color: 'from-emerald-50 to-emerald-100/50 dark:from-emerald-900/20 dark:to-emerald-900/10', text: 'text-emerald-700 dark:text-emerald-400' }] : []),
                                                             ].map(s => (
@@ -449,9 +449,9 @@ const PayrollReport = () => {
                                                             {[
                                                                 { label: 'Half Days', val: att.half_days || 0, icon: '🌓', color: 'from-amber-50 to-amber-100/50 dark:from-amber-900/20 dark:to-amber-900/10', text: 'text-amber-700 dark:text-amber-400' },
                                                                 { label: 'Full Day Leave', val: att.full_day_leaves || 0, icon: '🏠', color: 'from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10', text: 'text-orange-700 dark:text-orange-400' },
-                                                                { label: 'Checked In', val: att.checked_in_days || 0, icon: '📍', color: 'from-sky-50 to-sky-100/50 dark:from-sky-900/20 dark:to-sky-900/10', text: 'text-sky-700 dark:text-sky-400' },
+                                                                { label: 'Checked In', val: att.checked_in_days || 0, icon: '📍', color: 'from-brand-50 to-brand-100/50 dark:from-brand-900/20 dark:to-brand-900/10', text: 'text-brand-700 dark:text-brand-400' },
                                                                 { label: 'Absent Days', val: att.absent_days, icon: '❌', color: 'from-red-50 to-red-100/50 dark:from-red-900/20 dark:to-red-900/10', text: 'text-red-700 dark:text-red-400' },
-                                                                { label: 'Total Leaves', val: att.paid_leaves + att.unpaid_leaves, icon: '📄', color: 'from-indigo-50 to-indigo-100/50 dark:from-indigo-900/20 dark:to-indigo-900/10', text: 'text-indigo-700 dark:text-indigo-400' },
+                                                                { label: 'Total Leaves', val: att.paid_leaves + att.unpaid_leaves, icon: '📄', color: 'from-brand-50 to-brand-100/50 dark:from-brand-900/20 dark:to-brand-900/10', text: 'text-brand-700 dark:text-brand-400' },
                                                             ].map(s => (
                                                                 <div key={s.label} className={`relative overflow-hidden group bg-gradient-to-br ${s.color} rounded-2xl p-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-white/50 dark:border-gray-700/30`}>
                                                                     <div className="flex items-center justify-between relative z-10">
@@ -468,19 +468,19 @@ const PayrollReport = () => {
 
                                                     {/* Leave Breakdown (Sub-stats) */}
                                                     <div className="flex flex-wrap gap-4 px-1">
-                                                        <div className="flex items-center gap-2 bg-blue-50/50 dark:bg-blue-900/10 px-3 py-1.5 rounded-full border border-blue-100/50 dark:border-blue-800/20">
-                                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                                            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Paid Leaves: {att.paid_leaves}</span>
+                                                        <div className="flex items-center gap-2 bg-brand-50/50 dark:bg-brand-900/10 px-3 py-1.5 rounded-full border border-brand-100/50 dark:border-brand-800/20">
+                                                            <span className="w-2 h-2 rounded-full bg-brand-500"></span>
+                                                            <span className="text-[10px] font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">Paid Leaves: {att.paid_leaves}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 bg-amber-50/50 dark:bg-amber-900/10 px-3 py-1.5 rounded-full border border-amber-100/50 dark:border-amber-800/20">
                                                             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                                                             <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Unpaid Leaves: {att.unpaid_leaves}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3 justify-end mt-2 p-2 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-800/20">
+                                                    <div className="flex items-center gap-3 justify-end mt-2 p-2 bg-brand-50/50 dark:bg-brand-900/10 rounded-lg border border-brand-100 dark:border-brand-800/20">
                                                         <label className="flex items-center gap-2 cursor-pointer">
-                                                            <input type="checkbox" className="form-checkbox text-purple-600 rounded" checked={otEnabled} onChange={e => setOtEnabled(e.target.checked)} />
-                                                            <span className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Enable Overtime Payment</span>
+                                                            <input type="checkbox" className="form-checkbox text-brand-accent rounded" checked={otEnabled} onChange={e => setOtEnabled(e.target.checked)} />
+                                                            <span className="text-xs font-bold text-brand-700 dark:text-brand-accent uppercase tracking-wider">Enable Overtime Payment</span>
                                                         </label>
                                                     </div>
 
@@ -567,7 +567,7 @@ const PayrollReport = () => {
                                                     )}
                                                     {item.highlight && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
                                                     {item.secondary && <span className="w-2 h-2 rounded-full bg-gray-400"></span>}
-                                                    {item.key.startsWith('ot') && <span className="w-2 h-2 rounded-full bg-purple-500"></span>}
+                                                    {item.key.startsWith('ot') && <span className="w-2 h-2 rounded-full bg-brand-accent"></span>}
 
                                                     <span className={`text-sm font-semibold ${item.secondary ? 'text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>{item.label}</span>
 
@@ -648,7 +648,7 @@ const PayrollReport = () => {
                                                              {sel.active_loans_breakdown.map((loan: any) => (
                                                                   <div key={loan.id} className="flex justify-between items-center text-xs border-b border-gray-50 dark:border-gray-700 pb-1 last:border-0">
                                                                       <div>
-                                                                          <p className="font-bold text-indigo-600">{loan.category}</p>
+                                                                          <p className="font-bold text-brand-600">{loan.category}</p>
                                                                           <p className="text-[9px] text-gray-400">Approved: {loan.date}</p>
                                                                       </div>
                                                                       <div className="text-right">

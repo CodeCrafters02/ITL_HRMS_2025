@@ -3,6 +3,10 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 
+import Button from '../../../components/Common/Button';
+import CardGrid from '../../../components/Common/CardGrid';
+import { brandHex } from '../../../theme/brandColors';
+import Modal from '../../../components/Common/Modal';
 const API_BASE_URL = 'http://localhost:8000';
 const REVIEWS_API = `${API_BASE_URL}/employee/course-reviews/`;
 const CERTIFICATES_API = `${API_BASE_URL}/employee/certificates/`;
@@ -104,7 +108,7 @@ const EmployeeCourseReviews = () => {
                 text: 'Your review rating and comments will be permanently deleted.',
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#3085d6',
+                confirmButtonColor: brandHex('brand'),
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Yes, delete it!'
             });
@@ -185,205 +189,74 @@ const EmployeeCourseReviews = () => {
 
     return (
         <div className="space-y-6">
-            <div className="panel border-0 shadow-sm rounded-xl p-5 bg-white dark:bg-[#0e1726]">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                        <h2 className="text-xl font-extrabold text-gray-800 dark:text-white-light">My Course Reviews</h2>
-                        <p className="text-xs text-gray-450 mt-1">Manage and view course ratings and comments you submitted.</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        <input
-                            type="text"
-                            placeholder="Search reviews..."
-                            className="form-input text-xs rounded-lg w-full sm:w-60"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+<CardGrid
+    items={reviews}
+    loading={loading}
+    page={page}
+    pageSize={limit}
+    totalCount={totalCount}
+    pageSizeOptions={[4, 6, 10, 20]}
+    onPageChange={setPage}
+    onPageSizeChange={(sz) => { setLimit(sz); setPage(1); }}
+    searchValue={search}
+    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+    searchPlaceholder="Search reviews..."
+    emptyMessage="No course reviews submitted"
+    entityLabel="reviews"
+    cols={2}
+    onRefresh={() => fetchReviews(page)}
+    actions={
+        <Button
+                onClick={() => {
+                    if (availableCourses.length === 0) {
+                        Swal.fire('No Courses to Review', 'You can only review courses you have completed and earned a certificate for.', 'info');
+                        return;
+                    }
+                    setShowModal(true);
+                }}
+            >
+                + Write a Review
+            </Button>
+    }
+    renderCard={(r) => (
+            <div className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl p-5 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                            <span className="badge badge-outline-primary text-[9px] uppercase font-bold">{r.course_category}</span>
+                            <h3 className="font-extrabold text-sm text-gray-800 dark:text-white-light leading-snug line-clamp-1">{r.course_title}</h3>
+                        </div>
                         <button
                             type="button"
-                            onClick={() => {
-                                if (availableCourses.length === 0) {
-                                    Swal.fire('No Courses to Review', 'You can only review courses you have completed and earned a certificate for.', 'info');
-                                    return;
-                                }
-                                setShowModal(true);
-                            }}
-                            className="btn btn-primary rounded-lg text-xs py-2 px-4 shadow-sm w-full sm:w-auto"
+                            onClick={() => handleDeleteReview(r.id)}
+                            className="text-gray-300 hover:text-danger p-1 rounded-lg hover:bg-danger/5 transition-all duration-300"
+                            title="Delete Review"
                         >
-                            + Write a Review
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                         </button>
                     </div>
+                    <div className="flex items-center gap-2 mt-1">
+                        {renderStars(r.rating)}
+                        <span className="text-[11px] font-bold text-amber-500">{r.rating}.0 / 5.0</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium bg-gray-50/50 dark:bg-black/10 p-3 rounded-lg border border-gray-100 dark:border-gray-850 min-h-[60px]">
+                        {r.review_text || <span className="italic text-gray-400">No comment feedback left.</span>}
+                    </p>
+                </div>
+                <div className="text-[10px] text-gray-400 mt-4 text-right font-medium">
+                    Submitted on: <strong>{new Date(r.created_at).toLocaleDateString()}</strong>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <span className="animate-spin border-4 border-primary border-l-transparent w-9 h-9 rounded-full inline-block"></span>
-                </div>
-            ) : reviews.length === 0 ? (
-                <div className="panel text-center py-16 bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl">
-                    <span className="text-5xl block mb-3">💬</span>
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">No course reviews submitted</h3>
-                    <p className="text-xs text-gray-450 mt-1.5 max-w-xs mx-auto">
-                        Your reviews will show up here after you complete courses and leave rating feedbacks!
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {reviews.map((r) => (
-                        <div key={r.id} className="panel bg-white dark:bg-[#0e1726] border-0 shadow-sm rounded-xl p-5 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <span className="badge badge-outline-primary text-[9px] uppercase font-bold">{r.course_category}</span>
-                                        <h3 className="font-extrabold text-sm text-gray-800 dark:text-white-light leading-snug line-clamp-1">{r.course_title}</h3>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDeleteReview(r.id)}
-                                        className="text-gray-300 hover:text-danger p-1 rounded-lg hover:bg-danger/5 transition-all duration-300"
-                                        title="Delete Review"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                    {renderStars(r.rating)}
-                                    <span className="text-[11px] font-bold text-amber-500">{r.rating}.0 / 5.0</span>
-                                </div>
-                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium bg-gray-50/50 dark:bg-black/10 p-3 rounded-lg border border-gray-100 dark:border-gray-850 min-h-[60px]">
-                                    {r.review_text || <span className="italic text-gray-400">No comment feedback left.</span>}
-                                </p>
-                            </div>
-                            <div className="text-[10px] text-gray-400 mt-4 text-right font-medium">
-                                Submitted on: <strong>{new Date(r.created_at).toLocaleDateString()}</strong>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+        )}
+/>
 
-            {totalPages >= 1 && (
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-                    <div className="flex items-center gap-4">
-                        <div className="text-xs text-gray-500">
-                            Showing <span className="text-primary font-semibold">{totalCount === 0 ? 0 : ((page - 1) * limit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(page * limit, totalCount)}</span> of <span className="text-primary font-semibold">{totalCount}</span> reviews
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                            <select
-                                className="form-select w-20 text-xs font-semibold py-1"
-                                value={limit}
-                                onChange={(e) => {
-                                    const newLimit = Number(e.target.value);
-                                    setLimit(newLimit);
-                                    setPage(1);
-                                    setPageInput('1');
-                                    fetchReviews(1, newLimit);
-                                }}
-                            >
-                                <option value="4">4</option>
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-                    </div>
-                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                onClick={() => {
-                                    const prevPage = page > 1 ? page - 1 : 1;
-                                    setPage(prevPage);
-                                    fetchReviews(prevPage);
-                                }}
-                                disabled={page === 1}
-                            >
-                                Prev
-                            </button>
-                        </li>
-                        {(() => {
-                            const pages: (number | string)[] = [];
-                            if (totalPages <= 3) {
-                                for (let i = 1; i <= totalPages; i++) pages.push(i);
-                            } else {
-                                if (page <= 2) {
-                                    pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                } else if (page >= totalPages - 1) {
-                                    pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                } else {
-                                    pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                }
-                            }
-                            return pages.map((p, idx) => {
-                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                    return (
-                                        <li key={`${p}-${idx}`}>
-                                            <button
-                                                type="button"
-                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                onClick={() => {
-                                                    setPage(jumpPage);
-                                                    fetchReviews(jumpPage);
-                                                }}
-                                            >
-                                                ...
-                                            </button>
-                                        </li>
-                                    );
-                                }
-                                return (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                                page === p
-                                                    ? 'bg-primary text-white shadow-md'
-                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                            }`}
-                                            onClick={() => {
-                                                setPage(p as number);
-                                                fetchReviews(p as number);
-                                            }}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                );
-                            });
-                        })()}
-                        <li>
-                            <button
-                                type="button"
-                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                onClick={() => {
-                                    const nextPage = page < totalPages ? page + 1 : totalPages;
-                                    setPage(nextPage);
-                                    fetchReviews(nextPage);
-                                }}
-                                disabled={page === totalPages || totalPages === 0}
-                            >
-                                Next
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            )}
 
             {/* Write a Review Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate__animated animate__fadeIn">
-                    <div className="bg-white dark:bg-[#0e1726] rounded-xl shadow-xl max-w-md w-full p-6 space-y-4 border border-gray-150 dark:border-gray-800 animate__animated animate__zoomIn">
-                        <div className="flex justify-between items-center border-b border-gray-150 dark:border-gray-800 pb-3">
-                            <h3 className="text-base font-bold text-gray-800 dark:text-white">Submit a Course Review</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">✕</button>
-                        </div>
+                <Modal open onClose={() => setShowModal(false)} title="Submit a Course Review" size="md" dismissible={false}>
                         <form onSubmit={handleSubmitReview} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold mb-2">Select Course <span className="text-danger">*</span></label>
@@ -430,24 +303,21 @@ const EmployeeCourseReviews = () => {
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-3 border-t border-gray-150 dark:border-gray-800">
-                                <button
+                                <Button variant="outline-danger" size="sm"
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="btn btn-outline-danger btn-sm rounded-lg"
+                                    
                                 >
                                     Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button size="sm"
                                     type="submit"
-                                    disabled={saving}
-                                    className="btn btn-primary btn-sm rounded-lg"
-                                >
+                                    disabled={saving}>
                                     {saving ? 'Saving...' : 'Submit Review'}
-                                </button>
+                                </Button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </Modal>
             )}
         </div>
     );

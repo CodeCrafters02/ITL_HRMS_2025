@@ -15,6 +15,8 @@ import { Fragment } from 'react';
 import IconX from '../../components/Icon/IconX';
 import Swal from 'sweetalert2';
 
+import PageHeader from '../../components/Common/PageHeader';
+import IconUser from '../../components/Icon/IconUser';
 const Profile = () => {
     const dispatch = useDispatch();
     const [userData, setUserData] = useState<any>(null);
@@ -227,13 +229,8 @@ const Profile = () => {
 
     return (
         <div>
-            {/* <ul className="flex space-x-2 rtl:space-x-reverse">
-              
-                <li className="before:content-['/'] ltr:before:mr-2 rtl:before:ml-2">
-                    <span>Profile</span>
-                </li>
-            </ul> */}
-            <div className="pt-5">
+            <PageHeader title="My Profile" subtitle="Your personal details, reporting line and organisation chart." icon={<IconUser />} />
+            <div className="pt-6">
                 <div className="flex items-center gap-3 mb-5 border-b border-[#ebedf2] dark:border-[#191e3a]">
                     <button 
                         type="button" 

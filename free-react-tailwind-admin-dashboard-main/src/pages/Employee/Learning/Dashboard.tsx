@@ -5,6 +5,8 @@ import ReactApexChart from 'react-apexcharts';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import { authFetch } from '../../../utils/authFetch';
 
+import HeroBanner, { HeroPill } from '../../../components/Common/HeroBanner';
+import { brandHex } from '../../../theme/brandColors';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 const COMPLIANCE_API = `${API_BASE_URL}/employee/compliance-assignments/`;
@@ -112,7 +114,7 @@ const EmployeeLearningDashboard = () => {
     const progressCourses = useMemo(() => [...enrollments].sort((a, b) => b.progress_percentage - a.progress_percentage).slice(0, 8), [enrollments]);
     const progressOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#8b5cf6'],
+        colors: [brandHex('accent')],
         plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '50%' } },
         dataLabels: { enabled: true, formatter: (v: number) => `${v}%`, style: { fontSize: '10px' } },
         xaxis: { categories: progressCourses.map((c) => c.course_title), max: 100, labels: { style: { fontSize: '10px' } } },
@@ -123,7 +125,7 @@ const EmployeeLearningDashboard = () => {
     // ── Overall completion gauge (radialBar) ──
     const completionOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'radialBar', fontFamily: 'Inter, sans-serif' },
-        colors: ['#8b5cf6'],
+        colors: [brandHex('accent')],
         plotOptions: {
             radialBar: {
                 hollow: { size: '60%' },
@@ -144,7 +146,7 @@ const EmployeeLearningDashboard = () => {
     }, [enrollments]);
     const difficultyOptions: ApexCharts.ApexOptions = useMemo(() => ({
         chart: { type: 'bar', fontFamily: 'Inter, sans-serif', toolbar: { show: false } },
-        colors: ['#6366f1', '#8b5cf6', '#ec4899'],
+        colors: [brandHex('brand'), brandHex('accent'), '#ec4899'],
         plotOptions: { bar: { borderRadius: 6, columnWidth: '45%', distributed: true } },
         legend: { show: false },
         dataLabels: { enabled: false },
@@ -209,7 +211,7 @@ const EmployeeLearningDashboard = () => {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-10 h-10 border-4 border-brand-accent border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs text-gray-400 font-semibold">Loading your learning dashboard...</span>
                 </div>
             </div>
@@ -218,36 +220,30 @@ const EmployeeLearningDashboard = () => {
 
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
-            {/* ── Hero Banner ── */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 text-white p-7 shadow-xl">
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/5 blur-3xl" />
-                <div className="absolute -bottom-12 -left-12 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                    <div>
-                        <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-0.5">Learning Management</p>
-                        <h1 className="text-2xl font-extrabold leading-tight">My Learning Overview</h1>
-                        <p className="text-white/80 text-xs mt-1">Your enrolled courses, compliance progress, and certifications at a glance.</p>
-                    </div>
-                    <div className="flex gap-4 shrink-0">
-                        <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+            {/* ── Hero Banner (company brand theme) ── */}
+            <HeroBanner
+                eyebrow="Learning Management"
+                title="My Learning Overview"
+                subtitle="Your enrolled courses, compliance progress, and certifications at a glance."
+                aside={
+                    <>
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                             <div className="text-2xl font-extrabold">{completionRate}%</div>
-                            <div className="text-[10px] font-bold text-white/70 uppercase">Completion Rate</div>
+                            <div className="text-[10px] font-bold uppercase text-white/70">Completion Rate</div>
                         </div>
-                        <div className="text-center bg-white/10 backdrop-blur rounded-2xl px-5 py-3">
+                        <div className="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center backdrop-blur-md">
                             <div className="text-2xl font-extrabold">{activeCount}</div>
-                            <div className="text-[10px] font-bold text-white/70 uppercase">Active Courses</div>
+                            <div className="text-[10px] font-bold uppercase text-white/70">Active Courses</div>
                         </div>
-                    </div>
-                </div>
-                <div className="relative z-10 flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/20">
-                    {NAV_LINKS.map((l) => (
-                        <NavLink key={l.to} to={l.to}
-                            className="text-[10px] font-bold uppercase tracking-wider bg-white/15 hover:bg-white/25 transition px-3 py-1.5 rounded-full">
-                            {l.label}
-                        </NavLink>
-                    ))}
-                </div>
-            </div>
+                    </>
+                }
+            >
+                {NAV_LINKS.map((l) => (
+                    <HeroPill key={l.to} as={NavLink} to={l.to} className="!rounded-full !px-3 !py-1.5 !text-[10px] font-bold uppercase tracking-wider">
+                        {l.label}
+                    </HeroPill>
+                ))}
+            </HeroBanner>
 
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -331,10 +327,10 @@ const EmployeeLearningDashboard = () => {
                             <div key={e.id} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3">
                                 <div className="flex items-center justify-between mb-1.5">
                                     <span className="text-xs font-bold text-gray-800 dark:text-white truncate">{e.course_title}</span>
-                                    <span className="text-[9px] font-black bg-violet-500/10 text-violet-600 px-2 py-0.5 rounded-full shrink-0 capitalize">{e.course_difficulty}</span>
+                                    <span className="text-[9px] font-black bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full shrink-0 capitalize">{e.course_difficulty}</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-2">
-                                    <div className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full" style={{ width: `${e.progress_percentage}%` }} />
+                                    <div className="h-full bg-gradient-to-r from-brand to-brand-accent rounded-full" style={{ width: `${e.progress_percentage}%` }} />
                                 </div>
                                 <div className="text-[9px] text-gray-400 mt-1">{e.progress_percentage}% complete</div>
                             </div>

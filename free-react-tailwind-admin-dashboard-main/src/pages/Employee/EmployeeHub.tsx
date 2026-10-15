@@ -7,6 +7,7 @@ import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconOpenBook from '../../components/Icon/IconOpenBook';
 import { touchHeartbeat } from '../../utils/sessionManager';
 
+import HeroBanner from '../../components/Common/HeroBanner';
 interface HubCard {
     label: string;
     subtitle: string;
@@ -25,8 +26,8 @@ const cards: HubCard[] = [
         subtitle: 'Core Operations & Tasks',
         description: 'Manage your daily work check-in/out, view assigned tasks, submit leave requests, download monthly payslips, and check company announcements.',
         icon: <IconUsersGroup className="w-6 h-6" />,
-        tint: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
-        accent: 'text-blue-600 dark:text-blue-400',
+        tint: 'bg-brand/10 text-brand',
+        accent: 'text-brand',
         route: '/employee/dashboard',
         available: true,
         features: ['Attendance Check-in', 'Leave Application', 'My Tasks & Work logs', 'Download Payslips'],
@@ -36,8 +37,8 @@ const cards: HubCard[] = [
         subtitle: 'Goals, KPIs & Reviews',
         description: 'Track your Objectives & Key Results (OKRs), view active KPIs, fill out self-appraisal cycles, and review constructive feedback from your managers.',
         icon: <IconTrendingUp className="w-6 h-6" />,
-        tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
-        accent: 'text-emerald-600 dark:text-emerald-400',
+        tint: 'bg-brand-mid/10 text-brand-mid',
+        accent: 'text-brand-mid',
         route: '/employee/performance',
         available: true,
         features: ['My OKRs & KPIs', 'Self-Appraisal Forms', 'Manager Review feedback', 'Training recommendations'],
@@ -47,8 +48,8 @@ const cards: HubCard[] = [
         subtitle: 'Training & Skill Dev',
         description: 'Browse assigned training courses, watch video and document lessons, attempt quizzes, and download your earned completion certificates.',
         icon: <IconOpenBook className="w-6 h-6" />,
-        tint: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400',
-        accent: 'text-violet-600 dark:text-violet-400',
+        tint: 'bg-brand-accent/15 text-brand-dark',
+        accent: 'text-brand-dark',
         route: '/employee/learning-management',
         available: true,
         features: ['Assigned Courses', 'Quizzes & Grading', 'Progress Tracking', 'PDF Certificates'],
@@ -132,27 +133,22 @@ const EmployeeHub = () => {
 
     return (
         <div className="mx-auto w-full max-w-[85rem] space-y-8 px-1 py-2 sm:px-2">
-            {/* Welcome banner */}
-            <div className="relative overflow-hidden rounded-2xl bg-[#0b1437] text-white shadow-sm">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_-10%,rgba(67,97,238,0.55),transparent_55%)]" />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_120%,rgba(99,102,241,0.25),transparent_45%)]" />
-
-                <div className="relative flex flex-col gap-6 p-7 sm:p-9 md:flex-row md:items-center md:justify-between">
-                    <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-200/80">People Suite · Employee Hub</p>
-                        <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                            {greeting}, {displayName}
-                        </h1>
-                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">
-                            Check in, apply for leave, download your payslips and track your goals and performance, all from one place.
-                        </p>
-                    </div>
-                    <div className="shrink-0 rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 md:text-right">
-                        <p className="text-xs font-medium text-slate-300">{formattedDate}</p>
+            {/* Welcome banner (follows the company brand theme) */}
+            <HeroBanner
+                eyebrow="People Suite · Employee Hub"
+                title={
+                    <>
+                        {greeting}, {displayName}
+                    </>
+                }
+                subtitle="Check in, apply for leave, download your payslips and track your goals and performance, all from one place."
+                aside={
+                    <div className="rounded-xl border border-white/20 bg-white/10 px-5 py-3.5 backdrop-blur-md md:text-right">
+                        <p className="text-xs font-medium text-white/80">{formattedDate}</p>
                         <p className="mt-0.5 text-2xl font-semibold tabular-nums">{formattedTime}</p>
                     </div>
-                </div>
-            </div>
+                }
+            />
 
             {/* Workspaces */}
             <div>
@@ -166,7 +162,7 @@ const EmployeeHub = () => {
                         <button
                             key={card.label}
                             onClick={() => navigate(card.route)}
-                            className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-[#1b2e4b] dark:bg-[#0e1726]"
+                            className="group flex flex-col rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 dark:border-[#1b2e4b] dark:bg-[#0e1726]"
                         >
                             <div className="flex w-full items-start justify-between gap-3">
                                 <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${card.tint}`}>{card.icon}</div>
@@ -192,7 +188,7 @@ const EmployeeHub = () => {
                                 ))}
                             </ul>
 
-                            <div className={`mt-auto flex items-center gap-2 pt-6 text-sm font-semibold ${card.available ? 'text-primary' : 'text-slate-400'}`}>
+                            <div className={`mt-auto flex items-center gap-2 pt-6 text-sm font-semibold ${card.available ? 'text-brand' : 'text-slate-400'}`}>
                                 {card.available ? 'Open' : 'Launching soon'}
                                 {card.available && (
                                     <svg className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

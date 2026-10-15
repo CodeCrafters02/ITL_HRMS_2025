@@ -27,7 +27,9 @@
         <script>
             (function () {
                 try {
-                    var vars = JSON.parse(localStorage.getItem('company_theme_vars') || 'null');
+                    var role = localStorage.getItem('user_role');
+                    var companyUser = role === 'admin' || role === 'employee';
+                    var vars = companyUser && location.pathname.indexOf('/auth') !== 0 ? JSON.parse(localStorage.getItem('company_theme_vars') || 'null') : null;
                     if (vars) for (var k in vars) document.documentElement.style.setProperty(k, vars[k]);
                 } catch (e) {}
             })();

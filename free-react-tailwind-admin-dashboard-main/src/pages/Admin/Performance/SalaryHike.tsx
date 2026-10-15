@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle {
     id: number;
     name: string;
@@ -22,7 +23,7 @@ const EMPTY_FORM: FormState = { min_rating: '', max_rating: '', recommended_hike
 
 // Derive a performance label + color from hike %
 const bandMeta = (hike: number): { label: string; color: string; bar: string; bg: string } => {
-    if (hike >= 15) return { label: 'Outstanding',         color: 'text-violet-600 dark:text-violet-400', bar: 'bg-violet-500', bg: 'bg-violet-500/10' };
+    if (hike >= 15) return { label: 'Outstanding',         color: 'text-brand-accent dark:text-brand-accent', bar: 'bg-brand-accent', bg: 'bg-brand-accent/10' };
     if (hike >= 10) return { label: 'Exceeds Expectations', color: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', bg: 'bg-emerald-500/10' };
     if (hike >= 7)  return { label: 'Meets Expectations',  color: 'text-brand dark:text-brand-400',    bar: 'bg-brand',    bg: 'bg-brand/10' };
     if (hike >= 4)  return { label: 'Needs Improvement',   color: 'text-amber-600 dark:text-amber-400',  bar: 'bg-amber-400',   bg: 'bg-amber-500/10' };
@@ -55,7 +56,7 @@ const PRESETS = [
 const STATUS_STYLE: Record<string, string> = {
     draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400',
-    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
+    completed: 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400',
 };
 
 const SalaryHike = () => {
@@ -275,7 +276,7 @@ const SalaryHike = () => {
                                                         </div>
                                                         <div className="flex justify-end gap-2">
                                                             <button type="button" onClick={resetForm} className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-lg text-[10px] font-bold">Cancel</button>
-                                                            <button type="submit" disabled={saving} className="px-3 py-1.5 bg-brand hover:bg-brand text-white rounded-lg text-[10px] font-bold">
+                                                            <button type="submit" disabled={saving} className={buttonClasses('primary', 'sm')}>
                                                                 {saving ? 'Saving...' : 'Update Band'}
                                                             </button>
                                                         </div>

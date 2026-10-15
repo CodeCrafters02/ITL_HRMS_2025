@@ -9,6 +9,7 @@ import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconPlayCircle from '../../../components/Icon/IconPlayCircle';
 import IconNotesEdit from '../../../components/Icon/IconNotesEdit';
 import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle {
     id: number;
     name: string;
@@ -47,7 +48,7 @@ const BAND_PRESETS = [
     { label: '3-Band', bands: [{ minRating: '4.00', maxRating: '5.00', hikePercent: '15.00' }, { minRating: '2.50', maxRating: '3.99', hikePercent: '7.00' }, { minRating: '1.00', maxRating: '2.49', hikePercent: '0.00' }] },
     { label: '5-Band', bands: [{ minRating: '4.50', maxRating: '5.00', hikePercent: '18.00' }, { minRating: '4.00', maxRating: '4.49', hikePercent: '12.00' }, { minRating: '3.00', maxRating: '3.99', hikePercent: '7.00' }, { minRating: '2.00', maxRating: '2.99', hikePercent: '3.00' }, { minRating: '1.00', maxRating: '1.99', hikePercent: '0.00' }] },
 ];
-const bandColor = (h: number) => h >= 15 ? 'text-violet-600 dark:text-violet-400 bg-violet-500/10' : h >= 10 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : h >= 7 ? 'text-brand dark:text-brand-400 bg-brand/10' : h >= 4 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-500/10';
+const bandColor = (h: number) => h >= 15 ? 'text-brand-accent dark:text-brand-accent bg-brand-accent/10' : h >= 10 ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10' : h >= 7 ? 'text-brand dark:text-brand-400 bg-brand/10' : h >= 4 ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10' : 'text-rose-600 dark:text-rose-400 bg-rose-500/10';
 
 const EMPTY_FORM: FormState = {
     name: '', start_date: '', end_date: '',
@@ -57,7 +58,7 @@ const EMPTY_FORM: FormState = {
 const EMPTY_DRAFTS: DraftQuestions = { self: [], manager: [], peer: [], hr: [] };
 
 const ROLE_META: Record<RoleKey, { label: string; icon: string; color: string }> = {
-    self:    { label: 'Self',     icon: '👤', color: 'text-violet-600 dark:text-violet-400' },
+    self:    { label: 'Self',     icon: '👤', color: 'text-brand-accent dark:text-brand-accent' },
     manager: { label: 'Manager',  icon: '👔', color: 'text-brand dark:text-brand-400' },
     peer:    { label: 'Peer',     icon: '🤝', color: 'text-amber-600 dark:text-amber-400' },
     hr:      { label: 'Admin/HR', icon: '🛡️', color: 'text-rose-600 dark:text-rose-400' },
@@ -70,7 +71,7 @@ const STATUS_FLOW: Record<Cycle['status'], Cycle['status']> = {
 const STATUS_STYLE: Record<Cycle['status'], string> = {
     draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
     active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400',
-    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
+    completed: 'bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-400',
 };
 
 const fmt = (d: string) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -265,7 +266,7 @@ const AppraisalCycles = () => {
                 subtitle="Manage performance review periods, deadlines and question banks."
                 actions={
                     <>
-                        <button onClick={openCreate} className="px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 whitespace-nowrap">
+                        <button onClick={openCreate} className={buttonClasses('primary', 'sm')}>
                     + New Cycle
                 </button>
                     </>
@@ -303,7 +304,7 @@ const AppraisalCycles = () => {
                                 </div>
                                 <div className="flex items-center justify-between mt-2">
                                     <span className="text-[9px] text-gray-400">{fmt(c.start_date)} → {fmt(c.end_date)}</span>
-                                    <span className="text-[8px] font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">{c.question_count}Q</span>
+                                    <span className="text-[8px] font-black text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">{c.question_count}Q</span>
                                 </div>
                                 <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                                     <button
@@ -336,7 +337,7 @@ const AppraisalCycles = () => {
                             </div>
                             <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400">Select a cycle</h4>
                             <p className="text-[10px] text-gray-400 mt-1 max-w-xs leading-relaxed">Click a cycle from the list or create a new one to view its details and question bank.</p>
-                            <button onClick={openCreate} className="mt-4 px-4 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold">
+                            <button onClick={openCreate} className={buttonClasses('primary', 'sm', 'mt-4')}>
                                 + Create First Cycle
                             </button>
                         </div>
@@ -386,7 +387,7 @@ const AppraisalCycles = () => {
                                 </div>
                                 <div className="grid grid-cols-4 gap-2">
                                     {[
-                                        { label: 'Self', count: selected.self_count, color: 'text-violet-600 dark:text-violet-400 bg-violet-500/10' },
+                                        { label: 'Self', count: selected.self_count, color: 'text-brand-accent dark:text-brand-accent bg-brand-accent/10' },
                                         { label: 'Manager', count: selected.manager_count, color: 'text-brand dark:text-brand-400 bg-brand/10' },
                                         { label: 'Peer', count: selected.peer_count, color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10' },
                                         { label: 'Admin/HR', count: selected.hr_count, color: 'text-rose-600 dark:text-rose-400 bg-rose-500/10' },
@@ -516,11 +517,11 @@ const AppraisalCycles = () => {
                                     <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
                                         {/* Existing questions (edit mode) */}
                                         {existingQs.filter(q => q.role === qRole && !q._deleted).map(q => (
-                                            <div key={q.id} className="flex items-start gap-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl px-3 py-2.5">
-                                                <span className="text-[8px] font-black text-blue-400 mt-1 shrink-0 uppercase">saved</span>
+                                            <div key={q.id} className="flex items-start gap-2 bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/30 rounded-xl px-3 py-2.5">
+                                                <span className="text-[8px] font-black text-brand-400 mt-1 shrink-0 uppercase">saved</span>
                                                 <div className="flex-1 min-w-0 space-y-1.5">
                                                     <input type="text" value={q.text} onChange={e => updateExistingQ(q.id, { text: e.target.value })}
-                                                        className="w-full bg-transparent text-xs font-semibold text-gray-800 dark:text-white focus:outline-none border-b border-transparent hover:border-blue-200 dark:hover:border-blue-800 focus:border-blue-400 transition" />
+                                                        className="w-full bg-transparent text-xs font-semibold text-gray-800 dark:text-white focus:outline-none border-b border-transparent hover:border-brand-200 dark:hover:border-brand-800 focus:border-brand-400 transition" />
                                                     <div className="flex items-center gap-2">
                                                         {(['scale', 'yes_no'] as const).map(t => (
                                                             <button key={t} type="button" onClick={() => updateExistingQ(q.id, { type: t })}
@@ -585,7 +586,7 @@ const AppraisalCycles = () => {
                                                 </>
                                             )}
                                             <button type="button" onClick={addDraftQ} disabled={!qText.trim()}
-                                                className="ml-auto px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
+                                                className={buttonClasses('primary', 'sm', 'ml-auto')}>
                                                 + Add
                                             </button>
                                         </div>
@@ -614,8 +615,8 @@ const AppraisalCycles = () => {
                                         {existingBands.filter(b => !b._deleted).map(b => {
                                             const h = parseFloat(b.hikePercent) || 0;
                                             return (
-                                                <div key={b.id} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 rounded-xl px-3 py-2">
-                                                    <span className="text-[8px] font-black text-blue-400 shrink-0 uppercase">saved</span>
+                                                <div key={b.id} className="flex items-center gap-2 bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900/30 rounded-xl px-3 py-2">
+                                                    <span className="text-[8px] font-black text-brand-400 shrink-0 uppercase">saved</span>
                                                     <div className="flex items-center gap-1.5 flex-1 flex-wrap">
                                                         <span className="text-[9px] text-gray-400">Rating</span>
                                                         <input type="number" step="0.01" value={b.minRating} onChange={e => setExistingBands(prev => prev.map(x => x.id === b.id ? { ...x, minRating: e.target.value } : x))}
@@ -678,7 +679,7 @@ const AppraisalCycles = () => {
                                             <button type="button"
                                                 disabled={!bandForm.minRating || !bandForm.maxRating || !bandForm.hikePercent}
                                                 onClick={() => { setDraftBands(prev => [...prev, bandForm]); setBandForm(EMPTY_BAND); }}
-                                                className="ml-auto px-3 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-xl text-[10px] font-black transition">
+                                                className={buttonClasses('primary', 'sm', 'ml-auto')}>
                                                 + Add Band
                                             </button>
                                         </div>
@@ -696,7 +697,7 @@ const AppraisalCycles = () => {
                                             <button type="button" onClick={() => setShowForm(false)}
                                                 className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-bold">Cancel</button>
                                             <button type="submit" disabled={saving}
-                                                className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+                                                className={buttonClasses('primary', 'sm')}>
                                                 {saving && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                 {saving ? (editId ? 'Saving...' : 'Creating...') : editId ? 'Save All Changes' : `Create Cycle`}
                                             </button>
@@ -707,7 +708,7 @@ const AppraisalCycles = () => {
                                         <button type="button" onClick={() => setStep(1)}
                                             className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold">← Back</button>
                                         <button type="button" onClick={() => setStep(3)}
-                                            className="px-5 py-2 bg-brand hover:bg-brand text-white rounded-xl text-xs font-bold">
+                                            className={buttonClasses('primary', 'sm')}>
                                             Next: Hike Bands →
                                         </button>
                                     </>
@@ -717,7 +718,7 @@ const AppraisalCycles = () => {
                                             className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded-xl text-xs font-bold">Cancel</button>
                                         <button type="button" disabled={!form.name || !form.start_date || !form.end_date}
                                             onClick={() => { if (!form.name || !form.start_date || !form.end_date) { setErrorMsg('Name, start date and end date are required.'); return; } setErrorMsg(''); setStep(2); }}
-                                            className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 disabled:text-gray-100 text-white rounded-xl text-xs font-bold">
+                                            className={buttonClasses('primary', 'sm')}>
                                             Next: {editId ? 'Edit Questions →' : 'Add Questions →'}
                                         </button>
                                     </>

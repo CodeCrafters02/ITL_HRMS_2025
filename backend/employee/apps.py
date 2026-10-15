@@ -58,6 +58,20 @@ class EmployeeConfig(AppConfig):
 
             scheduler.add_job(_teams_job('teams_outlook_poll', 240), IntervalTrigger(minutes=5),
                               id='teams_outlook_poll', replace_existing=True, max_instances=1, misfire_grace_time=120)
+            def _entra_auto_sync():
+                try:
+                    from notifications.teams import claim
+                    if not claim('lock:entra_auto_sync', 240):
+                        return
+                    from app.entra_sync import run_auto_sync_all
+                    result = run_auto_sync_all()
+                    if any(v != 'unchanged' for v in result.values()):
+                        logger.info('[Scheduler] entra_auto_sync: %s', result)
+                except Exception as exc:
+                    logger.error('[Scheduler] entra_auto_sync failed: %s', exc)
+
+            scheduler.add_job(_entra_auto_sync, IntervalTrigger(minutes=5),
+                              id='entra_auto_sync', replace_existing=True, max_instances=1, misfire_grace_time=120)
             scheduler.add_job(_teams_job('teams_birthday_digest', 3600), CronTrigger(hour=9, minute=0, timezone='Asia/Kolkata'),
                               id='teams_birthday_digest', replace_existing=True, misfire_grace_time=600)
             scheduler.add_job(_teams_job('teams_missing_checkout_admin_digest', 3600),

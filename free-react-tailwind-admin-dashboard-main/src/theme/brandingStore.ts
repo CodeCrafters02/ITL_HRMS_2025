@@ -50,7 +50,13 @@ const authHeader = (): Record<string, string> => {
 
 /** Loads the company's name, logo and theme and applies the theme app-wide. Safe to call repeatedly. */
 export const loadBranding = async () => {
-    if (!localStorage.getItem('access_token')) return;
+    const role = localStorage.getItem('user_role');
+    // Login page, master users and signed-out visitors always get the default Innovyx theme
+    if (!localStorage.getItem('access_token') || (role !== 'admin' && role !== 'employee') || window.location.pathname.startsWith('/auth')) {
+        applyTheme(null);
+        set({ name: '', logoUrl: null, theme: DEFAULT_THEME, loaded: false });
+        return;
+    }
     try {
         const res = await fetch(`${API_BASE_URL}/app/company-branding/`, { headers: authHeader() });
         if (res.ok) absorb(await res.json());

@@ -517,7 +517,7 @@ const AdminAssignTask = () => {
                     <>
                         <button
                         type="button"
-                        className={`btn ${showCreateForm ? 'btn-outline-danger border-white text-white hover:bg-white/10' : 'btn-primary'}`}
+                        className={`btn ${showCreateForm ? 'btn-outline-danger' : 'btn-primary'}`}
                         onClick={() => {
                             if (showCreateForm) {
                                 setEditingTaskId(null);

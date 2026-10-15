@@ -38,7 +38,7 @@ interface FilterSelectProps {
 export const FilterSelect = ({ label, value, onChange, options, allLabel = 'All' }: FilterSelectProps) => (
     <label className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
         <span className="whitespace-nowrap">{label}</span>
-        <select className={`form-select h-10 w-auto min-w-[8.5rem] rounded-lg py-0 text-sm font-medium ${value ? '!border-primary/60 !text-primary' : ''}`} value={value} onChange={(e) => onChange(e.target.value)}>
+        <select className={`form-select h-10 w-auto min-w-[8.5rem] rounded-xl py-0 text-xs font-medium ${value ? '!border-brand/60 !text-brand' : ''}`} value={value} onChange={(e) => onChange(e.target.value)}>
             <option value="">{allLabel}</option>
             {options.map((option) => (
                 <option key={option.value} value={option.value}>

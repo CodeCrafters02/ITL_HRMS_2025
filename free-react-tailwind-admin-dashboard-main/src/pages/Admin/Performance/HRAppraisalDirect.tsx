@@ -5,6 +5,7 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconSearch from '../../../components/Icon/IconSearch';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -372,7 +373,7 @@ const HRAppraisalDirect = () => {
                                     <button
                                         type="button"
                                         onClick={() => setSelectedEmployee(null)}
-                                        className="btn bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-650 dark:text-gray-400 text-xs font-bold px-5 py-2.5 rounded-xl transition"
+                                        className={buttonClasses('secondary', 'sm')}
                                     >
                                         Clear Selection
                                     </button>
@@ -381,7 +382,7 @@ const HRAppraisalDirect = () => {
                                             type="button"
                                             onClick={handleSubmitHRAppraisal}
                                             disabled={saving}
-                                            className="btn bg-brand hover:bg-brand disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-brand/10 transition"
+                                            className={buttonClasses('primary', 'sm')}
                                         >
                                             {saving ? 'Submitting...' : 'Submit Evaluation'}
                                         </button>

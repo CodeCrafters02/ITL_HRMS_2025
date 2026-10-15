@@ -16,6 +16,7 @@ import 'flatpickr/dist/flatpickr.css';
 
 import PageHeader from '../../components/Common/PageHeader';
 import Button from '../../components/Common/Button';
+import { buttonClasses } from '../../components/Common/Button';
 const PayslipRollout = () => {
     const dispatch = useDispatch();
     useEffect(() => {
@@ -242,11 +243,11 @@ const PayslipRollout = () => {
             sortable: true,
             render: (_val, item: RolloutDashboardItem) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-black text-gray-400 group-hover:bg-blue-500 group-hover:text-white transition-all flex-shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-sm font-black text-gray-400 group-hover:bg-brand-500 group-hover:text-white transition-all flex-shrink-0">
                         {item.employee_name.charAt(0)}
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <span className="font-black text-sm text-gray-800 dark:text-white group-hover:text-blue-600 transition-colors truncate">
+                        <span className="font-black text-sm text-gray-800 dark:text-white group-hover:text-brand-600 transition-colors truncate">
                             {item.employee_name}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400 tracking-wider">ID: {item.employee_id_str}</span>
@@ -267,7 +268,7 @@ const PayslipRollout = () => {
                         </div>
                         <div className="text-gray-300 dark:text-gray-700 font-light">/</div>
                         <div className="flex flex-col items-center">
-                            <span className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">{item.details.expected_working_days}</span>
+                            <span className="text-lg font-black text-brand-600 dark:text-brand-400 leading-none">{item.details.expected_working_days}</span>
                             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Working</span>
                         </div>
                     </div>
@@ -276,13 +277,13 @@ const PayslipRollout = () => {
                             <span className="text-[8px] font-bold bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded-full">½ Day: {item.details.half_days}</span>
                         )}
                         {item.details.paid_leaves > 0 && (
-                            <span className="text-[8px] font-bold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded-full">PL: {item.details.paid_leaves}</span>
+                            <span className="text-[8px] font-bold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-1.5 py-0.5 rounded-full">PL: {item.details.paid_leaves}</span>
                         )}
                         {item.details.absent_days > 0 && (
                             <span className="text-[8px] font-bold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded-full">Absent: {item.details.absent_days}</span>
                         )}
                         {item.details.overtime_hours > 0 && (
-                            <span className="text-[8px] font-bold bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 px-1.5 py-0.5 rounded-full">OT: {item.details.overtime_hours}h</span>
+                            <span className="text-[8px] font-bold bg-brand-50 dark:bg-brand-900/20 text-brand-accent dark:text-brand-accent px-1.5 py-0.5 rounded-full">OT: {item.details.overtime_hours}h</span>
                         )}
                     </div>
                 </div>
@@ -307,8 +308,8 @@ const PayslipRollout = () => {
                     </div>
                     {item.details.ot_pay > 0 && (
                         <div className="flex items-center justify-between gap-4 text-[10px]">
-                            <span className="text-purple-500 font-bold">OT Pay</span>
-                            <span className="font-mono font-bold text-purple-600">₹{item.details.ot_pay.toLocaleString()}</span>
+                            <span className="text-brand-accent font-bold">OT Pay</span>
+                            <span className="font-mono font-bold text-brand-accent">₹{item.details.ot_pay.toLocaleString()}</span>
                         </div>
                     )}
                     <div className="flex items-center gap-1 mt-0.5">
@@ -390,7 +391,7 @@ const PayslipRollout = () => {
                         <>
                             <button
                                 onClick={() => handleView(item.id!, item.file!)}
-                                className="btn btn-sm bg-gray-100 dark:bg-gray-800 hover:bg-blue-500 hover:text-white text-gray-600 dark:text-gray-400 transition-all p-2 rounded-lg"
+                                className="btn btn-sm bg-gray-100 dark:bg-gray-800 hover:bg-brand-500 hover:text-white text-gray-600 dark:text-gray-400 transition-all p-2 rounded-lg"
                                 title="View & Verify"
                             >
                                 <IconEye className={`w-4 h-4 ${viewedIds.has(item.id!) ? 'text-green-500 group-hover:text-white' : ''}`} />
@@ -399,7 +400,7 @@ const PayslipRollout = () => {
                                 <button
                                     onClick={() => handleSend(item.id!)}
                                     disabled={!!actionLoading}
-                                    className="btn btn-sm py-2 px-4 rounded-lg font-black uppercase text-[10px] tracking-widest transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md"
+                                    className={buttonClasses('primary', 'sm')}
                                 >
                                     {actionLoading === `send-${item.id}` ? (
                                         <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-3 h-3"></span>

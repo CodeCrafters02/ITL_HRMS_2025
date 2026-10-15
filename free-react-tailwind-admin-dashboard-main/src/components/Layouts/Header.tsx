@@ -155,6 +155,7 @@ const Header = () => {
     const leaveBadgeCount = leaveDecisionKeys.filter((key) => !leaveSeenDecisionKeys.includes(key)).length;
     const isReportingManager = localStorage.getItem('is_reporting_manager') === 'true';
     const hideHRQuickLinks = 
+        userRole === 'master' || // masters have no company calendar / HR data (those endpoints return 403)
         (userRole === 'admin' && ['/admin/hub', '/admin/learning'].includes(location.pathname)) ||
         (userRole === 'employee' && ['/employee/hub'].includes(location.pathname));
 
@@ -207,6 +208,7 @@ const Header = () => {
             return [
                 { label: 'Dashboard', path: '/master/dashboard' },
                 { label: 'Company', path: '/master/company' },
+                { label: 'Employees', path: '/master/employee' },
                 { label: 'User Management', path: '/master/user-management' },
                 { label: 'Administrators', path: '/master/administration' },
             ];
@@ -514,7 +516,7 @@ const Header = () => {
                 )}
                 <div className="pointer-events-auto fixed inset-x-4 bottom-5 z-[60000] rounded-2xl border border-primary/35 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-primary/45 dark:bg-[#1b2e4b]/95 sm:hidden">
                     <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-purple-500/25 text-lg" aria-hidden>
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-brand-accent/25 text-lg" aria-hidden>
                             ✈
                         </span>
                         <div className="min-w-0 flex-1">
@@ -567,7 +569,7 @@ const Header = () => {
 
                     <div className="ltr:mr-2 rtl:ml-2">
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
-                            {userRole === 'admin' && companyName && (
+                            {companyName && userRole !== 'master' && (
                                 <li className="min-w-0">
                                     <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/70 py-1 pl-1 pr-3 dark:border-slate-700/80 dark:bg-slate-800/40" title={companyName}>
                                         {companyLogo ? (
@@ -632,7 +634,7 @@ const Header = () => {
                                                 {showLeaveIntro && leaveBadgeCount === 0 && (
                                                     <span
                                                         aria-hidden
-                                                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-purple-500 text-[10px] font-bold text-white shadow-md animate-bounce"
+                                                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-primary to-brand-accent text-[10px] font-bold text-white shadow-md animate-bounce"
                                                     >
                                                         ✈
                                                     </span>
@@ -660,7 +662,7 @@ const Header = () => {
                     </div>
                     <div className="sm:flex-1 ltr:sm:ml-0 ltr:ml-auto sm:rtl:mr-0 rtl:mr-auto flex items-center space-x-1.5 lg:space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                         <div className="sm:ltr:mr-auto sm:rtl:ml-auto">
-                            {!hideHRQuickLinks && userRole !== 'admin' && (
+                            {!hideHRQuickLinks && userRole !== 'admin' && userRole !== 'employee' && (
                                 <>
                                     <form
                                         className={`${search && '!block'} sm:relative absolute inset-x-0 sm:top-0 top-1/2 sm:translate-y-0 -translate-y-1/2 sm:mx-0 mx-4 z-10 sm:block hidden`}

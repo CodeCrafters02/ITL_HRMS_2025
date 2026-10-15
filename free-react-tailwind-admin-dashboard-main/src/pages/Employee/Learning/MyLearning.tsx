@@ -10,6 +10,9 @@ import IconMenuInvoice from '../../../components/Icon/Menu/IconMenuInvoice';
 import IconOpenBook from '../../../components/Icon/IconOpenBook';
 import PageHeader from '../../../components/Common/PageHeader';
 
+import Button from '../../../components/Common/Button';
+import { buttonClasses } from '../../../components/Common/Button';
+import Pagination from '../../../components/Common/Pagination';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 const ENROLLMENTS_API = `${API_BASE_URL}/employee/enrollments/`;
 const COMPLIANCE_API = `${API_BASE_URL}/employee/compliance-assignments/`;
@@ -254,113 +257,20 @@ const MyLearning = () => {
     const renderCertificatePagination = () => {
         if (certificateTotalPages < 1) return null;
         return (
-            <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-                <div className="flex items-center gap-4">
-                    <div className="text-xs text-gray-500">
-                        Showing <span className="text-primary font-semibold">{certificateTotalCount === 0 ? 0 : ((certificatePage - 1) * certificateLimit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(certificatePage * certificateLimit, certificateTotalCount)}</span> of <span className="text-primary font-semibold">{certificateTotalCount}</span> credentials
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                        <select
-                            className="form-select w-20 text-xs font-semibold py-1"
-                            value={certificateLimit}
-                            onChange={(e) => {
-                                const newLimit = Number(e.target.value);
-                                setCertificateLimit(newLimit);
-                                setCertificatePage(1);
-                                fetchDashboardData(enrollmentPage, wishlistPage, 1, enrollmentLimit, wishlistLimit, newLimit);
-                            }}
-                        >
-                            <option value="3">3</option>
-                            <option value="6">6</option>
-                            <option value="9">9</option>
-                            <option value="12">12</option>
-                        </select>
-                    </div>
-                </div>
-                <ul className="inline-flex items-center space-x-1 font-semibold">
-                    <li>
-                        <button
-                            type="button"
-                            className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                            onClick={() => {
-                                const prevPage = certificatePage > 1 ? certificatePage - 1 : 1;
-                                setCertificatePage(prevPage);
-                                fetchDashboardData(enrollmentPage, wishlistPage, prevPage);
-                            }}
-                            disabled={certificatePage === 1}
-                        >
-                            Prev
-                        </button>
-                    </li>
-                    {(() => {
-                        const pages: (number | string)[] = [];
-                        if (certificateTotalPages <= 3) {
-                            for (let i = 1; i <= certificateTotalPages; i++) pages.push(i);
-                        } else {
-                            if (certificatePage <= 2) {
-                                pages.push(1, 2, 3, 'right-ellipsis', certificateTotalPages);
-                            } else if (certificatePage >= certificateTotalPages - 1) {
-                                pages.push(1, 'left-ellipsis', certificateTotalPages - 2, certificateTotalPages - 1, certificateTotalPages);
-                            } else {
-                                pages.push(1, 'left-ellipsis', certificatePage, 'right-ellipsis', certificateTotalPages);
-                            }
-                        }
-                        return pages.map((p, idx) => {
-                            if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                const jumpPage = p === 'left-ellipsis' ? Math.max(1, certificatePage - 3) : Math.min(certificateTotalPages, certificatePage + 3);
-                                return (
-                                    <li key={`${p}-${idx}`}>
-                                        <button
-                                            type="button"
-                                            title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                            className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                            onClick={() => {
-                                                setCertificatePage(jumpPage);
-                                                fetchDashboardData(enrollmentPage, wishlistPage, jumpPage);
-                                            }}
-                                        >
-                                            ...
-                                        </button>
-                                    </li>
-                                );
-                            }
-                            return (
-                                <li key={p}>
-                                    <button
-                                        type="button"
-                                        className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                            certificatePage === p
-                                                ? 'bg-primary text-white shadow-md'
-                                                : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                        }`}
-                                        onClick={() => {
-                                            setCertificatePage(p as number);
-                                            fetchDashboardData(enrollmentPage, wishlistPage, p as number);
-                                        }}
-                                    >
-                                        {p}
-                                    </button>
-                                </li>
-                            );
-                        });
-                    })()}
-                    <li>
-                        <button
-                            type="button"
-                            className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                            onClick={() => {
-                                const nextPage = certificatePage < certificateTotalPages ? certificatePage + 1 : certificateTotalPages;
-                                setCertificatePage(nextPage);
-                                fetchDashboardData(enrollmentPage, wishlistPage, nextPage);
-                            }}
-                            disabled={certificatePage === certificateTotalPages || certificateTotalPages === 0}
-                        >
-                            Next
-                        </button>
-                    </li>
-                </ul>
-            </div>
+            <Pagination
+                page={certificatePage}
+                pageSize={certificateLimit}
+                totalCount={certificateTotalCount}
+                pageSizeOptions={[3, 6, 9, 12]}
+                entityLabel="credentials"
+                className="mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-white"
+                onPageChange={(p) => {
+                    setCertificatePage(p); fetchDashboardData(enrollmentPage, wishlistPage, p);
+                }}
+                onPageSizeChange={(n) => {
+                    setCertificateLimit(n); setCertificatePage(1); fetchDashboardData(enrollmentPage, wishlistPage, 1, enrollmentLimit, wishlistLimit, n);
+                }}
+            />
         );
     };
 
@@ -425,7 +335,7 @@ const MyLearning = () => {
             {!location.pathname.includes('certifications') && !loading && continueLearning && (
                 <div className="panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl mb-6 overflow-hidden bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10 shadow-sm">
                     <div className="flex flex-col sm:flex-row items-stretch">
-                        <div className="w-full sm:w-56 h-32 sm:h-auto bg-gradient-to-br from-[#8b5cf6]/25 to-[#0e1726]/10 flex items-center justify-center shrink-0">
+                        <div className="w-full sm:w-56 h-32 sm:h-auto bg-gradient-to-br from-brand/25 to-[#0e1726]/10 flex items-center justify-center shrink-0">
                             {continueLearning.course_image_url ? (
                                 <img src={continueLearning.course_image_url} alt={continueLearning.course_title} className="w-full h-full object-cover" />
                             ) : (
@@ -445,7 +355,7 @@ const MyLearning = () => {
                             </div>
                             <Link
                                 to={`/employee/learning-management/course-player/${continueLearning.id}`}
-                                className="btn btn-primary rounded-lg font-bold text-sm px-6 py-2 shrink-0 shadow-md hover:shadow-lg transition-shadow"
+                                className={buttonClasses('primary', 'md', 'shrink-0')}
                             >
                                 Resume →
                             </Link>
@@ -527,7 +437,7 @@ const MyLearning = () => {
                                 {certificates.map((cert) => (
                                     <div
                                         key={cert.id}
-                                        className="group relative panel border border-dashed border-[#8b5cf6]/50 bg-gradient-to-br from-[#8b5cf6]/10 to-transparent dark:from-[#8b5cf6]/10 p-5 rounded-xl hover:shadow-lg hover:border-[#8b5cf6] transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                                        className="group relative panel border border-dashed border-brand/50 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/10 p-5 rounded-xl hover:shadow-lg hover:border-brand transition-all duration-300 flex flex-col justify-between overflow-hidden"
                                     >
                                         <div className="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:opacity-10 transition-opacity">🎓</div>
                                         <div className="relative">
@@ -543,13 +453,13 @@ const MyLearning = () => {
                                             </div>
                                         </div>
 
-                                        <div className="relative mt-4 pt-3 border-t border-[#8b5cf6]/10">
+                                        <div className="relative mt-4 pt-3 border-t border-brand/10">
                                             {cert.certificate_file_url ? (
                                                 <a
                                                     href={cert.certificate_file_url}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="btn btn-primary btn-sm w-full text-[11px] py-1.5 font-bold block text-center rounded-lg"
+                                                    className={buttonClasses('primary', 'sm', 'w-full block text-center')}
                                                 >
                                                     ⬇ Download Credential
                                                 </a>
@@ -573,7 +483,7 @@ const MyLearning = () => {
                                 <div className="panel text-center py-14 text-gray-500 border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl">
                                     <span className="text-4xl block mb-3">📚</span>
                                     <p className="font-semibold mb-3">You have not enrolled in any courses yet.</p>
-                                    <Link to="/employee/learning-management/course-catalog" className="btn btn-primary rounded-lg text-xs px-5 py-2 font-bold">
+                                    <Link to="/employee/learning-management/course-catalog" className={buttonClasses('primary', 'md')}>
                                         Browse Course Catalog
                                     </Link>
                                 </div>
@@ -586,7 +496,7 @@ const MyLearning = () => {
                                                 key={enr.id}
                                                 className="group panel border border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden p-0 bg-white dark:bg-[#0e1726]/40"
                                             >
-                                                <div className="h-36 bg-gradient-to-br from-[#8b5cf6]/20 to-[#0e1726]/10 relative flex items-center justify-center border-b border-gray-150 dark:border-gray-800 overflow-hidden">
+                                                <div className="h-36 bg-gradient-to-br from-brand/20 to-[#0e1726]/10 relative flex items-center justify-center border-b border-gray-150 dark:border-gray-800 overflow-hidden">
                                                     {enr.course_image_url ? (
                                                         <img
                                                             src={enr.course_image_url}
@@ -648,113 +558,20 @@ const MyLearning = () => {
                             )}
 
                             {enrollmentTotalPages >= 1 && (
-                                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-xs text-gray-500">
-                                            Showing <span className="text-primary font-semibold">{enrollmentTotalCount === 0 ? 0 : ((enrollmentPage - 1) * enrollmentLimit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(enrollmentPage * enrollmentLimit, enrollmentTotalCount)}</span> of <span className="text-primary font-semibold">{enrollmentTotalCount}</span> courses
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                                            <select
-                                                className="form-select w-20 text-xs font-semibold py-1"
-                                                value={enrollmentLimit}
-                                                onChange={(e) => {
-                                                    const newLimit = Number(e.target.value);
-                                                    setEnrollmentLimit(newLimit);
-                                                    setEnrollmentPage(1);
-                                                    fetchDashboardData(1, wishlistPage, certificatePage, newLimit);
-                                                }}
-                                            >
-                                                <option value="3">3</option>
-                                                <option value="6">6</option>
-                                                <option value="9">9</option>
-                                                <option value="12">12</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                                        <li>
-                                            <button
-                                                type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => {
-                                                    const prevPage = enrollmentPage > 1 ? enrollmentPage - 1 : 1;
-                                                    setEnrollmentPage(prevPage);
-                                                    fetchDashboardData(prevPage, wishlistPage, certificatePage);
-                                                }}
-                                                disabled={enrollmentPage === 1}
-                                            >
-                                                Prev
-                                            </button>
-                                        </li>
-                                        {(() => {
-                                            const pages: (number | string)[] = [];
-                                            if (enrollmentTotalPages <= 3) {
-                                                for (let i = 1; i <= enrollmentTotalPages; i++) pages.push(i);
-                                            } else {
-                                                if (enrollmentPage <= 2) {
-                                                    pages.push(1, 2, 3, 'right-ellipsis', enrollmentTotalPages);
-                                                } else if (enrollmentPage >= enrollmentTotalPages - 1) {
-                                                    pages.push(1, 'left-ellipsis', enrollmentTotalPages - 2, enrollmentTotalPages - 1, enrollmentTotalPages);
-                                                } else {
-                                                    pages.push(1, 'left-ellipsis', enrollmentPage, 'right-ellipsis', enrollmentTotalPages);
-                                                }
-                                            }
-                                            return pages.map((p, idx) => {
-                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, enrollmentPage - 3) : Math.min(enrollmentTotalPages, enrollmentPage + 3);
-                                                    return (
-                                                        <li key={`${p}-${idx}`}>
-                                                            <button
-                                                                type="button"
-                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                                onClick={() => {
-                                                                    setEnrollmentPage(jumpPage);
-                                                                    fetchDashboardData(jumpPage, wishlistPage, certificatePage);
-                                                                }}
-                                                            >
-                                                                ...
-                                                            </button>
-                                                        </li>
-                                                    );
-                                                }
-                                                return (
-                                                    <li key={p}>
-                                                        <button
-                                                            type="button"
-                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                                                enrollmentPage === p
-                                                                    ? 'bg-primary text-white shadow-md'
-                                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                                            }`}
-                                                            onClick={() => {
-                                                                setEnrollmentPage(p as number);
-                                                                fetchDashboardData(p as number, wishlistPage, certificatePage);
-                                                            }}
-                                                        >
-                                                            {p}
-                                                        </button>
-                                                    </li>
-                                                );
-                                            });
-                                        })()}
-                                        <li>
-                                            <button
-                                                type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => {
-                                                    const nextPage = enrollmentPage < enrollmentTotalPages ? enrollmentPage + 1 : enrollmentTotalPages;
-                                                    setEnrollmentPage(nextPage);
-                                                    fetchDashboardData(nextPage, wishlistPage, certificatePage);
-                                                }}
-                                                disabled={enrollmentPage === enrollmentTotalPages || enrollmentTotalPages === 0}
-                                            >
-                                                Next
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
+                                <Pagination
+                                    page={enrollmentPage}
+                                    pageSize={enrollmentLimit}
+                                    totalCount={enrollmentTotalCount}
+                                    pageSizeOptions={[3, 6, 9, 12]}
+                                    entityLabel="courses"
+                                    className="mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-white"
+                                    onPageChange={(p) => {
+                                        setEnrollmentPage(p); fetchDashboardData(p, wishlistPage, certificatePage);
+                                    }}
+                                    onPageSizeChange={(n) => {
+                                        setEnrollmentLimit(n); setEnrollmentPage(1); fetchDashboardData(1, wishlistPage, certificatePage, n);
+                                    }}
+                                />
                             )}
                         </div>
                     )}
@@ -824,7 +641,7 @@ const MyLearning = () => {
                                     {certificates.map((cert) => (
                                         <div
                                             key={cert.id}
-                                            className="group relative panel border border-dashed border-[#8b5cf6]/50 bg-gradient-to-br from-[#8b5cf6]/10 to-transparent dark:from-[#8b5cf6]/10 p-5 rounded-xl hover:shadow-lg hover:border-[#8b5cf6] transition-all duration-300 flex flex-col justify-between overflow-hidden"
+                                            className="group relative panel border border-dashed border-brand/50 bg-gradient-to-br from-brand/10 to-transparent dark:from-brand/10 p-5 rounded-xl hover:shadow-lg hover:border-brand transition-all duration-300 flex flex-col justify-between overflow-hidden"
                                         >
                                             <div className="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:opacity-10 transition-opacity">🎓</div>
                                             <div className="relative">
@@ -840,13 +657,13 @@ const MyLearning = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="relative mt-4 pt-3 border-t border-[#8b5cf6]/10">
+                                            <div className="relative mt-4 pt-3 border-t border-brand/10">
                                                 {cert.certificate_file_url ? (
                                                     <a
                                                         href={cert.certificate_file_url}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="btn btn-primary btn-sm w-full text-[11px] py-1.5 font-bold block text-center rounded-lg"
+                                                        className={buttonClasses('primary', 'sm', 'w-full block text-center')}
                                                     >
                                                         ⬇ Download Credential
                                                     </a>
@@ -869,7 +686,7 @@ const MyLearning = () => {
                                 <div className="panel text-center py-14 text-gray-500 border border-dashed border-[#e0e6ed] dark:border-[#1b2e4b] rounded-xl">
                                     <span className="text-4xl block mb-3">⭐</span>
                                     <p className="font-semibold mb-3">Your wishlist is empty.</p>
-                                    <Link to="/employee/learning-management/course-catalog" className="btn btn-primary rounded-lg text-xs px-5 py-2 font-bold">
+                                    <Link to="/employee/learning-management/course-catalog" className={buttonClasses('primary', 'md')}>
                                         Browse Course Catalog
                                     </Link>
                                 </div>
@@ -894,21 +711,21 @@ const MyLearning = () => {
                                             </div>
 
                                             <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
-                                                <button
+                                                <Button size="sm" className="flex-1 text-xs !py-1.5"
                                                     type="button"
-                                                    className="btn btn-primary btn-sm flex-1 text-xs py-1.5 font-bold"
+                                                    
                                                     onClick={() => handleEnrollFromWishlist(item.course)}
                                                     disabled={enrollingId === item.course}
                                                 >
                                                     Enroll Now
-                                                </button>
-                                                <button
+                                                </Button>
+                                                <Button variant="outline-danger" size="sm" className="text-xs !py-1.5 !px-3"
                                                     type="button"
-                                                    className="btn btn-outline-danger btn-sm text-xs py-1.5 px-3"
+                                                    
                                                     onClick={() => handleRemoveWishlist(item.id)}
                                                 >
                                                     Remove
-                                                </button>
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -916,113 +733,20 @@ const MyLearning = () => {
                             )}
 
                             {wishlistTotalPages >= 1 && (
-                                <div className="flex flex-wrap items-center justify-between gap-3 mt-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-xs text-gray-500">
-                                            Showing <span className="text-primary font-semibold">{wishlistTotalCount === 0 ? 0 : ((wishlistPage - 1) * wishlistLimit) + 1}</span> to <span className="text-primary font-semibold">{Math.min(wishlistPage * wishlistLimit, wishlistTotalCount)}</span> of <span className="text-primary font-semibold">{wishlistTotalCount}</span> wishlisted courses
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs font-semibold text-gray-500">Per page:</span>
-                                            <select
-                                                className="form-select w-20 text-xs font-semibold py-1"
-                                                value={wishlistLimit}
-                                                onChange={(e) => {
-                                                    const newLimit = Number(e.target.value);
-                                                    setWishlistLimit(newLimit);
-                                                    setWishlistPage(1);
-                                                    fetchDashboardData(enrollmentPage, 1, certificatePage, enrollmentLimit, newLimit);
-                                                }}
-                                            >
-                                                <option value="3">3</option>
-                                                <option value="6">6</option>
-                                                <option value="9">9</option>
-                                                <option value="12">12</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <ul className="inline-flex items-center space-x-1 font-semibold">
-                                        <li>
-                                            <button
-                                                type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => {
-                                                    const prevPage = wishlistPage > 1 ? wishlistPage - 1 : 1;
-                                                    setWishlistPage(prevPage);
-                                                    fetchDashboardData(enrollmentPage, prevPage, certificatePage);
-                                                }}
-                                                disabled={wishlistPage === 1}
-                                            >
-                                                Prev
-                                            </button>
-                                        </li>
-                                        {(() => {
-                                            const pages: (number | string)[] = [];
-                                            if (wishlistTotalPages <= 3) {
-                                                for (let i = 1; i <= wishlistTotalPages; i++) pages.push(i);
-                                            } else {
-                                                if (wishlistPage <= 2) {
-                                                    pages.push(1, 2, 3, 'right-ellipsis', wishlistTotalPages);
-                                                } else if (wishlistPage >= wishlistTotalPages - 1) {
-                                                    pages.push(1, 'left-ellipsis', wishlistTotalPages - 2, wishlistTotalPages - 1, wishlistTotalPages);
-                                                } else {
-                                                    pages.push(1, 'left-ellipsis', wishlistPage, 'right-ellipsis', wishlistTotalPages);
-                                                }
-                                            }
-                                            return pages.map((p, idx) => {
-                                                if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                                    const jumpPage = p === 'left-ellipsis' ? Math.max(1, wishlistPage - 3) : Math.min(wishlistTotalPages, wishlistPage + 3);
-                                                    return (
-                                                        <li key={`${p}-${idx}`}>
-                                                            <button
-                                                                type="button"
-                                                                title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs"
-                                                                onClick={() => {
-                                                                    setWishlistPage(jumpPage);
-                                                                    fetchDashboardData(enrollmentPage, jumpPage, certificatePage);
-                                                                }}
-                                                            >
-                                                                ...
-                                                            </button>
-                                                        </li>
-                                                    );
-                                                }
-                                                return (
-                                                    <li key={p}>
-                                                        <button
-                                                            type="button"
-                                                            className={`flex justify-center font-semibold px-3 py-1.5 rounded-lg transition text-xs ${
-                                                                wishlistPage === p
-                                                                    ? 'bg-primary text-white shadow-md'
-                                                                    : 'bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'
-                                                            }`}
-                                                            onClick={() => {
-                                                                setWishlistPage(p as number);
-                                                                fetchDashboardData(enrollmentPage, p as number, certificatePage);
-                                                            }}
-                                                        >
-                                                            {p}
-                                                        </button>
-                                                    </li>
-                                                );
-                                            });
-                                        })()}
-                                        <li>
-                                            <button
-                                                type="button"
-                                                className="flex justify-center font-semibold px-3 py-1.5 rounded-lg transition bg-white-light text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                                                onClick={() => {
-                                                    const nextPage = wishlistPage < wishlistTotalPages ? wishlistPage + 1 : wishlistTotalPages;
-                                                    setWishlistPage(nextPage);
-                                                    fetchDashboardData(enrollmentPage, nextPage, certificatePage);
-                                                }}
-                                                disabled={wishlistPage === wishlistTotalPages || wishlistTotalPages === 0}
-                                            >
-                                                Next
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
+                                <Pagination
+                                    page={wishlistPage}
+                                    pageSize={wishlistLimit}
+                                    totalCount={wishlistTotalCount}
+                                    pageSizeOptions={[3, 6, 9, 12]}
+                                    entityLabel="courses"
+                                    className="mt-6 overflow-hidden rounded-2xl border border-slate-200/90 bg-white"
+                                    onPageChange={(p) => {
+                                        setWishlistPage(p); fetchDashboardData(enrollmentPage, p, certificatePage);
+                                    }}
+                                    onPageSizeChange={(n) => {
+                                        setWishlistLimit(n); setWishlistPage(1); fetchDashboardData(enrollmentPage, 1, certificatePage, enrollmentLimit, n);
+                                    }}
+                                />
                             )}
                         </div>
                     )}

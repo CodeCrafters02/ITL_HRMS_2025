@@ -245,7 +245,7 @@ const LoanApprovals = () => {
             key: 'category_name',
             title: 'Loan Type',
             sortable: true,
-            render: (val) => <span className="text-xs font-bold text-indigo-600 uppercase">{val}</span>,
+            render: (val) => <span className="text-xs font-bold text-brand-600 uppercase">{val}</span>,
         },
         {
             key: 'requested_amount',
@@ -277,7 +277,7 @@ const LoanApprovals = () => {
         {
             key: 'repayment_end_month',
             title: 'Ends On',
-            render: (val) => <span className="text-xs font-semibold text-indigo-500 uppercase">{val || '—'}</span>,
+            render: (val) => <span className="text-xs font-semibold text-brand-500 uppercase">{val || '—'}</span>,
         },
         {
             key: 'created_at',
@@ -327,8 +327,8 @@ const LoanApprovals = () => {
                     {['Active Requests', 'Approval History'].map((t) => (
                         <Tab key={t} as={Fragment}>
                             {({ selected }) => (
-                                <button className={`px-6 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none border-b-4 ${selected ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>
-                                    {t} {t === 'Active Requests' && pendingTotalCount > 0 && <span className="ml-2 bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[9px]">{pendingTotalCount}</span>}
+                                <button className={`px-6 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none border-b-4 ${selected ? 'text-brand-600 border-brand-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>
+                                    {t} {t === 'Active Requests' && pendingTotalCount > 0 && <span className="ml-2 bg-brand-600 text-white px-2 py-0.5 rounded-full text-[9px]">{pendingTotalCount}</span>}
                                 </button>
                             )}
                         </Tab>
@@ -364,7 +364,7 @@ const LoanApprovals = () => {
                                         </div>
 
                                         <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl mb-6">
-                                            <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{app.category_name}</p>
+                                            <p className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-1">{app.category_name}</p>
                                             <p className="text-2xl font-black text-emerald-600">₹{Number(app.requested_amount).toLocaleString()}</p>
                                             <div className="flex justify-between mt-2 text-[9px] font-bold text-gray-500 uppercase">
                                                 <span>{app.repayment_months} Months</span>
@@ -373,7 +373,7 @@ const LoanApprovals = () => {
                                         </div>
 
                                         <div className="mt-auto flex flex-col gap-2">
-                                            <Button className="w-full font-black !py-3 shadow-indigo-500/20" 
+                                            <Button className="w-full font-black !py-3 shadow-brand-500/20" 
                                                 onClick={() => handleAction(app)}
 
                                             >
@@ -423,8 +423,8 @@ const LoanApprovals = () => {
             {/* Action Modal */}
             <Modal open={modal} onClose={() => setModal(false)} title="Review Loan Request" size="lg">
                 <div className="space-y-6">
-                                                        <div className="flex items-center gap-4 p-4 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl">
-                                                            <div className="bg-indigo-600 text-white p-3 rounded-xl font-black text-xl">
+                                                        <div className="flex items-center gap-4 p-4 bg-brand-50/50 dark:bg-brand-900/10 rounded-2xl">
+                                                            <div className="bg-brand-600 text-white p-3 rounded-xl font-black text-xl">
                                                                 {selectedApp?.employee_details.full_name.charAt(0)}
                                                             </div>
                                                             <div>
@@ -440,7 +440,7 @@ const LoanApprovals = () => {
                                                             </div>
                                                             <div className="panel border-gray-100 dark:border-gray-800 p-4">
                                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Duration</p>
-                                                                <p className="text-lg font-black text-indigo-600">{selectedApp?.repayment_months} Months</p>
+                                                                <p className="text-lg font-black text-brand-600">{selectedApp?.repayment_months} Months</p>
                                                             </div>
                                                         </div>
 
@@ -458,7 +458,7 @@ const LoanApprovals = () => {
                                                                     href={`${selectedApp.supporting_document}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
-                                                                    className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-bold text-sm"
+                                                                    className="inline-flex items-center gap-2 text-brand-600 hover:text-brand-700 font-bold text-sm"
                                                                 >
                                                                     <IconInfoCircle className="w-4 h-4" />
                                                                     View Attachment
@@ -469,7 +469,7 @@ const LoanApprovals = () => {
                                                         <div>
                                                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Decision Remarks</label>
                                                             <textarea
-                                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-indigo-500"
+                                                                className="form-textarea min-h-[100px] border-gray-200 focus:border-brand-500"
                                                                 placeholder="Add any internal remarks or reason for rejection..."
                                                                 value={remarks}
                                                                 onChange={e => setRemarks(e.target.value)}

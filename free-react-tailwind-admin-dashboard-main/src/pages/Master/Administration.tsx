@@ -8,7 +8,7 @@ import {
     apiRequest,
     Badge,
     Column,
-    DataTable,
+    ServerTable,
     FilterSelect,
     FormField,
     FormGrid,
@@ -20,12 +20,10 @@ import {
     ModalFooter,
     notifyError,
     notifySuccess,
-    SearchInput,
-    SectionCard,
-    TableToolbar,
     useServerTable,
 } from '../../components/Master';
 
+import Button from '../../components/Common/Button';
 interface Admin {
     id: number;
     username: string;
@@ -130,39 +128,27 @@ const MasterAdministration = () => {
             title="Administrators"
             description="Company administrator accounts. Assign an administrator to a company from the Companies page."
             actions={
-                <button type="button" className="btn btn-primary gap-2" onClick={openAdd}>
+                <Button type="button" onClick={openAdd}>
                     <IconPlus className="h-4 w-4" />
                     Add administrator
-                </button>
+                </Button>
             }
         >
-            <SectionCard flush>
-                <TableToolbar onReset={table.reset} canReset={table.hasActiveFilters} summary={!table.loading && `${table.total} ${table.total === 1 ? 'administrator' : 'administrators'}`}>
-                    <SearchInput value={table.search} onChange={table.setSearch} placeholder="Search name, username, email or company" />
-                    <FilterSelect label="Company" value={table.filters.assigned} onChange={(value) => table.setFilter('assigned', value)} options={ASSIGNMENT_OPTIONS} allLabel="Any" />
-                </TableToolbar>
-                <DataTable
-                    columns={columns}
-                    rows={table.rows}
-                    rowKey={(admin) => admin.id}
-                    loading={table.loading}
-                    error={table.error}
-                    onRetry={reload}
-                    ordering={table.ordering}
-                    onOrderingChange={table.setOrdering}
-                    emptyIcon={<IconListCheck className="h-6 w-6" />}
-                    emptyTitle={table.hasActiveFilters ? 'No administrators match these filters' : 'No administrators yet'}
-                    emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add an administrator, then assign them to a company.'}
-                    emptyAction={
-                        table.hasActiveFilters && (
-                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={table.reset}>
-                                Clear filters
-                            </button>
-                        )
-                    }
-                    pagination={{ page: table.page, pageSize: table.pageSize, total: table.total, onPageChange: table.setPage, onPageSizeChange: table.setPageSize, noun: 'administrators' }}
-                />
-            </SectionCard>
+            <ServerTable
+                table={table}
+                columns={columns}
+                rowKey={(admin) => admin.id}
+                noun="administrators"
+                searchPlaceholder="Search name, username, email or company"
+                filters={
+                    <>
+                        <FilterSelect label="Company" value={table.filters.assigned} onChange={(value) => table.setFilter('assigned', value)} options={ASSIGNMENT_OPTIONS} allLabel="Any" />
+                    </>
+                }
+                emptyIcon={<IconListCheck className="h-6 w-6" />}
+                emptyTitle={table.hasActiveFilters ? 'No administrators match these filters' : 'No administrators yet'}
+                emptyDescription={table.hasActiveFilters ? 'Try a different search term or clear the filters.' : 'Add an administrator, then assign them to a company.'}
+            />
 
             <MasterModal
                 open={modalOpen}
@@ -198,12 +184,12 @@ const MasterAdministration = () => {
                         </FormGrid>
                     </ModalBody>
                     <ModalFooter>
-                        <button type="button" className="btn btn-outline-dark" onClick={() => setModalOpen(false)} disabled={saving}>
+                        <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>
                             Cancel
-                        </button>
-                        <button type="submit" className="btn btn-primary" disabled={saving}>
+                        </Button>
+                        <Button type="submit" disabled={saving}>
                             {saving ? 'Saving...' : editing ? 'Save changes' : 'Add administrator'}
-                        </button>
+                        </Button>
                     </ModalFooter>
                 </form>
             </MasterModal>

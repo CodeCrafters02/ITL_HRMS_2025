@@ -4,8 +4,16 @@ import { setPageTitle } from '../../../store/themeConfigSlice';
 import { EmployeeTask, MyTasksResponse, TaskAssignment, TaskPriority, TaskStatus, fetchMyTasks, updateTaskAssignmentStatus } from './api';
 import IconLayoutGrid from '../../../components/Icon/IconLayoutGrid';
 import IconListCheck from '../../../components/Icon/IconListCheck';
-import IconSearch from '../../../components/Icon/IconSearch';
 
+import Button from '../../../components/Common/Button';
+import PageHeader from '../../../components/Common/PageHeader';
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import CardGrid from '../../../components/Common/CardGrid';
+import Modal from '../../../components/Common/Modal';
+import StatCard, { StatGrid } from '../../../components/Common/StatCard';
+import IconClock from '../../../components/Icon/IconClock';
+import IconChecks from '../../../components/Icon/IconChecks';
+import IconInfoTriangle from '../../../components/Icon/IconInfoTriangle';
 type PriorityFilter = 'all' | TaskPriority;
 type StatusFilter = 'all' | TaskStatus;
 type ViewMode = 'card' | 'table';
@@ -127,7 +135,6 @@ const MyTasks = () => {
         }
     }, [tasks, selectedTask]);
 
-    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
     const handleStatusUpdate = async (assignmentId: number, status: TaskStatus) => {
         try {
@@ -142,19 +149,6 @@ const MyTasks = () => {
         }
     };
 
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
 
     const statusSelect = (assignment: TaskAssignment) => (
         <select
@@ -170,198 +164,142 @@ const MyTasks = () => {
         </select>
     );
 
+    const filterControls = (
+        <>
+            <select className="form-select h-10 w-40 rounded-xl" value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value as PriorityFilter); setPage(1); }}>
+                <option value="all">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <select className="form-select h-10 w-44 rounded-xl" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}>
+                <option value="all">All Statuses</option>
+                <option value="todo">To Do</option>
+                <option value="inprogress">In Progress</option>
+                <option value="inreview">In Review</option>
+                <option value="done">Done</option>
+            </select>
+        </>
+    );
+
+    const viewSwitcher = (
+        <div className="flex items-center gap-1.5">
+            <Button size="sm" variant={viewMode === 'card' ? 'primary' : 'outline'} onClick={() => setViewMode('card')} aria-label="Card view"><IconLayoutGrid /></Button>
+            <Button size="sm" variant={viewMode === 'table' ? 'primary' : 'outline'} onClick={() => setViewMode('table')} aria-label="Table view"><IconListCheck /></Button>
+        </div>
+    );
+
+    const columns: Column<EmployeeTask>[] = [
+        {
+            key: 'title', title: 'Task',
+            render: (_v, task) => (
+                <div className="max-w-[320px]">
+                    <p className="truncate font-semibold">{task.title}</p>
+                    <p className="mt-1 truncate text-xs text-white-dark">{task.description || '-'}</p>
+                </div>
+            ),
+        },
+        { key: 'priority', title: 'Priority', render: (_v, task) => <span className={`badge ${priorityStyleMap[task.priority]}`}>{priorityLabelMap[task.priority]}</span> },
+        {
+            key: 'deadline', title: 'Deadline',
+            render: (_v, task) => {
+                const dueDate = parseDate(task.deadline);
+                const isOverdue = dueDate ? dueDate.getTime() < Date.now() : false;
+                return <span className={isOverdue ? 'font-semibold text-danger' : ''}>{formatDate(task.deadline)}</span>;
+            },
+        },
+        { key: 'created_at', title: 'Created On', hideBelow: 'lg', render: (_v, task) => formatDateTime(task.created_at) },
+        {
+            key: 'progress', title: 'Progress',
+            render: (_v, task) => (
+                <div className="flex min-w-[130px] items-center gap-2">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full bg-primary" style={{ width: `${task.progress}%` }} />
+                    </div>
+                    <span className="text-xs font-semibold text-primary">{task.progress}%</span>
+                </div>
+            ),
+        },
+        {
+            key: 'assignments', title: 'My Assignment', hideBelow: 'md',
+            render: (_v, task) => {
+                const ownAssign = getOwnAssignment(task.assignments, currentUserName);
+                return ownAssign ? statusSelect(ownAssign) : <span className="text-xs text-white-dark">-</span>;
+            },
+        },
+        { key: 'details', title: 'Details', align: 'center', render: (_v, task) => <Button variant="outline" size="sm" onClick={() => setSelectedTask(task)}>Open</Button> },
+    ];
+
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="panel bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] text-white border-0">
-                <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                        <IconListCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">My Tasks</h1>
-                        <p className="mt-1 text-white/75 text-sm md:text-base">Monitor assignments, update status, and keep work on schedule.</p>
-                    </div>
-                </div>
-            </div>
+            <PageHeader
+                title="My Tasks"
+                subtitle="Monitor assignments, update status, and keep work on schedule."
+            />
 
             {error && (
                 <div className="panel border border-danger/30 bg-danger-light text-danger">
                     <div className="flex items-center justify-between gap-3">
                         <p className="font-semibold">{error}</p>
-                        <button type="button" onClick={loadTasks} className="btn btn-sm btn-danger">
+                        <Button variant="danger" size="sm" type="button" onClick={loadTasks}>
                             Retry
-                        </button>
+                        </Button>
                     </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Assigned</p>
-                    <p className="text-2xl font-bold mt-2">{summary?.total ?? 0}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">In Progress</p>
-                    <p className="text-2xl font-bold mt-2 text-info">{summary?.in_progress ?? 0}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Completed</p>
-                    <p className="text-2xl font-bold mt-2 text-success">{summary?.done ?? 0}</p>
-                </div>
-                <div className="panel">
-                    <p className="text-white-dark text-xs uppercase tracking-wide">Overdue</p>
-                    <p className="text-2xl font-bold mt-2 text-danger">{summary?.overdue ?? 0}</p>
-                </div>
-            </div>
+            <StatGrid cols={4} className="!mb-0">
+                <StatCard label="Assigned" value={summary?.total ?? 0} tone="primary" icon={<IconListCheck />} />
+                <StatCard label="In Progress" value={summary?.in_progress ?? 0} tone="info" icon={<IconClock />} />
+                <StatCard label="Completed" value={summary?.done ?? 0} tone="success" icon={<IconChecks />} />
+                <StatCard label="Overdue" value={summary?.overdue ?? 0} tone="danger" icon={<IconInfoTriangle />} />
+            </StatGrid>
 
-            <div className="panel">
-                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                    <div className="flex flex-wrap items-center gap-3 flex-1">
-                        <div className="relative flex-1 min-w-[220px]">
-                            <input
-                                type="text"
-                                className="form-input pl-10"
-                                placeholder="Search title or description..."
-                                value={search}
-                                onChange={(e) => {
-                                    setSearch(e.target.value);
-                                    setPage(1);
-                                }}
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                <IconSearch className="w-4 h-4" />
-                            </span>
-                        </div>
-
-                        <select
-                            className="form-select sm:w-[150px]"
-                            value={priorityFilter}
-                            onChange={(e) => {
-                                setPriorityFilter(e.target.value as PriorityFilter);
-                                setPage(1);
-                            }}
-                        >
-                            <option value="all">All Priorities</option>
-                            <option value="high">High</option>
-                            <option value="medium">Medium</option>
-                            <option value="low">Low</option>
-                        </select>
-
-                        <select
-                            className="form-select sm:w-[160px]"
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value as StatusFilter);
-                                setPage(1);
-                            }}
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="todo">To Do</option>
-                            <option value="inprogress">In Progress</option>
-                            <option value="inreview">In Review</option>
-                            <option value="done">Done</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'card' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('card')}
-                            aria-label="Card view"
-                        >
-                            <IconLayoutGrid className="h-4 w-4" />
-                        </button>
-                        <button
-                            type="button"
-                            className={`btn btn-sm p-2 ${viewMode === 'table' ? 'btn-primary' : 'btn-outline-primary'}`}
-                            onClick={() => setViewMode('table')}
-                            aria-label="Table view"
-                        >
-                            <IconListCheck className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {totalCount > 0 && (
-                <div className="panel">
-                    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-white-dark">Per page</label>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={6}>6</option>
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            )}
-
-            {loading && tasks.length === 0 ? (
-                <div className="panel text-center py-14 text-white-dark">
-                    <div className="inline-block h-9 w-9 animate-spin rounded-full border-4 border-primary border-l-transparent mb-3" />
-                    <p>Loading tasks...</p>
-                </div>
-            ) : tasks.length === 0 ? (
-                <div className="panel text-center py-14 text-white-dark">
-                    <IconListCheck className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                    <p>No tasks available for current filters.</p>
-                </div>
-            ) : viewMode === 'card' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {tasks.map((task) => {
+            {viewMode === 'table' ? (
+                <DataTable
+                    columns={columns}
+                    data={tasks}
+                    loading={loading}
+                    page={page}
+                    pageSize={pageSize}
+                    pageSizeOptions={[6, 10, 20, 50]}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                    searchValue={search}
+                    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                    onRefresh={loadTasks}
+                    searchPlaceholder="Search title or description..."
+                    emptyMessage="No tasks available for current filters"
+                    entityLabel="tasks"
+                    filters={filterControls}
+                    actionButton={viewSwitcher}
+                />
+            ) : (
+                <CardGrid
+                    items={tasks}
+                    loading={loading}
+                    page={page}
+                    pageSize={pageSize}
+                    pageSizeOptions={[6, 10, 20, 50]}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                    searchValue={search}
+                    onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                    onRefresh={loadTasks}
+                    searchPlaceholder="Search title or description..."
+                    emptyMessage="No tasks available for current filters"
+                    entityLabel="tasks"
+                    filters={filterControls}
+                    actions={viewSwitcher}
+                    renderCard={(task) => {
                         const ownAssign = getOwnAssignment(task.assignments, currentUserName);
                         const dueDate = parseDate(task.deadline);
                         const isOverdue = dueDate ? dueDate.getTime() < Date.now() : false;
 
                         return (
-                            <div key={task.id} className="panel border border-white-light dark:border-[#1b2e4b]">
+                            <div className="panel border border-white-light dark:border-[#1b2e4b]">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                         <h3 className="font-semibold text-base truncate">{task.title}</h3>
@@ -370,9 +308,9 @@ const MyTasks = () => {
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
                                         <span className={`badge ${priorityStyleMap[task.priority]}`}>{priorityLabelMap[task.priority]}</span>
-                                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setSelectedTask(task)}>
+                                        <Button variant="outline" size="sm" type="button"  onClick={() => setSelectedTask(task)}>
                                             View
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -406,134 +344,68 @@ const MyTasks = () => {
 
                             </div>
                         );
-                    })}
-                </div>
-            ) : (
-                <div className="panel p-0 overflow-hidden">
-                    <div className="table-responsive">
-                        <table className="table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Task</th>
-                                    <th>Priority</th>
-                                    <th>Deadline</th>
-                                    <th>Created On</th>
-                                    <th>Progress</th>
-                                    <th>My Assignment</th>
-                                    <th className="text-center">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tasks.map((task) => {
-                                    const ownAssign = getOwnAssignment(task.assignments, currentUserName);
-                                    const dueDate = parseDate(task.deadline);
-                                    const isOverdue = dueDate ? dueDate.getTime() < Date.now() : false;
-
-                                    return (
-                                        <tr key={task.id}>
-                                            <td className="font-semibold">
-                                                <div className="max-w-[320px]">
-                                                    <p className="truncate">{task.title}</p>
-                                                    <p className="text-xs text-white-dark truncate mt-1">{task.description || '-'}</p>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${priorityStyleMap[task.priority]}`}>{priorityLabelMap[task.priority]}</span>
-                                            </td>
-                                            <td className={isOverdue ? 'text-danger font-semibold' : ''}>{formatDate(task.deadline)}</td>
-                                            <td>{formatDateTime(task.created_at)}</td>
-                                            <td>
-                                                <div className="flex items-center gap-2 min-w-[130px]">
-                                                    <div className="flex-1 h-1.5 bg-[#ebedf2] dark:bg-[#1b2e4b] rounded-full overflow-hidden">
-                                                        <div className="h-full bg-primary" style={{ width: `${task.progress}%` }} />
-                                                    </div>
-                                                    <span className="text-xs font-semibold text-primary">{task.progress}%</span>
-                                                </div>
-                                            </td>
-                                            <td>{ownAssign ? statusSelect(ownAssign) : <span className="text-xs text-white-dark">-</span>}</td>
-                                            <td className="text-center">
-                                                <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setSelectedTask(task)}>
-                                                    Open
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    }}
+                />
             )}
 
+
             {selectedTask && (
-                <div className="fixed inset-0 z-[100] bg-black/60 p-4 flex items-center justify-center" onClick={() => setSelectedTask(null)}>
-                    <div className="panel w-full max-w-3xl max-h-[92vh] overflow-auto dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h3 className="text-xl font-bold">{selectedTask.title}</h3>
-                                <p className="text-white-dark mt-1">{selectedTask.description || 'No description provided.'}</p>
-                            </div>
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setSelectedTask(null)}>
-                                Close
-                            </button>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
-                                <p className="text-xs text-white-dark">Priority</p>
-                                <p className="font-semibold mt-1">{priorityLabelMap[selectedTask.priority]}</p>
-                            </div>
-                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
-                                <p className="text-xs text-white-dark">Status</p>
-                                <p className="mt-1">
-                                    <span className={`badge ${statusStyleMap[selectedTask.status]}`}>{statusLabelMap[selectedTask.status]}</span>
-                                </p>
-                            </div>
-                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
-                                <p className="text-xs text-white-dark">Deadline</p>
-                                <p className="font-semibold mt-1">{formatDate(selectedTask.deadline)}</p>
-                            </div>
-                            <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
-                                <p className="text-xs text-white-dark">Created On</p>
-                                <p className="font-semibold mt-1">{formatDateTime(selectedTask.created_at)}</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-5">
-                            <h4 className="font-semibold mb-3">Subtasks ({selectedTask.subtask_details.length})</h4>
-                            {selectedTask.subtask_details.length === 0 ? (
-                                <p className="text-white-dark">No subtasks available.</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {selectedTask.subtask_details.map((sub) => (
-                                        <div key={sub.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <p className="font-semibold">{sub.title}</p>
-                                                <span className={`badge ${statusStyleMap[sub.status]}`}>{statusLabelMap[sub.status]}</span>
-                                            </div>
-                                            <p className="text-sm text-white-dark mt-1">{sub.description || '-'}</p>
-                                            <div className="mt-3 flex items-center justify-between text-xs text-white-dark">
-                                                <span>Progress: {sub.progress}%</span>
-                                                <span>Deadline: {formatDate(sub.deadline)}</span>
-                                            </div>
-                                            <div className="mt-3">
-                                                <p className="text-[11px] text-white-dark mb-1.5">My Subtask Assignment</p>
-                                                {(() => {
-                                                    const ownSubtaskAssignment = getOwnAssignment(sub.assignments, currentUserName);
-                                                    return ownSubtaskAssignment ? (
-                                                        statusSelect(ownSubtaskAssignment)
-                                                    ) : (
-                                                        <span className="text-xs text-white-dark">Not directly assigned</span>
-                                                    );
-                                                })()}
-                                            </div>
-                                        </div>
-                                    ))}
+                <Modal open onClose={() => setSelectedTask(null)} title={selectedTask.title} subtitle={selectedTask.description || 'No description provided.'} size="3xl">
+                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                    <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
+                                        <p className="text-xs text-white-dark">Priority</p>
+                                        <p className="font-semibold mt-1">{priorityLabelMap[selectedTask.priority]}</p>
+                                    </div>
+                                    <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
+                                        <p className="text-xs text-white-dark">Status</p>
+                                        <p className="mt-1">
+                                            <span className={`badge ${statusStyleMap[selectedTask.status]}`}>{statusLabelMap[selectedTask.status]}</span>
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
+                                        <p className="text-xs text-white-dark">Deadline</p>
+                                        <p className="font-semibold mt-1">{formatDate(selectedTask.deadline)}</p>
+                                    </div>
+                                    <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-3">
+                                        <p className="text-xs text-white-dark">Created On</p>
+                                        <p className="font-semibold mt-1">{formatDateTime(selectedTask.created_at)}</p>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+
+                                <div className="mt-5">
+                                    <h4 className="font-semibold mb-3">Subtasks ({selectedTask.subtask_details.length})</h4>
+                                    {selectedTask.subtask_details.length === 0 ? (
+                                        <p className="text-white-dark">No subtasks available.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {selectedTask.subtask_details.map((sub) => (
+                                                <div key={sub.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="font-semibold">{sub.title}</p>
+                                                        <span className={`badge ${statusStyleMap[sub.status]}`}>{statusLabelMap[sub.status]}</span>
+                                                    </div>
+                                                    <p className="text-sm text-white-dark mt-1">{sub.description || '-'}</p>
+                                                    <div className="mt-3 flex items-center justify-between text-xs text-white-dark">
+                                                        <span>Progress: {sub.progress}%</span>
+                                                        <span>Deadline: {formatDate(sub.deadline)}</span>
+                                                    </div>
+                                                    <div className="mt-3">
+                                                        <p className="text-[11px] text-white-dark mb-1.5">My Subtask Assignment</p>
+                                                        {(() => {
+                                                            const ownSubtaskAssignment = getOwnAssignment(sub.assignments, currentUserName);
+                                                            return ownSubtaskAssignment ? (
+                                                                statusSelect(ownSubtaskAssignment)
+                                                            ) : (
+                                                                <span className="text-xs text-white-dark">Not directly assigned</span>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                </Modal>
             )}
         </div>
     );

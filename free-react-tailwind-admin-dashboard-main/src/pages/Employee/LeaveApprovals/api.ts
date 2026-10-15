@@ -33,6 +33,25 @@ export const fetchManagerLeaveRequests = async (): Promise<ManagerLeaveRequest[]
     return Array.isArray(data) ? data : data.results || [];
 };
 
+export interface ManagerLeavePage {
+    results: ManagerLeaveRequest[];
+    count: number;
+    counts: Partial<Record<LeaveStatus, number>>;
+}
+
+/** Server-side page of leave requests (search + status filter handled by the backend). */
+export const fetchManagerLeavePage = async (opts: { page: number; pageSize: number; search?: string; status?: string }): Promise<ManagerLeavePage> => {
+    const url = new URL(`${EMPLOYEE_API}/emp-leaves/`);
+    url.searchParams.set('page', String(opts.page));
+    url.searchParams.set('page_size', String(opts.pageSize));
+    if (opts.search?.trim()) url.searchParams.set('search', opts.search.trim());
+    if (opts.status && opts.status !== 'all') url.searchParams.set('status', opts.status);
+    const res = await authFetch(url.toString());
+    const data = await parseJson<ManagerLeavePage | ManagerLeaveRequest[]>(res, 'Failed to load leave requests');
+    if (Array.isArray(data)) return { results: data, count: data.length, counts: {} };
+    return { results: data.results || [], count: data.count ?? (data.results || []).length, counts: data.counts || {} };
+};
+
 export const approveManagerLeave = async (leaveId: number): Promise<{ detail?: string }> => {
     const res = await authFetch(`${EMPLOYEE_API}/emp-leaves/${leaveId}/approve/`, {
         method: 'POST',

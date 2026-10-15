@@ -1038,18 +1038,18 @@ const AdminAssetsInventory = () => {
                                                 return (
                                                     <Fragment key={g.id}>
                                                         <tr 
-                                                            className={`cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/30'}`}
+                                                            className={`cursor-pointer transition-colors ${isExpanded ? 'bg-brand-50/50 dark:bg-brand-900/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800/30'}`}
                                                             onClick={() => toggleBatch(g.id)}
                                                         >
                                                             <td className="font-bold flex items-center gap-3">
-                                                                <div className={`p-1 rounded bg-indigo-100 text-indigo-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                                                                <div className={`p-1 rounded bg-brand-100 text-brand-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                                                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
                                                                 </div>
                                                                 <div className="flex flex-col">
-                                                                    <span className="text-sm font-black text-indigo-600 uppercase tracking-tighter">{g.requested_by_name || g.requested_by}</span>
+                                                                    <span className="text-sm font-black text-brand-600 uppercase tracking-tighter">{g.requested_by_name || g.requested_by}</span>
                                                                     <div className="flex gap-2 items-center">
                                                                         <span className="text-[9px] font-bold text-gray-400 font-mono italic">Order: {g.id}</span>
-                                                                        <span className="text-[9px] font-bold text-indigo-400 font-mono">ID: {g.requester_emp_id || 'N/A'}</span>
+                                                                        <span className="text-[9px] font-bold text-brand-400 font-mono">ID: {g.requester_emp_id || 'N/A'}</span>
                                                                     </div>
                                                                 </div>
                                                             </td>
@@ -1077,7 +1077,7 @@ const AdminAssetsInventory = () => {
                                                         {isExpanded && (
                                                             <tr className="animate__animated animate__fadeIn">
                                                                 <td colSpan={5} className="p-0">
-                                                                    <div className="bg-white dark:bg-gray-900 border-x border-b border-indigo-100 dark:border-indigo-900/30 p-4 shadow-inner">
+                                                                    <div className="bg-white dark:bg-gray-900 border-x border-b border-brand-100 dark:border-brand-900/30 p-4 shadow-inner">
                                                                         <table className="table-sm w-full">
                                                                             <thead className="bg-gray-50 dark:bg-gray-800">
                                                                                 <tr>
@@ -1103,7 +1103,7 @@ const AdminAssetsInventory = () => {
                                                                                             <p className="text-[9px] font-bold text-gray-400 uppercase italic leading-none">{it.remarks || '—'}</p>
                                                                                         </td>
                                                                                         <td className="text-center text-xs font-bold text-gray-400 italic">₹{(it.item_price || 0).toLocaleString()}</td>
-                                                                                        <td className="text-center font-black italic text-indigo-600">x{it.requested_quantity || 1}</td>
+                                                                                        <td className="text-center font-black italic text-brand-600">x{it.requested_quantity || 1}</td>
                                                                                         <td className="text-center text-xs font-black text-emerald-600 italic">₹{((it.item_price || 0) * (it.requested_quantity || 1)).toLocaleString()}</td>
                                                                                         <td className="text-center">
                                                                                             <span className={`badge uppercase text-[8px] font-black ${it.approval_status === 'approved' ? 'text-green-500' : it.approval_status === 'rejected' ? 'text-red-500' : 'text-amber-500'}`}>
@@ -1377,16 +1377,16 @@ const AdminAssetsInventory = () => {
                                             <textarea className="form-textarea" rows={2} value={siForm.vendor_details} onChange={(e) => setSiForm({ ...siForm, vendor_details: e.target.value })} />
                                         </div>
                                         <div>
-                                            <label className="form-label text-indigo-600 font-bold">Item Image (Optional)</label>
+                                            <label className="form-label text-brand-600 font-bold">Item Image (Optional)</label>
                                             <div className="flex items-center gap-4">
                                                 <input 
                                                     type="file" 
-                                                    className="form-input flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" 
+                                                    className="form-input flex-1 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 cursor-pointer" 
                                                     accept="image/*" 
                                                     onChange={(e) => setSiImage(e.target.files?.[0] || null)} 
                                                 />
                                                 {siImage && (
-                                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-indigo-200">
+                                                    <div className="w-12 h-12 rounded-lg overflow-hidden border border-brand-200">
                                                         <img src={URL.createObjectURL(siImage)} className="w-full h-full object-cover" alt="Preview" />
                                                     </div>
                                                 )}
@@ -1614,9 +1614,9 @@ const AdminAssetsInventory = () => {
                                 leaveTo="opacity-0 scale-95"
                             >
                                 <Dialog.Panel className="panel w-full max-w-lg overflow-hidden dark:bg-[#0e1726] shadow-2xl border-0 p-0">
-                                    <div className="bg-indigo-600 p-6">
+                                    <div className="bg-brand-600 p-6">
                                         <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Asset Approval Details</h3>
-                                        <p className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-80">Specifying action type and employee payment for this request</p>
+                                        <p className="text-brand-100 text-[10px] font-bold uppercase tracking-widest mt-1 opacity-80">Specifying action type and employee payment for this request</p>
                                     </div>
                                     <div className="p-6 space-y-5">
                                         <div>
@@ -1638,7 +1638,7 @@ const AdminAssetsInventory = () => {
                                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-gray-400">₹</span>
                                                 <input 
                                                     type="number"
-                                                    className="form-input pl-8 font-black text-indigo-600"
+                                                    className="form-input pl-8 font-black text-brand-600"
                                                     placeholder="0.00"
                                                     value={approvalData.employee_payment_amount}
                                                     onChange={(e) => setApprovalData({ ...approvalData, employee_payment_amount: Number(e.target.value) })}
@@ -1655,7 +1655,7 @@ const AdminAssetsInventory = () => {
                                             >
                                                 Cancel
                                             </button>
-                                            <Button className="flex-1 font-black text-xs italic shadow-indigo-500/20" 
+                                            <Button className="flex-1 font-black text-xs italic shadow-brand-500/20" 
                                                 type="button" 
                                                 
                                                 onClick={() => processBatch(approvalData.batchId, 'approved', approvalData)}

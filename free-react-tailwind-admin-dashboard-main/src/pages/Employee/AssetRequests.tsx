@@ -1,9 +1,13 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
 import Swal from 'sweetalert2';
 import { authFetch } from '../../utils/authFetch';
 
+import Button from '../../components/Common/Button';
+import PageHeader from '../../components/Common/PageHeader';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import Modal from '../../components/Common/Modal';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const authJsonHeaders = (): HeadersInit => ({ 'Content-Type': 'application/json' });
@@ -23,7 +27,8 @@ const EmployeeAssetRequests = () => {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
 
     const [remarks, setRemarks] = useState('');
     const [relatedFixedId, setRelatedFixedId] = useState('');
@@ -69,38 +74,26 @@ const EmployeeAssetRequests = () => {
             const url = new URL(`${API_BASE_URL}/app/asset-requests/`);
             url.searchParams.set('page', String(page));
             url.searchParams.set('page_size', String(pageSize));
+            url.searchParams.set('kind', activeTab);
+            if (search.trim()) url.searchParams.set('search', search.trim());
+            if (statusFilter) url.searchParams.set('approval_status', statusFilter);
             const res = await authFetch(url.toString(), { headers: authJsonHeaders() });
             const data = await parseList(res);
             setRows(data.results);
             setTotalCount(data.count);
-            setTotalPages(Math.max(1, Math.ceil((data.count || 0) / pageSize)));
         } catch (e: any) {
             setRows([]);
             setTotalCount(0);
-            setTotalPages(1);
             Swal.fire('Error', e?.message || 'Could not load requests', 'error');
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize]);
+    }, [page, pageSize, activeTab, search, statusFilter]);
 
     useEffect(() => {
-        load();
+        const t = setTimeout(load, 300);
+        return () => clearTimeout(t);
     }, [load]);
-
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
 
     const submit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -287,320 +280,233 @@ const EmployeeAssetRequests = () => {
         }
     }, [isRequestModalOpen, requestType, fetchSupplyItems]);
 
-    return (
-        <div className="space-y-6 animate__animated animate__fadeIn">
-            <div className="bg-gradient-to-r from-[#220fb6] via-[#4f6be5] to-[#0f52af] p-6 rounded-2xl shadow-xl text-white">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-extrabold tracking-tight">Asset Requests</h1>
-                        <p className="text-white/80 mt-1 text-sm">Raise a request for a variable item or report a core asset issue.</p>
-                        <p className="text-white/60 mt-2 text-xs">Signed in as: {myName}</p>
-                    </div>
-                    <button type="button" className="btn btn-primary w-full md:w-auto" onClick={() => setIsRequestModalOpen(true)}>
-                        New Request
-                    </button>
-                </div>
-            </div>
+    const statusBadge = (status: string) => (
+        <span
+            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${
+                status === 'approved' ? 'bg-emerald-500/10 text-emerald-600' : status === 'rejected' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
+            }`}
+        >
+            {status}
+        </span>
+    );
 
-            <div className="panel">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-lg font-bold">My requests</h2>
-                    <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => load()} disabled={loading}>
-                        {loading ? 'Loading…' : 'Refresh'}
-                    </button>
-                </div>
+    // A unified order arrives as several rows sharing a batch_id; show it as one expandable line.
+    const groups = useMemo(() => {
+        const out: any[] = [];
+        const seen = new Set<string>();
+        rows.forEach((item) => {
+            if (item.batch_id) {
+                if (seen.has(item.batch_id)) return;
+                seen.add(item.batch_id);
+                const items = rows.filter((x) => x.batch_id === item.batch_id);
+                out.push({ gid: `b-${item.batch_id}`, kind: 'batch', id: item.batch_id, items, created_at: item.created_at });
+            } else {
+                out.push({ gid: `r-${item.id}`, kind: 'single', row: item, created_at: item.created_at });
+            }
+        });
+        return out;
+    }, [rows]);
 
-                <div className="flex items-center gap-6 mb-6 border-b dark:border-gray-800">
-                    <button 
-                        className={`pb-2.5 px-2 text-xs font-black uppercase tracking-widest transition-all border-b-2 relative ${activeTab === 'core' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-                        onClick={() => { setActiveTab('core'); setPage(1); }}
-                    >
-                        Core Assets (Fixed)
-                        {activeTab === 'core' && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span>}
-                    </button>
-                    <button 
-                        className={`pb-2.5 px-2 text-xs font-black uppercase tracking-widest transition-all border-b-2 relative ${activeTab === 'supply' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
-                        onClick={() => { setActiveTab('supply'); setPage(1); }}
-                    >
-                        Supply Items (Variable)
-                        {activeTab === 'supply' && <span className="absolute -top-1 -right-1 flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span></span>}
-                    </button>
-                </div>
-                {totalCount > 0 && (
-                    <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
+    const isOpen = (g: any) => (g.kind === 'batch' ? expandedBatches.includes(g.id) : expandedRows.includes(g.row.id));
+    const toggleGroup = (g: any) => (g.kind === 'batch' ? toggleBatch(g.id) : toggleRow(g.row.id));
+    const overall = (g: any) => (g.items.every((i: any) => i.approval_status === 'approved') ? 'approved' : g.items.every((i: any) => i.approval_status === 'rejected') ? 'rejected' : 'pending');
+
+    const columns: Column<any>[] = [
+        {
+            key: 'order',
+            title: 'Order / Type',
+            render: (_v, g) => (
+                <div className="flex items-center gap-2.5">
+                    <span className={`rounded-md bg-slate-100 p-1 text-slate-500 transition-transform ${isOpen(g) ? 'rotate-180' : ''}`}>
+                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </span>
+                    {g.kind === 'batch' ? (
+                        <div>
+                            <p className="text-xs font-bold text-brand">Unified order</p>
+                            <p className="font-mono text-[10px] text-slate-400">{g.id}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs text-white-dark">Per page</label>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => {
-                                    setPageSize(Number(e.target.value));
-                                    setPage(1);
-                                }}
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                            </select>
+                    ) : (
+                        <div>
+                            <p className="text-xs font-bold text-slate-900">{g.row.related_fixed_asset ? 'Fixed asset request' : 'Supply request'}</p>
+                            <p className="text-[10px] font-bold uppercase text-brand">{g.row.item_name}</p>
                         </div>
+                    )}
+                </div>
+            ),
+        },
+        { key: 'items', title: 'Items', align: 'center', render: (_v, g) => (g.kind === 'batch' ? `${g.items.length} items` : g.row.requested_quantity || 1) },
+        { key: 'status', title: 'Status', align: 'center', render: (_v, g) => statusBadge(g.kind === 'batch' ? overall(g) : g.row.approval_status) },
+        { key: 'note', title: 'Note', hideBelow: 'md', render: (_v, g) => <span className="line-clamp-1 max-w-[220px] text-xs italic text-slate-500">{(g.kind === 'batch' ? g.items[0]?.remarks : g.row.remarks) || '—'}</span> },
+        { key: 'created_at', title: 'Created', align: 'right', render: (_v, g) => <span className="text-xs text-slate-400">{new Date(g.created_at).toLocaleDateString()}</span> },
+    ];
 
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
+    const renderDetails = (g: any) => {
+        if (!isOpen(g)) return null;
+        if (g.kind === 'batch') {
+            const total = g.items.reduce((acc: number, cur: any) => acc + (cur.item_price || 0) * (cur.requested_quantity || 1), 0);
+            return (
+                <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <table className="w-full text-xs">
+                        <thead className="bg-slate-50 text-[10px] uppercase text-slate-500">
                             <tr>
-                                <th>Order / Type</th>
-                                <th className="text-center">Items</th>
-                                <th className="text-center">Overall Status</th>
-                                <th>Note</th>
-                                <th className="text-end">Created</th>
+                                <th className="px-3 py-2 text-left">Item</th>
+                                <th className="px-3 py-2 text-center">Unit price</th>
+                                <th className="px-3 py-2 text-center">Qty</th>
+                                <th className="px-3 py-2 text-center">Subtotal</th>
+                                <th className="px-3 py-2 text-right">Status</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {rows.length === 0 ? (
-                                <tr><td colSpan={5} className="text-center py-6 text-gray-500">No requests yet.</td></tr>
-                            ) : (() => {
-                                const filtered = rows.filter(row => {
-                                     if (activeTab === 'core') return !!row.related_fixed_asset;
-                                     if (activeTab === 'supply') return !!row.related_supply_item;
-                                     return true;
-                                 });
-                                 if (filtered.length === 0) {
-                                     return <tr><td colSpan={5} className="text-center py-6 text-gray-400 italic">No {activeTab === 'core' ? 'core asset' : 'supply item'} requests in this view.</td></tr>;
-                                 }
-                                const groups: any[] = [];
-                                const seen = new Set();
-                                filtered.forEach(item => {
-                                    if (item.batch_id && !seen.has(item.batch_id)) {
-                                        seen.add(item.batch_id);
-                                        const items = filtered.filter(x => x.batch_id === item.batch_id);
-                                        groups.push({ type: 'batch', id: item.batch_id, items, ...item });
-                                    } else if (!item.batch_id) {
-                                        groups.push({ type: 'single', data: item });
-                                    }
-                                });
-
-                                return groups.map((g) => {
-                                    if (g.type === 'single') {
-                                        const row = g.data;
-                                        const isRowExpanded = expandedRows.includes(row.id);
-                                        return (
-                                            <Fragment key={row.id}>
-                                                <tr className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors" onClick={() => toggleRow(row.id)}>
-                                                    <td className="font-bold text-xs flex items-center gap-2">
-                                                        <div className={`p-0.5 rounded bg-gray-100 text-gray-500 transition-transform ${isRowExpanded ? 'rotate-180' : ''}`}>
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span>{row.related_fixed_asset ? 'Fixed Asset Request' : 'Supply Request'}</span>
-                                                            <span className="text-[9px] font-black uppercase text-indigo-600 leading-none">{row.item_name}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="text-center font-black">{row.requested_quantity || 1}</td>
-                                                    <td className="text-center">
-                                                        <span className={`badge uppercase text-[8px] font-black ${
-                                                            row.approval_status === 'approved' ? 'badge-outline-success' : 
-                                                            row.approval_status === 'rejected' ? 'badge-outline-danger' : 'badge-outline-warning'
-                                                        }`}>{row.approval_status}</span>
-                                                    </td>
-                                                    <td className="text-[10px] italic text-gray-500 max-w-[200px] truncate">{row.remarks || '—'}</td>
-                                                    <td className="text-end text-[10px] text-gray-400">{new Date(row.created_at).toLocaleDateString()}</td>
-                                                </tr>
-                                                {isRowExpanded && (
-                                                    <tr className="bg-gray-50/50 dark:bg-gray-800/20">
-                                                        <td colSpan={5} className="p-3">
-                                                            <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/30 rounded-lg p-3 shadow-sm flex flex-col gap-2">
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[10px] font-black uppercase text-gray-400">Approval Details</span>
-                                                                    <span className={`text-[10px] font-black uppercase ${row.approval_status === 'approved' ? 'text-green-500' : 'text-amber-500'}`}>{row.approval_status}</span>
-                                                                </div>
-                                                                
-                                                                {row.approval_status === 'approved' && row.related_fixed_asset && (
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/10 p-2 rounded border border-indigo-100/50 dark:border-indigo-900/20">
-                                                                            <p className="text-[8px] uppercase font-black text-indigo-400 mb-1 tracking-widest">Admin Action</p>
-                                                                            <p className="text-xs font-black uppercase text-indigo-700 dark:text-indigo-300 italic">{row.admin_action_type || 'General Approval'}</p>
-                                                                        </div>
-                                                                        <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-2 rounded border border-emerald-100/50 dark:border-emerald-900/20">
-                                                                            <p className="text-[8px] uppercase font-black text-emerald-400 mb-1 tracking-widest">Employee Payment</p>
-                                                                            <p className="text-xs font-black uppercase text-emerald-700 dark:text-emerald-300 italic">
-                                                                                {Number(row.employee_payment_amount) > 0 ? `₹${Number(row.employee_payment_amount).toLocaleString()}` : 'NIL (Covered by Company)'}
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                
-                                                                {row.approval_status === 'rejected' && (
-                                                                    <div className="bg-red-50/50 dark:bg-red-900/10 p-2 rounded border border-red-100/50 dark:border-red-900/20">
-                                                                        <p className="text-[8px] uppercase font-black text-red-400 mb-1 tracking-widest">Reason for Rejection</p>
-                                                                        <p className="text-xs font-medium text-red-700 dark:text-red-300 italic">{row.remarks || 'No specific reason provided.'}</p>
-                                                                    </div>
-                                                                )}
-
-                                                                {!row.admin_action_type && row.approval_status === 'approved' && !row.related_fixed_asset && (
-                                                                    <p className="text-[10px] text-gray-400 italic">No additional details for this supply request.</p>
-                                                                )}
-                                                                
-                                                                {row.approval_status === 'pending' && (
-                                                                    <p className="text-[10px] text-gray-400 italic">This request is waiting for administrator review.</p>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </Fragment>
-                                        );
-                                    }
-
-                                    const isExpanded = expandedBatches.includes(g.id);
-                                    const overallStatus = g.items.every((i: any) => i.approval_status === 'approved') ? 'approved' : 
-                                                        g.items.every((i: any) => i.approval_status === 'rejected') ? 'rejected' : 'pending';
-
-                                    return (
-                                        <Fragment key={g.id}>
-                                            <tr className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/20 transition-colors" onClick={() => toggleBatch(g.id)}>
-                                                <td className="font-bold flex items-center gap-2">
-                                                    <div className={`p-0.5 rounded bg-gray-100 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-black uppercase text-indigo-600 tracking-tighter italic">Unified Order</span>
-                                                        <span className="text-[8px] font-bold text-gray-400 font-mono tracking-tighter">{g.id}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="text-center font-black text-xs text-gray-500 italic">{g.items.length} Items</td>
-                                                <td className="text-center">
-                                                    <span className={`badge uppercase text-[8px] font-black ${
-                                                        overallStatus === 'approved' ? 'badge-outline-success bg-green-50' : 
-                                                        overallStatus === 'rejected' ? 'badge-outline-danger bg-red-50' : 'badge-outline-warning bg-amber-50'
-                                                    }`}>{overallStatus}</span>
-                                                </td>
-                                                <td className="text-[10px] italic text-gray-500 max-w-[200px] truncate">{g.items[0]?.remarks || '—'}</td>
-                                                <td className="text-end text-[10px] text-gray-400">{new Date(g.created_at).toLocaleDateString()}</td>
-                                            </tr>
-                                            {isExpanded && (
-                                                <tr className="bg-gray-50/30 dark:bg-gray-800/10">
-                                                    <td colSpan={5} className="p-4">
-                                                        <div className="bg-white dark:bg-gray-900 border border-indigo-100 dark:border-indigo-900/30 rounded-xl overflow-hidden shadow-inner">
-                                                            <table className="table-sm w-full">
-                                                                <thead className="bg-gray-50 dark:bg-gray-800">
-                                                                    <tr>
-                                                                        <th className="text-[10px] uppercase font-black">Item</th>
-                                                                        <th className="text-[10px] uppercase font-black text-center">Unit Price</th>
-                                                                        <th className="text-[10px] uppercase font-black text-center">Qty</th>
-                                                                        <th className="text-[10px] uppercase font-black text-center">Subtotal</th>
-                                                                        <th className="text-end text-[10px] uppercase font-black pr-4">Status</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {g.items.map((it: any) => (
-                                                                        <tr key={it.id} className="border-b border-gray-50 dark:border-gray-800">
-                                                                            <td className="py-2 flex items-center gap-3">
-                                                                                <div className="w-8 h-8 rounded bg-gray-50 dark:bg-gray-800 overflow-hidden flex-shrink-0">
-                                                                                    {it.item_image ? <img src={it.item_image} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[6px] font-black opacity-20 uppercase">No Img</div>}
-                                                                                </div>
-                                                                                <div>
-                                                                                    <p className="text-[10px] font-black uppercase leading-tight">{it.item_name}</p>
-                                                                                    <p className="text-[8px] font-bold text-gray-400 italic leading-none">{it.remarks || '—'}</p>
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="text-center text-[10px] font-bold text-gray-400 italic">₹{(it.item_price || 0).toLocaleString()}</td>
-                                                                            <td className="text-center text-[10px] font-black text-indigo-600 italic">x{it.requested_quantity}</td>
-                                                                            <td className="text-center text-[10px] font-black text-emerald-600 italic">₹{((it.item_price || 0) * (it.requested_quantity || 1)).toLocaleString()}</td>
-                                                                            <td className="text-end pr-4">
-                                                                                <span className={`text-[9px] font-black uppercase ${it.approval_status === 'approved' ? 'text-green-500' : it.approval_status === 'rejected' ? 'text-red-500' : 'text-amber-500'}`}>
-                                                                                    {it.approval_status}
-                                                                                </span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                                <tfoot className="bg-emerald-50/50 dark:bg-emerald-900/5">
-                                                                    <tr>
-                                                                        <td colSpan={3} className="text-right py-2 pr-4 text-[9px] font-black uppercase text-gray-400 italic">Combined Order Total:</td>
-                                                                        <td className="text-center py-2 text-xs font-black italic text-emerald-600 tracking-tighter">
-                                                                            ₹{g.items.reduce((acc: number, cur: any) => acc + (cur.item_price || 0) * (cur.requested_quantity || 1), 0).toLocaleString()}
-                                                                        </td>
-                                                                        <td></td>
-                                                                    </tr>
-                                                                </tfoot>
-                                                            </table>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
-                                    );
-                                });
-                            })()}
+                        <tbody className="divide-y divide-slate-100">
+                            {g.items.map((it: any) => (
+                                <tr key={it.id}>
+                                    <td className="px-3 py-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="h-8 w-8 shrink-0 overflow-hidden rounded bg-slate-100">{it.item_image && <img src={it.item_image} className="h-full w-full object-cover" />}</div>
+                                            <div>
+                                                <p className="font-bold uppercase leading-tight text-slate-800">{it.item_name}</p>
+                                                <p className="text-[10px] italic text-slate-400">{it.remarks || '—'}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 text-center text-slate-500">₹{(it.item_price || 0).toLocaleString()}</td>
+                                    <td className="px-3 py-2 text-center font-bold text-brand">x{it.requested_quantity}</td>
+                                    <td className="px-3 py-2 text-center font-bold text-emerald-600">₹{((it.item_price || 0) * (it.requested_quantity || 1)).toLocaleString()}</td>
+                                    <td className="px-3 py-2 text-right">{statusBadge(it.approval_status)}</td>
+                                </tr>
+                            ))}
                         </tbody>
+                        <tfoot className="bg-emerald-50/60">
+                            <tr>
+                                <td colSpan={3} className="px-3 py-2 text-right text-[10px] font-bold uppercase text-slate-400">
+                                    Combined order total
+                                </td>
+                                <td className="px-3 py-2 text-center font-extrabold text-emerald-600">₹{total.toLocaleString()}</td>
+                                <td />
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
+            );
+        }
+        const row = g.row;
+        return (
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
+                <p className="text-[10px] font-extrabold uppercase text-slate-400">Approval details</p>
+                {row.approval_status === 'approved' && row.related_fixed_asset && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg border border-brand/15 bg-brand/5 p-3">
+                            <p className="mb-1 text-[9px] font-extrabold uppercase tracking-widest text-brand">Admin action</p>
+                            <p className="text-xs font-bold uppercase italic text-brand-dark">{row.admin_action_type || 'General approval'}</p>
+                        </div>
+                        <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+                            <p className="mb-1 text-[9px] font-extrabold uppercase tracking-widest text-emerald-600">Employee payment</p>
+                            <p className="text-xs font-bold uppercase italic text-emerald-700">{Number(row.employee_payment_amount) > 0 ? `₹${Number(row.employee_payment_amount).toLocaleString()}` : 'NIL (covered by company)'}</p>
+                        </div>
+                    </div>
+                )}
+                {row.approval_status === 'rejected' && (
+                    <div className="rounded-lg border border-rose-100 bg-rose-50/60 p-3">
+                        <p className="mb-1 text-[9px] font-extrabold uppercase tracking-widest text-rose-500">Reason for rejection</p>
+                        <p className="text-xs italic text-rose-700">{row.remarks || 'No specific reason provided.'}</p>
+                    </div>
+                )}
+                {!row.admin_action_type && row.approval_status === 'approved' && !row.related_fixed_asset && <p className="text-xs italic text-slate-400">No additional details for this supply request.</p>}
+                {row.approval_status === 'pending' && <p className="text-xs italic text-slate-400">This request is waiting for administrator review.</p>}
+            </div>
+        );
+    };
+
+    return (
+        <div className="space-y-6 animate__animated animate__fadeIn">
+            <PageHeader
+                title="Asset Requests"
+                subtitle="Raise a request for a variable item or report a core asset issue."
+                actions={
+                    <Button onClick={() => setIsRequestModalOpen(true)}>New Request</Button>
+                }
+            />
+
+            <div role="tablist" className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-sm">
+                {([['core', 'Core assets (fixed)'], ['supply', 'Supply items (variable)']] as const).map(([key, label]) => (
+                    <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === key}
+                        onClick={() => {
+                            setActiveTab(key);
+                            setPage(1);
+                        }}
+                        className={`rounded-xl px-5 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/25 ${
+                            activeTab === key ? 'bg-gradient-to-r from-brand to-brand-mid text-white shadow-md shadow-brand/25' : 'text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                        {label}
+                    </button>
+                ))}
             </div>
 
-            {isRequestModalOpen && (
-                <div className="fixed inset-0 z-[100] bg-black/60 p-4 flex items-center justify-center" onClick={() => setIsRequestModalOpen(false)}>
-                    <div className="panel w-full max-w-4xl max-h-[95vh] overflow-auto dark:bg-[#0e1726] shadow-2xl border-0" onClick={(e) => e.stopPropagation()}>
-                        {/* Modal Header */}
-                        <div className="flex items-start justify-between gap-3 mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
-                            <div>
-                                <h3 className="text-2xl font-black text-indigo-600 italic uppercase tracking-tighter">
-                                    {requestType === 'supply' ? 'Supply Catalog' : requestType === 'core' ? 'Core Asset Request' : 'Choose Request Type'}
-                                </h3>
-                                <p className="text-white-dark mt-1 text-xs font-bold uppercase tracking-widest opacity-60">
-                                    {requestType ? 'Fill in the details below' : 'Select the type of asset you want to request'}
-                                </p>
-                            </div>
-                            <button type="button" className="btn btn-sm btn-outline-danger font-black" onClick={() => setIsRequestModalOpen(false)}>
-                                Close
-                            </button>
-                        </div>
+            <DataTable
+                columns={columns}
+                data={groups}
+                rowKey={(g) => g.gid}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => {
+                    setPageSize(n);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                }}
+                searchPlaceholder="Search my requests..."
+                onRefresh={load}
+                entityLabel="requests"
+                emptyMessage={`No ${activeTab === 'core' ? 'core asset' : 'supply item'} requests found`}
+                onRowClick={toggleGroup}
+                renderSubRow={renderDetails}
+                filters={
+                    <select
+                        className="form-select h-10 w-44 rounded-xl text-xs"
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            setPage(1);
+                        }}
+                    >
+                        <option value="">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                }
+            />
 
+            <Modal
+                open={isRequestModalOpen}
+                onClose={() => setIsRequestModalOpen(false)}
+                dismissible={false}
+                size="4xl"
+                title={requestType === 'supply' ? 'Supply Catalog' : requestType === 'core' ? 'Core Asset Request' : 'Choose Request Type'}
+                subtitle={requestType ? 'Fill in the details below' : 'Select the type of asset you want to request'}
+            >
+                <div>
                         {!requestType ? (
                             /* Selection Stage */
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-10">
                                 <button 
                                     onClick={() => setRequestType('core')}
-                                    className="group panel border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-indigo-500 transition-all p-10 flex flex-col items-center text-center gap-4 bg-gray-50/50 dark:bg-gray-900/50"
+                                    className="group panel border-2 border-dashed border-gray-200 dark:border-gray-800 hover:border-brand-500 transition-all p-10 flex flex-col items-center text-center gap-4 bg-gray-50/50 dark:bg-gray-900/50"
                                 >
-                                    <div className="w-20 h-20 rounded-2xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+                                    <div className="w-20 h-20 rounded-2xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <svg className="w-10 h-10 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
                                     </div>
                                     <div>
                                         <h4 className="text-xl font-black uppercase italic">Core Assets</h4>
@@ -630,7 +536,7 @@ const EmployeeAssetRequests = () => {
                                         value={supplySearch}
                                         onChange={(e) => setSupplySearch(e.target.value)}
                                     />
-                                    <button onClick={() => setRequestType(null)} className="btn btn-outline-dark uppercase font-black text-xs">Back</button>
+                                    <Button variant="secondary" onClick={() => setRequestType(null)}>Back</Button>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -645,7 +551,7 @@ const EmployeeAssetRequests = () => {
                                                 <div 
                                                     key={item.id} 
                                                     onClick={() => addToCart(item)}
-                                                    className={`panel cursor-pointer group transition-all relative overflow-hidden border-2 ${inCart ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-transparent hover:border-indigo-200'} ${item.available_quantity === 0 ? 'opacity-60 grayscale cursor-not-allowed' : ''}`}
+                                                    className={`panel cursor-pointer group transition-all relative overflow-hidden border-2 ${inCart ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-transparent hover:border-brand-200'} ${item.available_quantity === 0 ? 'opacity-60 grayscale cursor-not-allowed' : ''}`}
                                                 >
                                                     <div className="flex gap-3">
                                                         <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0 border border-gray-100 dark:border-gray-700">
@@ -659,7 +565,7 @@ const EmployeeAssetRequests = () => {
                                                             <h5 className="font-black text-gray-800 dark:text-white-light truncate text-sm uppercase">{item.item_name}</h5>
                                                             <div className="flex items-center gap-2">
                                                                 <p className="text-[10px] font-bold text-gray-400 uppercase italic truncate">{item.sub_category}</p>
-                                                                <span className="text-[10px] font-black text-indigo-600">₹{Number(item.unit_price || 0).toLocaleString()}</span>
+                                                                <span className="text-[10px] font-black text-brand-600">₹{Number(item.unit_price || 0).toLocaleString()}</span>
                                                             </div>
                                                             <div className="mt-1 flex flex-wrap gap-1">
                                                                 {item.available_quantity > 0 ? (
@@ -676,22 +582,19 @@ const EmployeeAssetRequests = () => {
 
                                                     <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-800 pt-2">
                                                         {!inCart ? (
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); addToCart(item); }}
-                                                                className="btn btn-sm btn-outline-indigo w-full py-1 text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white"
-                                                            >
+                                                            <Button variant="outline" size="sm" fullWidth onClick={(e) => { e.stopPropagation(); addToCart(item); }}>
                                                                 Add to Basket
-                                                            </button>
+                                                            </Button>
                                                         ) : (
-                                                            <div className="flex items-center justify-between w-full bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-1 animate__animated animate__fadeIn">
+                                                            <div className="flex items-center justify-between w-full bg-brand-50 dark:bg-brand-900/20 rounded-lg p-1 animate__animated animate__fadeIn">
                                                                 <button 
                                                                     onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, -1); }}
-                                                                    className="w-7 h-7 flex items-center justify-center font-black text-indigo-600 hover:bg-white dark:hover:bg-gray-800 rounded-md transition-all shadow-sm"
+                                                                    className="w-7 h-7 flex items-center justify-center font-black text-brand-600 hover:bg-white dark:hover:bg-gray-800 rounded-md transition-all shadow-sm"
                                                                 >-</button>
-                                                                <span className="text-xs font-black italic text-indigo-700">{inCart.quantity}</span>
+                                                                <span className="text-xs font-black italic text-brand-700">{inCart.quantity}</span>
                                                                 <button 
                                                                     onClick={(e) => { e.stopPropagation(); updateCartQty(item.id, 1); }}
-                                                                    className="w-7 h-7 flex items-center justify-center font-black text-indigo-600 hover:bg-white dark:hover:bg-gray-800 rounded-md transition-all shadow-sm"
+                                                                    className="w-7 h-7 flex items-center justify-center font-black text-brand-600 hover:bg-white dark:hover:bg-gray-800 rounded-md transition-all shadow-sm"
                                                                 >+</button>
                                                             </div>
                                                         )}
@@ -720,7 +623,7 @@ const EmployeeAssetRequests = () => {
                                                         <h6 className="font-black uppercase text-[11px] truncate">{item.item_name}</h6>
                                                         <div className="flex items-center gap-2">
                                                             <p className="text-[9px] text-gray-400 font-bold uppercase">{item.category}</p>
-                                                            <span className="text-[9px] font-black text-indigo-600 italic">@ ₹{item.price.toLocaleString()}</span>
+                                                            <span className="text-[9px] font-black text-brand-600 italic">@ ₹{item.price.toLocaleString()}</span>
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -755,13 +658,11 @@ const EmployeeAssetRequests = () => {
                                                     <p className="text-xl font-black italic text-emerald-600 tracking-tighter leading-none">₹{cartTotal.toLocaleString()}</p>
                                                 </div>
                                             </div>
-                                            <button 
+                                            <Button className="w-full md:w-auto !px-10 !py-3 font-black italic h-full" 
                                                 onClick={submit} 
-                                                disabled={loading}
-                                                className="btn btn-primary w-full md:w-auto px-10 py-3 uppercase font-black italic tracking-widest shadow-xl shadow-emerald-500/20 h-full"
-                                            >
+                                                disabled={loading}>
                                                 {loading ? 'Sending...' : 'Place Request'}
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 )}
@@ -771,7 +672,7 @@ const EmployeeAssetRequests = () => {
                             <form onSubmit={submit} className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-xs font-black uppercase text-indigo-600 mb-2 block tracking-widest">Select Assigned Asset (Optional)</label>
+                                        <label className="text-xs font-black uppercase text-brand-600 mb-2 block tracking-widest">Select Assigned Asset (Optional)</label>
                                         <select 
                                             className="form-select" 
                                             value={relatedFixedId} 
@@ -793,12 +694,12 @@ const EmployeeAssetRequests = () => {
                                         <p className="text-[10px] text-gray-400 mt-1 italic font-bold">Select the item you are reporting an issue for.</p>
                                     </div>
                                     <div>
-                                        <label className="text-xs font-black uppercase text-indigo-600 mb-2 block tracking-widest">Upload Photo (Optional)</label>
+                                        <label className="text-xs font-black uppercase text-brand-600 mb-2 block tracking-widest">Upload Photo (Optional)</label>
                                         <input type="file" accept="image/*" className="form-input" onChange={(e) => setImage(e.target.files?.[0] || null)} />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-black uppercase text-indigo-600 mb-2 block tracking-widest">Describe Issue or Request</label>
+                                    <label className="text-xs font-black uppercase text-brand-600 mb-2 block tracking-widest">Describe Issue or Request</label>
                                     <textarea 
                                         className="form-textarea" 
                                         rows={4} 
@@ -808,14 +709,13 @@ const EmployeeAssetRequests = () => {
                                     />
                                 </div>
                                 <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-gray-800">
-                                    <button type="button" onClick={() => setRequestType(null)} className="btn btn-outline-dark uppercase font-black text-xs px-10">Back</button>
-                                    <button type="submit" className="btn btn-primary px-10 py-3 uppercase font-black italic tracking-widest shadow-lg shadow-indigo-500/20">Submit Request</button>
+                                    <Button type="button" variant="secondary" onClick={() => setRequestType(null)}>Back</Button>
+                                    <Button className="!px-10 !py-3 font-black italic shadow-brand-500/20" type="submit">Submit Request</Button>
                                 </div>
                             </form>
                         )}
-                    </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 };

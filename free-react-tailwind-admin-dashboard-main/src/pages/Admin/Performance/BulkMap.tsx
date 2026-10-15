@@ -4,6 +4,7 @@ import IconSearch from '../../../components/Icon/IconSearch';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Employee {
     id: number;
     employee_id: string;
@@ -320,7 +321,7 @@ const BulkMap = () => {
                                                 ))
                                             )}
                                             {selectedKraKpis.map(kpi => (
-                                                <span key={kpi.id} className="text-[8px] font-bold text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">{kpi.name}</span>
+                                                <span key={kpi.id} className="text-[8px] font-bold text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full">{kpi.name}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -452,7 +453,7 @@ const BulkMap = () => {
                                 <button
                                     onClick={handleBulkAssign}
                                     disabled={assigning || selectedEmpIds.length === 0 || !reviewerId}
-                                    className="px-5 py-2 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-bold shadow-md shadow-brand/10 transition duration-300"
+                                    className={buttonClasses('primary', 'sm')}
                                 >
                                     {assigning ? 'Mapping...' : `Map to ${selectedEmpIds.length || ''} Employee(s)`}
                                 </button>

@@ -16,5 +16,11 @@ export const confirmSignOut = async (): Promise<boolean> => {
     });
     if (!result.isConfirmed) return false;
     clearAllSessionData();
+    try {
+        localStorage.removeItem('company_theme_vars');
+        localStorage.removeItem('company_name');
+    } catch {
+        /* storage unavailable */
+    }
     return true;
 };

@@ -23,8 +23,8 @@ const tones: Record<StatTone, { tile: string; bar: string; ring: string }> = {
     success: { tile: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300', bar: 'bg-emerald-500', ring: 'ring-emerald-500/30' },
     warning: { tile: 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300', bar: 'bg-amber-500', ring: 'ring-amber-500/30' },
     danger: { tile: 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300', bar: 'bg-rose-500', ring: 'ring-rose-500/30' },
-    info: { tile: 'bg-sky-500/10 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300', bar: 'bg-sky-500', ring: 'ring-sky-500/30' },
-    purple: { tile: 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/15 dark:text-purple-300', bar: 'bg-purple-500', ring: 'ring-purple-500/30' },
+    info: { tile: 'bg-brand-500/10 text-brand-600 dark:bg-brand-500/15 dark:text-brand-300', bar: 'bg-brand-500', ring: 'ring-brand-500/30' },
+    purple: { tile: 'bg-brand-accent/10 text-brand-accent dark:bg-brand-accent/15 dark:text-brand-300', bar: 'bg-brand-accent', ring: 'ring-brand-accent/30' },
     slate: { tile: 'bg-slate-500/10 text-slate-600 dark:bg-slate-500/15 dark:text-slate-300', bar: 'bg-slate-500', ring: 'ring-slate-500/30' },
 };
 
@@ -74,12 +74,12 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, tone = '
 };
 
 export interface StatGridProps {
-    cols?: 2 | 3 | 4 | 5;
+    cols?: 2 | 3 | 4 | 5 | 6;
     className?: string;
     children: React.ReactNode;
 }
 
-const gridCols = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4', 5: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5' };
+const gridCols = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4', 5: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5', 6: 'sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6' };
 
 export const StatGrid: React.FC<StatGridProps> = ({ cols = 4, className = '', children }) => <div className={`mb-6 grid grid-cols-1 gap-4 ${gridCols[cols]} ${className}`}>{children}</div>;
 

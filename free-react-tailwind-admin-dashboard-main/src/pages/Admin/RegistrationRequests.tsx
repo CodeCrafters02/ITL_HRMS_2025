@@ -222,7 +222,7 @@ const RegistrationRequests = () => {
             render: (_val, r) => (
                 <div>
                     <p className="font-bold text-xs text-gray-800 dark:text-gray-200">{r.desired_designation || '—'}</p>
-                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 mt-0.5">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300 mt-0.5">
                         {r.desired_department || '—'}
                     </span>
                 </div>
@@ -357,7 +357,7 @@ const RegistrationRequests = () => {
             {selected && (
                 <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center p-4" onClick={() => setSelected(null)}>
                     <div className="panel w-full max-w-2xl max-h-[90vh] overflow-auto p-0" onClick={(e) => e.stopPropagation()}>
-                        <div className="bg-gradient-to-r from-indigo-500 to-violet-600 p-5 text-white flex items-start justify-between">
+                        <div className="bg-gradient-to-r from-brand-500 to-brand-accent p-5 text-white flex items-start justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-xl font-extrabold">
                                     {selected.first_name.charAt(0).toUpperCase()}

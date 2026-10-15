@@ -10,6 +10,8 @@ import IconSettings from '../../components/Icon/IconSettings';
 import IconRefresh from '../../components/Icon/IconRefresh';
 import { apiRequest, Badge, EmptyState, Identity, MasterPage, SectionCard, StatCard, StatGrid, Tone, TONES } from '../../components/Master';
 
+import Button from '../../components/Common/Button';
+import HeroBanner from '../../components/Common/HeroBanner';
 interface CompanyAdmin {
     username: string;
     email: string;
@@ -78,25 +80,26 @@ const MasterDashboard = () => {
     let donutOffset = 0;
 
     return (
-        <MasterPage
-            title={`${greeting}, ${displayName}`}
-            description={`${today} · Platform overview across every company.`}
-            actions={
-                <button type="button" className="btn btn-outline-primary gap-2" onClick={loadStats} disabled={loading}>
-                    <IconRefresh className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </button>
-            }
-        >
+        <div className="space-y-6">
+            <HeroBanner
+                eyebrow="Master Console"
+                title={`${greeting}, ${displayName}`}
+                subtitle={`${today} · Platform overview across every company.`}
+                aside={
+                    <Button variant="secondary" leftIcon={<IconRefresh className={loading ? 'animate-spin' : ''} />} onClick={loadStats} disabled={loading}>
+                        Refresh
+                    </Button>
+                }
+            />
             {error && !stats ? (
                 <SectionCard>
                     <EmptyState
                         title="Could not load the dashboard"
                         description={error}
                         action={
-                            <button type="button" className="btn btn-primary btn-sm" onClick={loadStats}>
+                            <Button type="button" onClick={loadStats} size="sm">
                                 Try again
-                            </button>
+                            </Button>
                         }
                     />
                 </SectionCard>
@@ -205,7 +208,7 @@ const MasterDashboard = () => {
                     </SectionCard>
                 </>
             )}
-        </MasterPage>
+        </div>
     );
 };
 

@@ -21,7 +21,7 @@ const AdminComingSoon = () => {
     return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] animate__animated animate__fadeIn">
             <div className="relative mb-8">
-                <div className="w-28 h-28 bg-gradient-to-br from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 rounded-full flex items-center justify-center">
+                <div className="w-28 h-28 bg-gradient-to-br from-brand-500/10 to-brand-accent/10 dark:from-brand-500/20 dark:to-brand-accent/20 rounded-full flex items-center justify-center">
                     <IconMenuDocumentation className="w-14 h-14 text-primary" />
                 </div>
                 <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg">

@@ -250,12 +250,12 @@ const SalaryStructure = () => {
                                                 <span className="ml-auto bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">AUTO</span>
                                             </div>
                                             <div className="flex items-center gap-3 bg-white dark:bg-[#0e1726] rounded-lg p-3 shadow-sm border border-emerald-100 dark:border-emerald-900/20">
-                                                <div className="w-2 h-10 bg-blue-500 rounded-full"></div>
+                                                <div className="w-2 h-10 bg-brand-500 rounded-full"></div>
                                                 <div>
                                                     <p className="font-bold text-gray-800 dark:text-white">Pay Based on Days</p>
                                                     <p className="text-xs text-gray-500">Calculated from employee attendance</p>
                                                 </div>
-                                                <span className="ml-auto bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-3 py-1 rounded-full text-xs font-bold">AUTO</span>
+                                                <span className="ml-auto bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 px-3 py-1 rounded-full text-xs font-bold">AUTO</span>
                                             </div>
                                             <div className="flex items-center gap-3 bg-white dark:bg-[#0e1726] rounded-lg p-3 shadow-sm border border-emerald-100 dark:border-emerald-900/20">
                                                 <div className="w-2 h-10 bg-amber-500 rounded-full"></div>

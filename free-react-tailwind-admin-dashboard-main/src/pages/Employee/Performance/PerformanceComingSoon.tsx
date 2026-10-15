@@ -20,10 +20,10 @@ const PerformanceComingSoon = ({ title, desc, plannedFeatures }: ComingSoonProps
         <div className="flex flex-col items-center justify-center min-h-[70vh] py-8 animate__animated animate__fadeIn">
             {/* Pulsing Emerald Graphic */}
             <div className="relative mb-8">
-                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-brand flex items-center justify-center shadow-lg shadow-brand/20">
                     <IconTrendingUp className="w-10 h-10 text-white" />
                 </div>
-                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 opacity-20 animate-ping" />
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500 to-brand opacity-20 animate-ping" />
             </div>
 
             {/* Title */}
@@ -41,7 +41,7 @@ const PerformanceComingSoon = ({ title, desc, plannedFeatures }: ComingSoonProps
                 <ul className="space-y-2.5">
                     {plannedFeatures.map((f, idx) => (
                         <li key={idx} className="flex items-start gap-2.5">
-                            <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="w-5 h-5 rounded-full bg-emerald-500/10 text-brand dark:text-brand-400 flex items-center justify-center shrink-0 mt-0.5">
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
@@ -55,7 +55,7 @@ const PerformanceComingSoon = ({ title, desc, plannedFeatures }: ComingSoonProps
             {/* Development tag */}
             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-full border border-emerald-500/20">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-[11px] font-extrabold text-teal-700 dark:text-teal-400 uppercase tracking-wide">Under Active Development</span>
+                <span className="text-[11px] font-extrabold text-brand-dark dark:text-brand-400 uppercase tracking-wide">Under Active Development</span>
             </div>
         </div>
     );

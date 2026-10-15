@@ -8,6 +8,8 @@ import IconClock from '../../components/Icon/IconClock';
 import IconInfoCircle from '../../components/Icon/IconInfoCircle';
 import IconCalendar from '../../components/Icon/IconCalendar';
 
+import Button from '../../components/Common/Button';
+import PageHeader from '../../components/Common/PageHeader';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const ConfRoomBooking = () => {
@@ -293,17 +295,10 @@ const ConfRoomBooking = () => {
 
     return (
         <div className="flex flex-col h-[calc(var(--app-vh)_-_90px)] space-y-4">
-            <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 rounded-xl p-4 text-white shadow-lg overflow-hidden relative">
-                <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-3xl font-extrabold mb-0.5">Book a Conference Room</h2>
-                        <p className="text-white/80 text-sm font-medium">Select a room and schedule your meeting. Time limits apply for auto-approval.</p>
-                    </div>
-                </div>
-                <div className="absolute right-[-20px] top-[-20px] opacity-10">
-                    <IconCalendar className="w-48 h-48" />
-                </div>
-            </div>
+            <PageHeader
+                title="Book a Conference Room"
+                subtitle="Select a room and schedule your meeting. Time limits apply for auto-approval."
+            />
 
             <div className="flex flex-col sm:flex-row items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
                 <select
@@ -514,7 +509,7 @@ const ConfRoomBooking = () => {
                                     </div>
                                 )}
 
-                                <button onClick={handleBook} className="btn btn-primary w-full h-11 font-bold mt-4">Confirm Booking</button>
+                                <Button className="w-full h-11 mt-4" onClick={handleBook}>Confirm Booking</Button>
 
                                 <div className="mt-8">
                                     <h6 className="text-[10px] uppercase font-black text-gray-400 mb-2 border-b pb-1">Room Schedule ({selectedDate})</h6>
@@ -566,7 +561,7 @@ const ConfRoomBooking = () => {
                                     )}
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedRoom(null)} className="btn btn-outline-secondary w-full mt-6 text-xs font-bold uppercase">Back to Map</button>
+                            <Button variant="secondary" className="w-full mt-6 text-xs" onClick={() => setSelectedRoom(null)} >Back to Map</Button>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full opacity-50 text-center">

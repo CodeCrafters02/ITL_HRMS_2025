@@ -4,6 +4,7 @@ import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
 import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('access_token')}` });
 
@@ -30,9 +31,9 @@ interface KRAItem {
 const ScoreBar = ({ score }: { score: number }) => (
     <div className="flex items-center gap-2">
         <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-            <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${(score / 5) * 100}%` }} />
+            <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${(score / 5) * 100}%` }} />
         </div>
-        <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 w-8 text-right">{score.toFixed(1)}</span>
+        <span className="text-xs font-black text-brand-600 dark:text-brand-400 w-8 text-right">{score.toFixed(1)}</span>
     </div>
 );
 
@@ -159,7 +160,7 @@ const KRAReview = () => {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search employee..."
-                                className="w-full pl-9 pr-3 py-2 text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:border-indigo-400 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 transition"
+                                className="w-full pl-9 pr-3 py-2 text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:border-brand-400 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 transition"
                             />
                         </div>
                     </div>
@@ -170,16 +171,16 @@ const KRAReview = () => {
                                 <button
                                     key={emp.id}
                                     onClick={() => handleSelectEmp(emp)}
-                                    className={`w-full text-left px-4 py-3.5 flex items-center gap-3 transition ${isSelected ? 'bg-indigo-50 dark:bg-indigo-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-850/30'}`}
+                                    className={`w-full text-left px-4 py-3.5 flex items-center gap-3 transition ${isSelected ? 'bg-brand-50 dark:bg-brand-950/30' : 'hover:bg-gray-50 dark:hover:bg-gray-850/30'}`}
                                 >
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black shrink-0 ${isSelected ? 'bg-indigo-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black shrink-0 ${isSelected ? 'bg-brand-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
                                         {emp.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <span className={`block text-xs font-bold truncate ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-800 dark:text-white'}`}>{emp.full_name}</span>
+                                        <span className={`block text-xs font-bold truncate ${isSelected ? 'text-brand-700 dark:text-brand-300' : 'text-gray-800 dark:text-white'}`}>{emp.full_name}</span>
                                         <span className="block text-[10px] text-gray-400 truncate">{emp.designation_name || emp.employee_id}</span>
                                     </div>
-                                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />}
+                                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />}
                                 </button>
                             );
                         })}
@@ -200,7 +201,7 @@ const KRAReview = () => {
                         </div>
                     ) : loadingKras ? (
                         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 p-20 text-center shadow-sm">
-                            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                            <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
                         </div>
                     ) : (
                         <>
@@ -208,7 +209,7 @@ const KRAReview = () => {
                             <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
                                 <div className="flex items-center justify-between flex-wrap gap-4">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-500 text-white font-black text-sm flex items-center justify-center">
+                                        <div className="w-12 h-12 rounded-2xl bg-brand-500 text-white font-black text-sm flex items-center justify-center">
                                             {selectedEmp.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                         </div>
                                         <div>
@@ -236,7 +237,7 @@ const KRAReview = () => {
                                         <button
                                             key={f}
                                             onClick={() => setFilter(f)}
-                                            className={`px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition ${filter === f ? 'bg-indigo-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+                                            className={`px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition ${filter === f ? 'bg-brand-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
                                         >
                                             {f === 'all' ? `All (${kras.length})` : f === 'pending' ? `Pending (${pendingCount})` : `Reviewed (${reviewedCount})`}
                                         </button>
@@ -304,10 +305,10 @@ const KRAReview = () => {
 
                                                             {kra.reviewer_name && (
                                                                 <div className="mt-2 flex items-center gap-1.5">
-                                                                    <svg className="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                                                                    <span className="text-[10px] text-blue-500 font-bold">Assigned Reviewer: {kra.reviewer_name}</span>
+                                                                    <svg className="w-3 h-3 text-brand-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                                                                    <span className="text-[10px] text-brand-500 font-bold">Assigned Reviewer: {kra.reviewer_name}</span>
                                                                     {kra.reviewer === myEmpId && (
-                                                                        <span className="text-[9px] bg-blue-500/10 text-blue-600 font-black px-1.5 py-0.5 rounded-full">You</span>
+                                                                        <span className="text-[9px] bg-brand-500/10 text-brand-600 font-black px-1.5 py-0.5 rounded-full">You</span>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -328,7 +329,7 @@ const KRAReview = () => {
                                                                     </div>
                                                                     <button
                                                                         onClick={() => initForm(kra)}
-                                                                        className="ml-4 px-3.5 py-1.5 rounded-xl text-[10px] font-black border border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition"
+                                                                        className="ml-4 px-3.5 py-1.5 rounded-xl text-[10px] font-black border border-brand-300 dark:border-brand-800 text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20 transition"
                                                                     >Edit</button>
                                                                 </div>
                                                                 {ev.remarks && (
@@ -339,14 +340,14 @@ const KRAReview = () => {
                                                             <div className="space-y-3">
                                                                 <div className="grid grid-cols-4 gap-3">
                                                                     <div>
-                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Score <span className="text-indigo-400">(0–5)</span></label>
+                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1.5">Score <span className="text-brand-400">(0–5)</span></label>
                                                                         <input
                                                                             type="number" min={0} max={5} step={0.1}
                                                                             value={f?.score ?? ''}
                                                                             onChange={e => setForms(p => ({ ...p, [kra.id]: { ...p[kra.id], score: e.target.value } }))}
                                                                             onFocus={() => !f && initForm({ ...kra, evaluation: null })}
                                                                             placeholder="e.g. 4.0"
-                                                                            className="w-full text-sm font-black bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-400 transition text-gray-800 dark:text-white"
+                                                                            className="w-full text-sm font-black bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-400 transition text-gray-800 dark:text-white"
                                                                         />
                                                                     </div>
                                                                     <div className="col-span-3">
@@ -357,7 +358,7 @@ const KRAReview = () => {
                                                                             onChange={e => setForms(p => ({ ...p, [kra.id]: { ...p[kra.id], remarks: e.target.value } }))}
                                                                             onFocus={() => !f && initForm({ ...kra, evaluation: null })}
                                                                             placeholder="Add performance remarks..."
-                                                                            className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-400 transition text-gray-700 dark:text-gray-300"
+                                                                            className="w-full text-xs font-semibold bg-gray-50 dark:bg-gray-850/50 border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-brand-400 transition text-gray-700 dark:text-gray-300"
                                                                         />
                                                                     </div>
                                                                 </div>
@@ -368,7 +369,7 @@ const KRAReview = () => {
                                                                         <button
                                                                             key={s}
                                                                             onClick={() => setForms(p => ({ ...p, [kra.id]: { ...(p[kra.id] ?? { remarks: '' }), score: String(s) } }))}
-                                                                            className={`w-8 h-8 rounded-lg text-xs font-black transition ${f?.score === String(s) ? 'bg-indigo-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-indigo-100 dark:hover:bg-indigo-950/30 hover:text-indigo-600'}`}
+                                                                            className={`w-8 h-8 rounded-lg text-xs font-black transition ${f?.score === String(s) ? 'bg-brand-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-brand-100 dark:hover:bg-brand-950/30 hover:text-brand-600'}`}
                                                                         >{s}</button>
                                                                     ))}
                                                                     <div className="ml-auto flex gap-2">
@@ -378,7 +379,7 @@ const KRAReview = () => {
                                                                         <button
                                                                             onClick={() => handleSubmit(kra)}
                                                                             disabled={submitting === kra.id}
-                                                                            className="px-5 py-1.5 rounded-xl text-[11px] font-black bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm disabled:opacity-60 transition flex items-center gap-2"
+                                                                            className={buttonClasses('primary', 'sm')}
                                                                         >
                                                                             {submitting === kra.id && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                                                                             {ev ? 'Update' : 'Submit'} Evaluation

@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import *
 from .outlook import OutlookFoldersAPIView, OutlookMessagesAPIView, OutlookMessageDetailAPIView, OutlookAttachmentAPIView, OutlookSendAPIView, OutlookRecipientsAPIView, OutlookCalendarAPIView, OutlookCalendarEventAPIView
+from .microsoft_directory import MicrosoftEntraUsersAPIView, MicrosoftEntraSyncAPIView, MicrosoftEntraAutoSyncAPIView, MicrosoftEntraSyncStatusAPIView
 
 router = DefaultRouter()
 router.register(r'master-register', MasterRegisterViewSet, basename='master-register')
@@ -81,6 +82,10 @@ urlpatterns = [
     path('outlook/recipients/', OutlookRecipientsAPIView.as_view(), name='outlook-recipients'),
     path('teams-sso/', TeamsSSOAPIView.as_view(), name='teams-sso'),
     path('microsoft-calendar-token/', MicrosoftCalendarTokenAPIView.as_view(), name='microsoft-calendar-token'),
+    path('microsoft-entra/users/', MicrosoftEntraUsersAPIView.as_view(), name='microsoft-entra-users'),
+    path('microsoft-entra/sync/', MicrosoftEntraSyncAPIView.as_view(), name='microsoft-entra-sync'),
+    path('microsoft-entra/sync/status/', MicrosoftEntraSyncStatusAPIView.as_view(), name='microsoft-entra-sync-status'),
+    path('microsoft-entra/auto-sync/', MicrosoftEntraAutoSyncAPIView.as_view(), name='microsoft-entra-auto-sync'),
     path('demo-status/', DemoStatusAPIView.as_view(), name='demo-status'),
     path('demo-login/', DemoLoginAPIView.as_view(), name='demo-login'),
     path('system-settings/', SystemSettingsAPIView.as_view(), name='system-settings'),

@@ -1,281 +1,169 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
-import { fetchReimbursements, ReimbursementRequest } from './api';
+import { fetchReimbursements, fetchReimbursementStats, ReimbursementRequest } from './api';
 import IconListCheck from '../../components/Icon/IconListCheck';
 import IconCalendar from '../../components/Icon/IconCalendar';
 import IconFile from '../../components/Icon/IconFile';
+import IconCashBanknotes from '../../components/Icon/IconCashBanknotes';
+import IconCircleCheck from '../../components/Icon/IconCircleCheck';
+import IconClock from '../../components/Icon/IconClock';
+import PageHeader from '../../components/Common/PageHeader';
+import DataTable, { Column } from '../../components/Common/DataTable';
+import StatCard, { StatGrid } from '../../components/Common/StatCard';
+
+const money = (n?: number) => `₹${(n || 0).toLocaleString()}`;
 
 const Status = () => {
     const dispatch = useDispatch();
     const [requests, setRequests] = useState<ReimbursementRequest[]>([]);
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    
-    // Pagination and Search
+
+    // search / filter / paging go to the backend
     const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
 
     useEffect(() => {
         dispatch(setPageTitle('Reimbursement Status'));
-        loadRequests();
-    }, [dispatch, page, pageSize, search]);
+    }, [dispatch]);
 
-    const loadRequests = async () => {
+    const load = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchReimbursements({
-                search: search,
-                page: page,
-                page_size: pageSize,
-            });
+            const [data, statsData] = await Promise.all([
+                fetchReimbursements({ search: search.trim(), status: statusFilter, page, page_size: pageSize }),
+                fetchReimbursementStats({ search: search.trim(), status: statusFilter }),
+            ]);
             setRequests(data.results);
             setTotalCount(data.count);
+            setStats(statsData);
         } catch (error) {
             console.error('Failed to load requests', error);
         } finally {
             setLoading(false);
         }
-    };
-    
-    const totalPages = Math.ceil(totalCount / pageSize);
+    }, [search, statusFilter, page, pageSize]);
 
-    const stats = useMemo(() => {
-        // Note: These stats are only for the current page. 
-        // For accurate total stats, a separate "totals" endpoint would be ideal.
-        const total = requests.reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const approved = requests.filter(r => r.status === 'approved').reduce((acc, curr) => acc + Number(curr.amount), 0);
-        const pending = requests.filter(r => r.status === 'pending').reduce((acc, curr) => acc + Number(curr.amount), 0);
-        return { total, approved, pending };
-    }, [requests]);
+    useEffect(() => {
+        const t = setTimeout(load, 300);
+        return () => clearTimeout(t);
+    }, [load]);
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'approved':
-                return <span className="badge bg-success-light text-success border-0 capitalize px-3">{status}</span>;
-            case 'rejected':
-                return <span className="badge bg-danger-light text-danger border-0 capitalize px-3">{status}</span>;
-            default:
-                return <span className="badge bg-warning-light text-warning border-0 capitalize px-3">{status}</span>;
-        }
-    };
+    const columns: Column<ReimbursementRequest>[] = [
+        {
+            key: 'created_at',
+            title: 'Date',
+            render: (_v, r) => (
+                <span className="flex items-center gap-2 text-slate-700">
+                    <IconCalendar className="h-4 w-4 text-slate-400" />
+                    {new Date(r.created_at).toLocaleDateString()}
+                </span>
+            ),
+        },
+        { key: 'category_name', title: 'Category', render: (_v, r) => <span className="font-semibold text-brand">{r.category_name}</span> },
+        { key: 'amount', title: 'Amount', render: (_v, r) => <span className="text-base font-black text-slate-900">{money(Number(r.amount))}</span> },
+        {
+            key: 'status',
+            title: 'Status',
+            align: 'center',
+            render: (_v, r) => (
+                <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase ${
+                        r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-600' : r.status === 'rejected' ? 'bg-rose-500/10 text-rose-600' : 'bg-amber-500/10 text-amber-600'
+                    }`}
+                >
+                    {r.status}
+                </span>
+            ),
+        },
+        {
+            key: 'reporting_manager_name',
+            title: 'Manager',
+            hideBelow: 'md',
+            render: (_v, r) => (
+                <div>
+                    <p className="text-slate-600">{r.reporting_manager_name || 'System Admin'}</p>
+                    {r.bill_attachment && (
+                        <a href={r.bill_attachment} target="_blank" rel="noreferrer" className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-brand hover:underline">
+                            <IconFile className="h-3 w-3" /> View my bill
+                        </a>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'description',
+            title: 'Description / reason',
+            hideBelow: 'lg',
+            render: (_v, r) => (
+                <div className="max-w-xs">
+                    <p className="truncate text-slate-600" title={r.description}>
+                        {r.description}
+                    </p>
+                    {r.status === 'rejected' && r.rejection_reason && (
+                        <p className="mt-1 whitespace-normal rounded-lg border border-rose-100 bg-rose-50 p-2 text-xs text-rose-700">
+                            <span className="font-bold">Rejected:</span> {r.rejection_reason}
+                        </p>
+                    )}
+                </div>
+            ),
+        },
+    ];
 
     return (
-        <div className="space-y-6 animate__animated animate__fadeIn">
-            {/* Header Banner */}
-            <div className="panel bg-gradient-to-r from-[#22c55e] via-[#16a34a] to-[#15803d] text-white border-0 shadow-lg">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconListCheck className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold">My Reimbursement Status</h1>
-                            <p className="mt-1 text-white/80">Track your submitted expense claims and their approval status.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader title="My Reimbursement Status" subtitle="Track your submitted expense claims and their approval status." icon={<IconListCheck />} />
 
-            {/* Summary Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="panel bg-white dark:bg-[#0e1726] border-white-light dark:border-[#1b2e4b] shadow-md">
-                    <p className="text-white-dark text-xs uppercase tracking-wider font-bold">Page Total Claimed</p>
-                    <p className="text-2xl font-extrabold mt-1">₹{stats.total.toLocaleString()}</p>
-                </div>
-                <div className="panel bg-white dark:bg-[#0e1726] border-white-light dark:border-[#1b2e4b] shadow-md">
-                    <p className="text-white-dark text-xs uppercase tracking-wider font-bold">Page Approved</p>
-                    <p className="text-2xl font-extrabold mt-1 text-success">₹{stats.approved.toLocaleString()}</p>
-                </div>
-                <div className="panel bg-white dark:bg-[#0e1726] border-white-light dark:border-[#1b2e4b] shadow-md">
-                    <p className="text-white-dark text-xs uppercase tracking-wider font-bold">Page Pending</p>
-                    <p className="text-2xl font-extrabold mt-1 text-warning">₹{stats.pending.toLocaleString()}</p>
-                </div>
-            </div>
+            <StatGrid cols={3} className="!mb-0">
+                <StatCard label="Total claimed" value={money(stats?.overall?.total_amount)} icon={<IconCashBanknotes />} tone="primary" active={statusFilter === ''} onClick={() => { setStatusFilter(''); setPage(1); }} />
+                <StatCard label="Approved" value={money(stats?.overall?.approved_amount)} icon={<IconCircleCheck />} tone="success" active={statusFilter === 'approved'} onClick={() => { setStatusFilter('approved'); setPage(1); }} />
+                <StatCard label="Pending" value={money(stats?.overall?.pending_amount)} icon={<IconClock />} tone="warning" active={statusFilter === 'pending'} onClick={() => { setStatusFilter('pending'); setPage(1); }} />
+            </StatGrid>
 
-            {/* Table Panel */}
-            <div className="panel p-0 border-0 overflow-hidden shadow-xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-5 gap-4 border-b border-[#e0e6ed] dark:border-[#1b2e4b]">
-                    <h5 className="font-bold text-xl dark:text-white-light">Request History</h5>
-                    <div className="relative group">
-                        <input
-                            type="text"
-                            className="form-input pr-10 w-full md:w-72 h-10 text-sm rounded-lg"
-                            placeholder="Search by category, description..."
-                            value={search}
-                            onChange={(e) => {
-                                setSearch(e.target.value);
-                                setPage(1);
-                            }}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </span>
-                    </div>
-                </div>
-
-                <div className="table-responsive min-h-[400px]">
-                    <table className="table-hover">
-                                <thead>
-                                    <tr className="bg-[#f8fafc] dark:bg-[#1a2234]">
-                                        <th>Date</th>
-                                        <th>Category</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
-                                        <th>Manager</th>
-                                        <th>Description / Reason</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={6} className="text-center py-20">
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="w-8 h-8 border-4 border-primary border-l-transparent rounded-full animate-spin"></div>
-                                                    <span className="text-gray-500 font-semibold tracking-wide">Loading your requests...</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : requests.length > 0 ? (
-                                        requests.map((req) => (
-                                            <tr key={req.id}>
-                                                <td>
-                                                    <div className="flex items-center gap-2">
-                                                        <IconCalendar className="w-4 h-4 text-white-dark" />
-                                                        <span className="font-medium text-gray-700 dark:text-gray-300">{new Date(req.created_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="font-semibold text-primary">{req.category_name}</td>
-                                                <td className="font-bold text-lg">₹{req.amount}</td>
-                                                <td>{getStatusBadge(req.status)}</td>
-                                                <td className="text-white-dark">
-                                                    <div className="flex flex-col">
-                                                        <span>{req.reporting_manager_name || 'System Admin'}</span>
-                                                        {req.bill_attachment && (
-                                                            <a href={req.bill_attachment} target="_blank" rel="noreferrer" className="text-primary hover:underline text-[10px] flex items-center gap-1 mt-1">
-                                                                <IconFile className="w-2.5 h-2.5" /> View My Bill
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="max-w-xs">
-                                                    <p className="truncate text-gray-600 dark:text-gray-400" title={req.description}>{req.description}</p>
-                                                    {req.status === 'rejected' && req.rejection_reason && (
-                                                        <p className="text-danger mt-1 text-xs whitespace-normal bg-danger-light/20 p-2 rounded border border-danger/10">
-                                                            <span className="font-bold">Rejected:</span> {req.rejection_reason}
-                                                        </p>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="text-center py-20">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <IconListCheck className="w-12 h-12 text-gray-300" />
-                                            <p className="text-gray-500 font-medium text-lg">No reimbursement requests found</p>
-                                            {search && <p className="text-sm text-gray-400">Try adjusting your search query</p>}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination Controls */}
-                {totalCount > 0 && (
-                    <div className="flex flex-col sm:flex-row justify-between items-center p-5 gap-4 border-t border-[#e0e6ed] dark:border-[#1b2e4b] bg-gray-50/50 dark:bg-gray-900/50">
-                        <div className="flex items-center gap-4">
-                            <div className="text-sm text-gray-500 font-bold dark:text-gray-400">
-                                Showing <span className="text-primary">{(page - 1) * pageSize + 1}</span> to <span className="text-primary">{Math.min(page * pageSize, totalCount)}</span> of <span className="text-primary">{totalCount}</span> entries
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold">Per page:</span>
-                                <select
-                                    className="form-select w-20 h-9 text-sm font-semibold py-1 rounded-lg border-gray-200"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPage(1);
-                                    }}
-                                >
-                                    <option value="10">10</option>
-                                    <option value="20">20</option>
-                                    <option value="50">50</option>
-                                </select>
-                            </div>
-                        </div>
-                        <ul className="inline-flex items-center space-x-2 font-bold">
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-bold px-4 py-2 rounded-lg transition bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase"
-                                    onClick={() => setPage(page > 1 ? page - 1 : 1)}
-                                    disabled={page === 1}
-                                >
-                                    Previous
-                                </button>
-                            </li>
-                            {(() => {
-                                const pages: (number | string)[] = [];
-                                if (totalPages <= 3) {
-                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
-                                } else {
-                                    if (page <= 2) {
-                                        pages.push(1, 2, 3, 'right-ellipsis', totalPages);
-                                    } else if (page >= totalPages - 1) {
-                                        pages.push(1, 'left-ellipsis', totalPages - 2, totalPages - 1, totalPages);
-                                    } else {
-                                        pages.push(1, 'left-ellipsis', page, 'right-ellipsis', totalPages);
-                                    }
-                                }
-                                return pages.map((p, idx) => {
-                                    if (p === 'left-ellipsis' || p === 'right-ellipsis') {
-                                        const jumpPage = p === 'left-ellipsis' ? Math.max(1, page - 3) : Math.min(totalPages, page + 3);
-                                        return (
-                                            <li key={`${p}-${idx}`}>
-                                                <button
-                                                    type="button"
-                                                    title={p === 'left-ellipsis' ? "Previous 3 pages" : "Next 3 pages"}
-                                                    className="flex justify-center font-bold px-4 py-2 rounded-lg transition bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary cursor-pointer text-xs uppercase"
-                                                    onClick={() => setPage(jumpPage)}
-                                                >
-                                                    ...
-                                                </button>
-                                            </li>
-                                        );
-                                    }
-                                    return (
-                                        <li key={p}>
-                                            <button
-                                                type="button"
-                                                className={`flex justify-center font-bold px-4 py-2 rounded-lg transition text-xs ${page === p ? 'bg-primary text-white shadow-lg border-primary' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary'}`}
-                                                onClick={() => setPage(p as number)}
-                                            >
-                                                {p}
-                                            </button>
-                                        </li>
-                                    );
-                                });
-                            })()}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="flex justify-center font-bold px-4 py-2 rounded-lg transition bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-dark hover:text-white hover:bg-primary dark:text-white-light dark:bg-[#191e3a] dark:hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-            </div>
+            <DataTable
+                title="Request history"
+                columns={columns}
+                data={requests}
+                rowKey={(r) => r.id}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(n) => {
+                    setPageSize(n);
+                    setPage(1);
+                }}
+                searchValue={search}
+                onSearchChange={(v) => {
+                    setSearch(v);
+                    setPage(1);
+                }}
+                searchPlaceholder="Search by category, description..."
+                onRefresh={load}
+                entityLabel="requests"
+                emptyMessage="No reimbursement requests found"
+                emptyIcon={<IconListCheck className="h-10 w-10" />}
+                filters={
+                    <select
+                        className="form-select h-10 w-40 rounded-xl text-xs"
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            setPage(1);
+                        }}
+                    >
+                        <option value="">All statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                }
+            />
         </div>
     );
 };

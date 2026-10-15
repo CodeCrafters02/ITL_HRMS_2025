@@ -5,6 +5,8 @@ import { fetchCategories, createReimbursement, ReimbursementCategory } from './a
 import Swal from 'sweetalert2';
 import IconCashBanknotes from '../../components/Icon/IconCashBanknotes';
 import IconFile from '../../components/Icon/IconFile';
+import PageHeader from '../../components/Common/PageHeader';
+import Button from '../../components/Common/Button';
 
 const Request = () => {
     const dispatch = useDispatch();
@@ -66,26 +68,13 @@ const Request = () => {
     };
 
     return (
-        <div className="space-y-6 animate__animated animate__fadeIn">
-            {/* Header Banner */}
-            <div className="panel bg-gradient-to-r from-[#0ea5e9] via-brand-mid to-brand-dark text-white border-0">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                            <IconCashBanknotes className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-extrabold">Reimbursement Request</h1>
-                            <p className="mt-1 text-white/80">Submit your expenses for approval and reimbursement.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div className="space-y-6">
+            <PageHeader title="Reimbursement Request" subtitle="Submit your expenses for approval and reimbursement." icon={<IconCashBanknotes />} />
 
             {/* Request Form */}
-            <div className="panel max-w-3xl mx-auto shadow-lg border-white-light dark:border-[#1b2e4b]">
-                <div className="mb-6 flex items-center gap-2 border-b border-white-light dark:border-[#1b2e4b] pb-4">
-                    <div className="w-8 h-8 rounded bg-primary-light text-primary flex items-center justify-center">
+            <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand">
                         <IconFile className="w-4 h-4" />
                     </div>
                     <h5 className="font-bold text-lg">New Expense Claim</h5>
@@ -174,14 +163,9 @@ const Request = () => {
                     </div>
 
                     <div className="pt-4">
-                        <button type="submit" className="btn btn-primary w-full py-3 text-lg font-bold shadow-primary-light" disabled={loading}>
-                            {loading ? (
-                                <span className="flex items-center gap-2 justify-center">
-                                    <span className="animate-spin border-2 border-white border-l-transparent rounded-full w-4 h-4" />
-                                    Submitting Claim...
-                                </span>
-                            ) : 'Submit Claim Request'}
-                        </button>
+                        <Button type="submit" size="lg" fullWidth loading={loading}>
+                            {loading ? 'Submitting claim...' : 'Submit Claim Request'}
+                        </Button>
                     </div>
                 </form>
             </div>

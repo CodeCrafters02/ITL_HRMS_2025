@@ -448,13 +448,13 @@ const WFHRequest = () => {
                 variant="indigo"
                 stats={
                     <div className="flex items-center gap-3">
-                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
-                            <p className="text-xl font-black text-white leading-none">{homeCount}</p>
-                            <p className="text-[9px] font-black uppercase tracking-wider text-indigo-200 mt-1">At Home</p>
+                        <div className="text-center bg-brand/10 p-2.5 px-4 rounded-xl border border-brand/20">
+                            <p className="text-xl font-black text-slate-900 leading-none">{homeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-brand mt-1">At Home</p>
                         </div>
-                        <div className="text-center bg-white/10 p-2.5 px-4 rounded-xl backdrop-blur-md border border-white/20">
-                            <p className="text-xl font-black text-white leading-none">{officeCount}</p>
-                            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-200 mt-1">In Office</p>
+                        <div className="text-center bg-brand/10 p-2.5 px-4 rounded-xl border border-brand/20">
+                            <p className="text-xl font-black text-slate-900 leading-none">{officeCount}</p>
+                            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600 mt-1">In Office</p>
                         </div>
                     </div>
                 }
@@ -465,7 +465,7 @@ const WFHRequest = () => {
                     {tabs.map((t) => (
                         <Tab key={t} as={Fragment}>
                             {({ selected }) => (
-                                <button className={`px-2 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none border-b-4 ${selected ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>
+                                <button className={`px-2 py-3 text-xs font-black uppercase tracking-[0.2em] transition-all outline-none border-b-4 ${selected ? 'text-brand-600 border-brand-600' : 'text-gray-400 border-transparent hover:text-gray-600'}`}>
                                     {t === 'Team Approvals' && pendingRequests.length > 0 && (
                                         <span className="inline-block w-2 h-2 bg-rose-500 rounded-full mr-2 animate-ping"></span>
                                     )}

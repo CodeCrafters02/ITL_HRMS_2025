@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Cycle {
     id: number;
     name: string;
@@ -154,7 +156,7 @@ const SelfAppraisal = () => {
                 <p className="text-sm font-bold text-rose-500">{error}</p>
                 <button
                     onClick={loadAppraisalData}
-                    className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition"
+                    className={buttonClasses('primary', 'sm')}
                 >
                     Retry
                 </button>
@@ -173,7 +175,7 @@ const SelfAppraisal = () => {
                     </p>
                     <Link
                         to="/employee/performance"
-                        className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10"
+                        className={buttonClasses('primary', 'sm')}
                     >
                         Back to Hub
                     </Link>
@@ -188,48 +190,30 @@ const SelfAppraisal = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header banner */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <span className="inline-flex items-center gap-1 bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-1">
-                        Self Appraisal Log
-                    </span>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">{activeCycle.name}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                        Deadline: {(() => {
-                            const baseDeadline = new Date(activeCycle.self_appraisal_deadline);
-                            const approvedExt = extensions.find(ext => {
-                                if (ext.status !== 'approved') return false;
-                                const extOrigDate = new Date(ext.original_deadline);
-                                return Math.abs(extOrigDate.getTime() - baseDeadline.getTime()) < 60000;
-                            });
-                            const extended = approvedExt ? new Date(approvedExt.extended_deadline) : baseDeadline;
-                            return (
-                                <>
-                                    <span className={approvedExt ? "text-emerald-500 font-extrabold" : ""}>
-                                        {extended.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                    {approvedExt && <span className="ml-2 text-emerald-500 font-extrabold text-[10px] uppercase">(Extension Approved)</span>}
-                                </>
-                            );
-                        })()}
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <Link
+            <PageHeader
+                title={<>{activeCycle.name}</>}
+                badge="Self Appraisal Log"
+                subtitle={<>Deadline: {(() => { const baseDeadline = new Date(activeCycle.self_appraisal_deadline); const approvedExt = extensions.find(ext => { if (ext.status !== 'approved') return false; const extOrigDate = new Date(ext.original_deadline); return Math.abs(extOrigDate.getTime() - baseDeadline.getTime()) < 60000; }); const extended = approvedExt ? new Date(approvedExt.extended_deadline) : baseDeadline; return ( <> <span className={approvedExt ? "text-emerald-500 font-extrabold" : ""}> {extended.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} </span> {approvedExt && <span className="ml-2 text-emerald-500 font-extrabold text-[10px] uppercase">(Extension Approved)</span>} </> ); })()}</>}
+                actions={
+                    <>
+                        <div className="flex gap-2">
+                        <Link
                         to="/employee/performance"
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-855 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition"
-                    >
+                        className={buttonClasses('secondary', 'sm')}
+                        >
                         ← Performance Hub
-                    </Link>
-                </div>
-            </div>
+                        </Link>
+                        </div>
+                    </>
+                }
+            />
 
             {/* Read-only notice */}
-            <div className="bg-teal-50 dark:bg-teal-950/20 border border-teal-205 dark:border-teal-900/40 text-teal-700 dark:text-teal-400 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2">
+            <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-205 dark:border-brand-900/40 text-brand-dark dark:text-brand-400 p-4 rounded-2xl text-xs font-semibold flex items-center gap-2">
                 <span className="text-base">ℹ️</span>
                 <span>
                     This page is view-only. You can submit or edit your live self-appraisal responses directly from the{' '}
-                    <Link to="/employee/performance/feedback-provided" className="underline font-bold text-teal-600 dark:text-teal-350 hover:text-teal-800 dark:hover:text-teal-300">
+                    <Link to="/employee/performance/feedback-provided" className="underline font-bold text-brand dark:text-brand-350 hover:text-brand-800 dark:hover:text-brand-300">
                         Feedback Provided
                     </Link>{' '}
                     page.
@@ -259,7 +243,7 @@ const SelfAppraisal = () => {
                                 className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm space-y-4"
                             >
                                 <div className="flex items-start gap-3">
-                                    <div className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center text-xs font-black shrink-0">
+                                    <div className="w-6 h-6 rounded-lg bg-brand/10 text-brand dark:text-brand-400 flex items-center justify-center text-xs font-black shrink-0">
                                         {idx + 1}
                                     </div>
                                     <h4 className="text-sm font-bold text-gray-800 dark:text-white leading-normal pt-0.5">

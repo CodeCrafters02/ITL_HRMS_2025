@@ -400,9 +400,9 @@ const OfficeStructure = () => {
                                 <IconUsers className="w-6 h-6 text-green-600" />
                                 <span className="text-xs font-bold text-green-700">Seat</span>
                             </button>
-                            <button onClick={() => addElement('zone')} className="flex flex-col items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl hover:scale-105 transition-transform">
-                                <IconLayout className="w-6 h-6 text-blue-600" />
-                                <span className="text-xs font-bold text-blue-700">Zone</span>
+                            <button onClick={() => addElement('zone')} className="flex flex-col items-center gap-2 p-3 bg-brand-50 dark:bg-brand-900/10 border border-brand-100 dark:border-brand-800 rounded-xl hover:scale-105 transition-transform">
+                                <IconLayout className="w-6 h-6 text-brand-600" />
+                                <span className="text-xs font-bold text-brand-700">Zone</span>
                             </button>
                             <button onClick={() => addElement('label')} className="flex flex-col items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-800 rounded-xl hover:scale-105 transition-transform">
                                 <IconNotes className="w-6 h-6 text-yellow-600" />

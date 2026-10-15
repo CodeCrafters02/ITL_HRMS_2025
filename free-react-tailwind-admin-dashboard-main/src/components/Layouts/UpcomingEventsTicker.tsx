@@ -27,7 +27,7 @@ const relLabel = (d: string) => {
     return n > 0 ? `In ${n} days` : `${-n} days ago`;
 };
 const fmtLong = (d: string) => parseDate(d).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-const tone = (e: CalendarEvent) => (e.is_holiday ? 'from-amber-400 to-orange-500' : 'from-indigo-500 to-fuchsia-500');
+const tone = (e: CalendarEvent) => (e.is_holiday ? 'from-amber-400 to-orange-500' : 'from-brand-500 to-brand-accent');
 
 const DateChip: FC<{ event: CalendarEvent; size?: 'sm' | 'md' }> = ({ event, size = 'sm' }) => {
     const d = parseDate(event.date);
@@ -103,7 +103,7 @@ const UpcomingEventsTicker: FC<{ calendarRoute: string }> = ({ calendarRoute }) 
                 onMouseEnter={() => setPaused(true)}
                 onMouseLeave={() => setPaused(false)}
                 title="View all events"
-                className="group relative hidden lg:flex w-64 xl:w-72 items-center gap-2.5 overflow-hidden rounded-full border border-primary/15 bg-gradient-to-r from-primary/10 via-fuchsia-500/10 to-amber-400/10 py-1 ltr:pl-1 ltr:pr-3 rtl:pr-1 rtl:pl-3 text-left shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                className="group relative hidden lg:flex w-64 xl:w-72 items-center gap-2.5 overflow-hidden rounded-full border border-primary/15 bg-gradient-to-r from-primary/10 via-brand-accent/10 to-amber-400/10 py-1 ltr:pl-1 ltr:pr-3 rtl:pr-1 rtl:pl-3 text-left shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
             >
                 {current ? (
                     <span key={current.id} className="flex min-w-0 flex-1 items-center gap-2.5" style={{ animation: 'evt-ticker-in 450ms ease-out' }}>
@@ -137,7 +137,7 @@ const UpcomingEventsTicker: FC<{ calendarRoute: string }> = ({ calendarRoute }) 
                         <div className="flex min-h-full items-center justify-center px-4 py-8">
                             <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
                                 <Dialog.Panel className="panel w-full max-w-xl overflow-hidden rounded-2xl border-0 p-0 text-black dark:text-white-dark">
-                                    <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-amber-500 px-6 py-5">
+                                    <div className="relative overflow-hidden bg-gradient-to-r from-brand-600 via-brand-accent to-amber-500 px-6 py-5">
                                         <div className="absolute -top-10 ltr:-right-10 rtl:-left-10 h-40 w-40 rounded-full bg-white opacity-10 blur-2xl" />
                                         <Dialog.Title className="relative text-xl font-extrabold tracking-tight text-white">Events</Dialog.Title>
                                         <p className="relative mt-0.5 text-xs font-medium text-white/80">

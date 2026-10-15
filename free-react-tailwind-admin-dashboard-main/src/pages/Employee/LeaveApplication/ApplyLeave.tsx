@@ -2,8 +2,10 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
-import IconSearch from '../../../components/Icon/IconSearch';
 import PageHeader from '../../../components/Common/PageHeader';
+import Button from '../../../components/Common/Button';
+import DataTable, { Column } from '../../../components/Common/DataTable';
+import Modal from '../../../components/Common/Modal';
 import {
     LeaveBalance,
     LeaveDuration,
@@ -167,19 +169,6 @@ const ApplyLeave = () => {
     }, [leaveBalances, showAllBalances]);
 
     // Smart Pagination logic
-    const getPageNumbers = () => {
-        const pages: (number | '...')[] = [];
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) pages.push(i);
-        } else {
-            pages.push(1);
-            if (page > 3) pages.push('...');
-            for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i);
-            if (page < totalPages - 2) pages.push('...');
-            pages.push(totalPages);
-        }
-        return pages;
-    };
 
     const requestedDayUnits = useMemo(() => requestDayUnits(fromDate, toDate, leaveDuration), [fromDate, toDate, leaveDuration]);
 
@@ -256,6 +245,35 @@ const ApplyLeave = () => {
         }
     };
 
+    const columns: Column<LeaveRequest>[] = [
+        { key: 'leave_type_name', title: 'Leave Type', render: (v) => <span className="font-semibold">{v || '-'}</span> },
+        { key: 'leave_duration', title: 'Duration', hideBelow: 'md', render: (v) => formatLeaveDurationLabel(v) },
+        { key: 'from_date', title: 'From', render: (v) => formatDate(v) },
+        { key: 'to_date', title: 'To', render: (v) => formatDate(v) },
+        { key: 'days', title: 'Days', hideBelow: 'md', render: (_v, r) => requestDayUnits(r.from_date, r.to_date, r.leave_duration) },
+        { key: 'status', title: 'Status', render: (v) => <span className={`badge ${statusStyleMap[v as keyof typeof statusStyleMap]}`}>{v}</span> },
+        {
+            key: 'reason', title: 'Reason', hideBelow: 'lg',
+            render: (_v, r) => (
+                <div className="max-w-[320px]">
+                    <p className="truncate" title={r.reason || ''}>{r.reason || '-'}</p>
+                    {r.status === 'Rejected' && r.rejection_reason && <p className="mt-1 whitespace-normal text-xs text-danger">Reason: {r.rejection_reason}</p>}
+                </div>
+            ),
+        },
+        {
+            key: 'actions', title: 'Action', align: 'center',
+            render: (_v, r) =>
+                canCancelLeaveRequest(r) ? (
+                    <Button variant="outline-danger" size="sm" disabled={cancellingId === r.id} onClick={() => onCancelLeave(r.id)}>
+                        {cancellingId === r.id ? 'Cancelling...' : 'Cancel'}
+                    </Button>
+                ) : (
+                    <span className="text-xs text-white-dark">-</span>
+                ),
+        },
+    ];
+
     return (
         <div className="space-y-6 animate__animated animate__fadeIn">
             <PageHeader
@@ -265,9 +283,9 @@ const ApplyLeave = () => {
                 badge="Time Off & Leaves"
                 variant="primary"
                 actions={
-                    <button
+                    <Button className="w-full md:w-auto"
                         type="button"
-                        className="btn btn-primary shadow-lg shadow-primary/20 backdrop-blur-sm w-full md:w-auto"
+                        
                         onClick={() => {
                             setLeaveDuration('full_day');
                             setFormError(null);
@@ -275,7 +293,7 @@ const ApplyLeave = () => {
                         }}
                     >
                         Apply Leave
-                    </button>
+                    </Button>
                 }
             />
 
@@ -308,9 +326,9 @@ const ApplyLeave = () => {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-lg font-bold">Leave Balances</h3>
                     {leaveBalances.length > leaveBalancePreviewCount && (
-                        <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setShowAllBalances((prev) => !prev)}>
+                        <Button variant="outline" size="sm" type="button"  onClick={() => setShowAllBalances((prev) => !prev)}>
                             {showAllBalances ? 'Show Less' : `Show All (${leaveBalances.length})`}
-                        </button>
+                        </Button>
                     )}
                 </div>
                 {loading && leaveBalances.length === 0 ? (
@@ -346,252 +364,119 @@ const ApplyLeave = () => {
                 )}
             </div>
 
-            <div className="panel">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-                    <h3 className="text-lg font-bold">My Leave Requests</h3>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                        <div className="relative sm:w-[240px]">
-                            <input
-                                type="text"
-                                className="form-input pl-10"
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                placeholder="Search leave request..."
-                            />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white-dark">
-                                <IconSearch className="w-4 h-4" />
-                            </span>
-                        </div>
-                        <select className="form-select sm:w-[180px]" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}>
-                            <option value="all">All Statuses</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Approved">Approved</option>
-                            <option value="Rejected">Rejected</option>
-                            <option value="Cancelled">Cancelled</option>
-                        </select>
-                    </div>
-                </div>
+            <DataTable
+                title="My Leave Requests"
+                columns={columns}
+                data={leaveRequests}
+                loading={loading}
+                page={page}
+                pageSize={pageSize}
+                totalCount={totalCount}
+                onPageChange={setPage}
+                onPageSizeChange={(sz) => { setPageSize(sz); setPage(1); }}
+                searchValue={search}
+                onSearchChange={(v) => { setSearch(v); setPage(1); }}
+                onRefresh={loadData}
+                searchPlaceholder="Search leave request..."
+                emptyMessage="No leave requests found"
+                entityLabel="requests"
+                filters={
+                    <select className="form-select h-10 w-44 rounded-xl" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as StatusFilter); setPage(1); }}>
+                        <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                }
+            />
 
-                {totalCount > 0 && (
-                    <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-xs text-white-dark">
-                            Showing <span className="text-primary font-semibold">{(page - 1) * pageSize + 1}</span> to{' '}
-                            <span className="text-primary font-semibold">{Math.min(page * pageSize, totalCount)}</span> of{' '}
-                            <span className="text-primary font-semibold">{totalCount}</span> entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-white-dark">Per page</span>
-                            <select
-                                className="form-select w-20 text-xs"
-                                value={pageSize}
-                                onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                            >
-                                <option value="10">10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
-                        <ul className="inline-flex items-center gap-1">
-                            <li>
-                                <button type="button" className="btn btn-sm btn-outline-primary px-2.5" onClick={() => setPage(page > 1 ? page - 1 : 1)} disabled={page === 1}>
-                                    Prev
-                                </button>
-                            </li>
-                            {getPageNumbers().map((p, idx) =>
-                                p === '...' ? <li key={`dots-${idx}`} className="px-2 text-white-dark">...</li> : (
-                                    <li key={p}>
-                                        <button
-                                            type="button"
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-primary'} min-w-[34px]`}
-                                            onClick={() => setPage(p as number)}
-                                        >
-                                            {p}
-                                        </button>
-                                    </li>
-                                ),
-                            )}
-                            <li>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-outline-primary px-2.5"
-                                    onClick={() => setPage(page < totalPages ? page + 1 : totalPages)}
-                                    disabled={page === totalPages || totalPages === 0}
-                                >
-                                    Next
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                )}
-
-                <div className="table-responsive">
-                    <table className="table-hover">
-                        <thead>
-                            <tr>
-                            <th>Leave Type</th>
-                            <th>Duration</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Days</th>
-                            <th>Status</th>
-                            <th>Reason</th>
-                            <th className="text-center">Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-8 text-white-dark">
-                                        Loading leave requests...
-                                    </td>
-                                </tr>
-                            ) : leaveRequests.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="text-center py-8 text-white-dark">
-                                        No leave requests found.
-                                    </td>
-                                </tr>
-                            ) : (
-                                leaveRequests.map((request) => (
-                                    <tr key={request.id}>
-                                        <td className="font-semibold">{request.leave_type_name || '-'}</td>
-                                        <td>{formatLeaveDurationLabel(request.leave_duration)}</td>
-                                        <td>{formatDate(request.from_date)}</td>
-                                        <td>{formatDate(request.to_date)}</td>
-                                        <td>{requestDayUnits(request.from_date, request.to_date, request.leave_duration)}</td>
-                                        <td>
-                                            <span className={`badge ${statusStyleMap[request.status]}`}>
-                                                {request.status}
-                                            </span>
-                                        </td>
-                                        <td className="max-w-[320px] truncate" title={request.reason || ''}>
-                                            {request.reason || '-'}
-                                            {request.status === 'Rejected' && request.rejection_reason && (
-                                                <p className="text-danger mt-1 whitespace-normal text-xs">
-                                                    Reason: {request.rejection_reason}
-                                                </p>
-                                            )}
-                                        </td>
-                                        <td className="text-center">
-                                            {canCancelLeaveRequest(request) ? (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    disabled={cancellingId === request.id}
-                                                    onClick={() => onCancelLeave(request.id)}
-                                                >
-                                                    {cancellingId === request.id ? 'Cancelling...' : 'Cancel'}
-                                                </button>
-                                            ) : (
-                                                <span className="text-xs text-white-dark">-</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-
-            </div>
-
-            {isApplyModalOpen && (
-                <div className="fixed inset-0 z-[1000] bg-black/60 p-4 flex items-center justify-center" onClick={() => setIsApplyModalOpen(false)}>
-                    <div className="panel w-full max-w-2xl max-h-[92vh] overflow-auto dark:bg-[#0e1726]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-between gap-3 mb-4">
-                            <h3 className="text-lg font-bold">Apply for Leave</h3>
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setIsApplyModalOpen(false)}>
-                                Close
-                            </button>
-                        </div>
-                        {formError && (
-                            <div className="mb-4 rounded-md border border-danger/30 bg-danger-light text-danger px-3 py-2 text-sm whitespace-pre-line">
-                                {formError}
-                            </div>
-                        )}
-                        <form className="space-y-4" onSubmit={submitLeave}>
-                            <div>
-                                <label className="form-label">Leave Type</label>
-                                <select className="form-select" value={leaveType} onChange={(e) => setLeaveType(e.target.value ? Number(e.target.value) : '')} required>
-                                    <option value="">Select leave type</option>
-                                    {leaveBalances.map((leave) => (
-                                        <option key={leave.id} value={leave.id}>
-                                            {leave.leave_name} ({leave.remaining_count} remaining)
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="form-label">Leave duration</label>
-                                <div className="flex flex-wrap gap-4 mt-1">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="leave_duration"
-                                            className="form-radio"
-                                            checked={leaveDuration === 'full_day'}
-                                            onChange={() => setLeaveDuration('full_day')}
+            <Modal open={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} title="Apply for Leave" size="2xl">
+                                {formError && (
+                                    <div className="mb-4 rounded-md border border-danger/30 bg-danger-light text-danger px-3 py-2 text-sm whitespace-pre-line">
+                                        {formError}
+                                    </div>
+                                )}
+                                <form className="space-y-4" onSubmit={submitLeave}>
+                                    <div>
+                                        <label className="form-label">Leave Type</label>
+                                        <select className="form-select" value={leaveType} onChange={(e) => setLeaveType(e.target.value ? Number(e.target.value) : '')} required>
+                                            <option value="">Select leave type</option>
+                                            {leaveBalances.map((leave) => (
+                                                <option key={leave.id} value={leave.id}>
+                                                    {leave.leave_name} ({leave.remaining_count} remaining)
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Leave duration</label>
+                                        <div className="flex flex-wrap gap-4 mt-1">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="leave_duration"
+                                                    className="form-radio"
+                                                    checked={leaveDuration === 'full_day'}
+                                                    onChange={() => setLeaveDuration('full_day')}
+                                                />
+                                                <span>Full day</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="leave_duration"
+                                                    className="form-radio"
+                                                    checked={leaveDuration === 'half_day'}
+                                                    onChange={() => setLeaveDuration('half_day')}
+                                                />
+                                                <span>Half day (same from / to date)</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="form-label">From Date</label>
+                                            <input
+                                                type="date"
+                                                className="form-input"
+                                                min={minLeaveDateStr}
+                                                value={fromDate}
+                                                onChange={(e) => setFromDate(e.target.value)}
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="form-label">To Date</label>
+                                            <input
+                                                type="date"
+                                                className="form-input"
+                                                min={toDateInputMin}
+                                                value={toDate}
+                                                onChange={(e) => setToDate(e.target.value)}
+                                                disabled={leaveDuration === 'half_day'}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Reason</label>
+                                        <textarea
+                                            className="form-textarea min-h-[120px]"
+                                            value={reason}
+                                            onChange={(e) => setReason(e.target.value)}
+                                            placeholder="Enter leave reason..."
+                                            required
                                         />
-                                        <span>Full day</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="leave_duration"
-                                            className="form-radio"
-                                            checked={leaveDuration === 'half_day'}
-                                            onChange={() => setLeaveDuration('half_day')}
-                                        />
-                                        <span>Half day (same from / to date)</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="form-label">From Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-input"
-                                        min={minLeaveDateStr}
-                                        value={fromDate}
-                                        onChange={(e) => setFromDate(e.target.value)}
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="form-label">To Date</label>
-                                    <input
-                                        type="date"
-                                        className="form-input"
-                                        min={toDateInputMin}
-                                        value={toDate}
-                                        onChange={(e) => setToDate(e.target.value)}
-                                        disabled={leaveDuration === 'half_day'}
-                                        required
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="form-label">Reason</label>
-                                <textarea
-                                    className="form-textarea min-h-[120px]"
-                                    value={reason}
-                                    onChange={(e) => setReason(e.target.value)}
-                                    placeholder="Enter leave reason..."
-                                    required
-                                />
-                            </div>
-                            <div className="rounded-md bg-primary-light/20 text-primary px-3 py-2 text-sm">
-                                Requested duration: <span className="font-bold">{requestedDayUnits || 0}</span> day(s)
-                            </div>
-                            <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
-                                {submitting ? 'Submitting...' : 'Submit Leave Request'}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
+                                    </div>
+                                    <div className="rounded-md bg-primary-light/20 text-primary px-3 py-2 text-sm">
+                                        Requested duration: <span className="font-bold">{requestedDayUnits || 0}</span> day(s)
+                                    </div>
+                                    <Button className="w-full" type="submit"  disabled={submitting}>
+                                        {submitting ? 'Submitting...' : 'Submit Leave Request'}
+                                    </Button>
+                                </form>
+            </Modal>
         </div>
     );
 };

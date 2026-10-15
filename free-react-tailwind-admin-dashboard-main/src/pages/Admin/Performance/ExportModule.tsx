@@ -15,6 +15,7 @@ import IconListCheck from '../../../components/Icon/IconListCheck';
 import IconCircleCheck from '../../../components/Icon/IconCircleCheck';
 import IconTrendingUp from '../../../components/Icon/IconTrendingUp';
 import IconClock from '../../../components/Icon/IconClock';
+import { buttonClasses } from '../../../components/Common/Button';
 interface Evaluation {
     id: number;
     employee: number;
@@ -427,13 +428,13 @@ const ExportModule = () => {
                         {/* Apply All */}
                         {cycleFilter !== 'all' && allBands[Number(cycleFilter)]?.length > 0 && (
                             <button onClick={applyAllHikes} disabled={applyingAll || hikeEligibleCount === 0}
-                                className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl text-xs font-black transition shadow-sm">
+                                className={buttonClasses('success', 'sm')}>
                                 {applyingAll ? '⏳ Applying...' : `🚀 Apply All Hikes (${hikeEligibleCount})`}
                             </button>
                         )}
 
                         <button onClick={handleExportCSV} disabled={filteredEvaluations.length === 0}
-                            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand hover:bg-brand disabled:bg-gray-300 text-white rounded-xl text-xs font-black transition shadow-sm">
+                            className={buttonClasses('primary', 'sm')}>
                             <IconDownload className="w-3.5 h-3.5" />
                             Export CSV
                         </button>
@@ -491,7 +492,7 @@ const ExportModule = () => {
                                         <td className="py-3.5 px-2 text-center">
                                             {hike !== null ? (
                                                 <span className={`font-black px-2 py-0.5 rounded-full text-[10px] ${
-                                                    hike >= 15 ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-400' :
+                                                    hike >= 15 ? 'bg-brand-100 text-brand-700 dark:bg-brand-950/40 dark:text-brand-accent' :
                                                     hike >= 10 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' :
                                                     hike >= 7  ? 'bg-brand-100 text-brand-dark dark:bg-brand-950/40 dark:text-brand-400' :
                                                     hike >= 4  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' :
@@ -504,7 +505,7 @@ const ExportModule = () => {
                                                 e.status === 'draft'
                                                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
                                                     : e.status === 'submitted_manager'
-                                                    ? 'bg-blue-105 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                    ? 'bg-brand-105 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400'
                                                     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                                             }`}>
                                                 {e.status.replace('_', ' ')}
@@ -526,7 +527,7 @@ const ExportModule = () => {
                                                 </span>
                                             ) : hike !== null ? (
                                                 <button onClick={() => applyHike(e)} disabled={busy}
-                                                    className="px-3 py-1 text-[9px] font-black bg-indigo-500 hover:bg-indigo-600 disabled:bg-gray-300 text-white rounded-lg transition">
+                                                    className={buttonClasses('primary', 'md')}>
                                                     {busy ? '...' : `Apply +${hike}%`}
                                                 </button>
                                             ) : (

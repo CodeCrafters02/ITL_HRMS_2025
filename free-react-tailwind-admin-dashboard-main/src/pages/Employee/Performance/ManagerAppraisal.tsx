@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 
+import PageHeader from '../../../components/Common/PageHeader';
+import { buttonClasses } from '../../../components/Common/Button';
 interface ReporteeTarget {
     id: number;
     name: string;
@@ -208,7 +210,7 @@ const ManagerAppraisal = () => {
                 <div className="text-rose-500 text-5xl mb-4">⚠️</div>
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Error</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-                <button onClick={loadTargets} className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition">
+                <button onClick={loadTargets} className={buttonClasses('primary', 'sm')}>
                     Retry
                 </button>
             </div>
@@ -224,7 +226,7 @@ const ManagerAppraisal = () => {
                     <p className="text-xs text-gray-405 leading-relaxed mb-6">
                         You have no reportee evaluations assigned to you in the current appraisal cycle.
                     </p>
-                    <Link to="/employee/performance" className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10">
+                    <Link to="/employee/performance" className={buttonClasses('primary', 'sm')}>
                         Back to Hub
                     </Link>
                 </div>
@@ -235,18 +237,18 @@ const ManagerAppraisal = () => {
     return (
         <div className="space-y-6 py-2 animate__animated animate__fadeIn">
             {/* Header banner */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <span className="inline-flex items-center gap-1 bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full mb-1">
-                        Manager Evaluation Period
-                    </span>
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">{activeCycleName}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">Evaluate your direct reportees for the current review cycle.</p>
-                </div>
-                <Link to="/employee/performance" className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-855 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-xs font-bold transition">
-                    ← Performance Hub
-                </Link>
-            </div>
+            <PageHeader
+                title={<>{activeCycleName}</>}
+                badge="Manager Evaluation Period"
+                subtitle="Evaluate your direct reportees for the current review cycle."
+                actions={
+                    <>
+                        <Link to="/employee/performance" className={buttonClasses('secondary', 'sm')}>
+                        ← Performance Hub
+                        </Link>
+                    </>
+                }
+            />
 
             {successMsg && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-2xl text-xs font-bold animate__animated animate__fadeIn">
@@ -267,14 +269,14 @@ const ManagerAppraisal = () => {
                     <div className="space-y-2">
                         {reporteeTargets.map(target => {
                             const isSelected = selectedTarget?.id === target.id;
-                            const colors = ['bg-emerald-500', 'bg-teal-500', 'bg-indigo-500', 'bg-violet-500', 'bg-cyan-500'];
+                            const colors = ['bg-emerald-500', 'bg-brand', 'bg-brand-500', 'bg-brand-accent', 'bg-brand-mid'];
                             const avatarBg = colors[target.id % colors.length];
 
                             return (
                                 <div key={target.id} onClick={() => handleSelectTarget(target, activeCycleId)}
                                     className={`p-3 rounded-2xl border cursor-pointer transition select-none flex items-center gap-3 ${
                                         isSelected 
-                                            ? 'bg-teal-500/10 border-teal-500' 
+                                            ? 'bg-brand/10 border-brand' 
                                             : 'border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/40'
                                     }`}>
                                     <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center font-extrabold text-sm shrink-0 ${avatarBg}`}>
@@ -314,7 +316,7 @@ const ManagerAppraisal = () => {
                                     </div>
                                 ) : (
                                     <button onClick={handleSubmitFeedback} disabled={saving}
-                                        className="px-5 py-2.5 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-300 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10">
+                                        className={buttonClasses('primary', 'sm')}>
                                         {saving ? 'Submitting...' : 'Submit Evaluation'}
                                     </button>
                                 )}
@@ -334,7 +336,7 @@ const ManagerAppraisal = () => {
                                         return (
                                             <div key={q.id} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-5 shadow-sm space-y-4">
                                                 <div className="flex items-start gap-3">
-                                                    <div className="w-6 h-6 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center text-xs font-black shrink-0">
+                                                    <div className="w-6 h-6 rounded-lg bg-brand/10 text-brand dark:text-brand-400 flex items-center justify-center text-xs font-black shrink-0">
                                                         {idx + 1}
                                                     </div>
                                                     <h4 className="text-sm font-bold text-gray-800 dark:text-white leading-normal pt-0.5">
@@ -402,7 +404,7 @@ const ManagerAppraisal = () => {
                                                     <textarea rows={3} placeholder="Provide specific feedback or examples to support this rating..."
                                                         value={val.comment} disabled={selectedTarget.already_submitted}
                                                         onChange={e => handleCommentChange(q.id, e.target.value)}
-                                                        className="w-full bg-gray-50 dark:bg-gray-855 border border-gray-200 dark:border-gray-855 px-3 py-2 rounded-xl text-xs font-semibold text-gray-850 dark:text-white focus:outline-none resize-none focus:ring-1 focus:ring-teal-500" />
+                                                        className="w-full bg-gray-50 dark:bg-gray-855 border border-gray-200 dark:border-gray-855 px-3 py-2 rounded-xl text-xs font-semibold text-gray-850 dark:text-white focus:outline-none resize-none focus:ring-1 focus:ring-brand" />
                                                 </div>
                                             </div>
                                         );
@@ -412,7 +414,7 @@ const ManagerAppraisal = () => {
                                     {!selectedTarget.already_submitted && (
                                         <div className="flex justify-end gap-2 pt-2">
                                             <button onClick={handleSubmitFeedback} disabled={saving}
-                                                className="px-6 py-2.5 bg-teal-500 hover:bg-teal-600 text-white rounded-xl text-xs font-bold transition shadow-md shadow-teal-500/10">
+                                                className={buttonClasses('primary', 'sm')}>
                                                 {saving ? 'Submitting...' : 'Submit Evaluation'}
                                             </button>
                                         </div>

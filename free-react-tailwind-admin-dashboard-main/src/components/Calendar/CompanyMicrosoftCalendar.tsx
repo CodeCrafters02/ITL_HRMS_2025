@@ -203,16 +203,32 @@ function writeHolidaySyncMap(m: Record<string, HolidayOutlookSyncEntry>) {
     localStorage.setItem(holidaySyncMapStorageKey(), JSON.stringify(m));
 }
 
+function addDaysToDateString(dateStr: string, days = 1): string {
+    const raw = String(dateStr || '').trim().slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        const d = new Date(parts[0], parts[1] - 1, parts[2] + days);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
 function fingerprintCompanyHoliday(h: CompanyCalEvent): string {
     return `${h.date}|${h.name}|${(h.description || '').trim()}`;
 }
 
 function buildCompanyHolidayOutlookBody(h: CompanyCalEvent): Record<string, unknown> {
     const tz = calendarTimeZone();
-    const d = new Date(h.date + 'T00:00:00');
-    const endD = new Date(d);
-    endD.setDate(endD.getDate() + 1);
-    const endStr = endD.toISOString().slice(0, 10);
+    const startDate = String(h.date || '').trim().slice(0, 10);
+    const endDate = addDaysToDateString(startDate, 1);
 
     return {
         subject: `[Company] ${h.name}`,
@@ -220,8 +236,8 @@ function buildCompanyHolidayOutlookBody(h: CompanyCalEvent): Record<string, unkn
             contentType: 'Text',
             content: [h.description?.trim(), 'Synced from company calendar (HRMS).'].filter(Boolean).join('\n\n'),
         },
-        start: { dateTime: `${h.date}T00:00:00`, timeZone: tz },
-        end: { dateTime: `${endStr}T00:00:00`, timeZone: tz },
+        start: { dateTime: `${startDate}T00:00:00`, timeZone: tz },
+        end: { dateTime: `${endDate}T00:00:00`, timeZone: tz },
         isAllDay: true,
         categories: ['HRMS Company Holiday'],
     };
@@ -731,10 +747,9 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
             let endDt: string;
 
             if (eventAllDay) {
-                startDt = `${eventDate}T00:00:00`;
-                const d = new Date(eventDate + 'T00:00:00');
-                d.setDate(d.getDate() + 1);
-                endDt = `${d.toISOString().slice(0, 10)}T00:00:00`;
+                const sDate = String(eventDate || '').trim().slice(0, 10);
+                startDt = `${sDate}T00:00:00`;
+                endDt = `${addDaysToDateString(sDate, 1)}T00:00:00`;
             } else {
                 startDt = `${eventDate}T${eventStart}:00`;
                 endDt = `${eventDate}T${eventEnd}:00`;
@@ -958,7 +973,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                 htmlContent += `<p class="pt-2"><a href="${teamsLink}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary inline-flex items-center gap-2">Join Microsoft Teams</a></p>`;
             }
             if (webLink) {
-                htmlContent += `<p class="pt-1"><a href="${webLink}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">View in Outlook on the web →</a></p>`;
+                htmlContent += `<p class="pt-1"><a href="${webLink}" target="_blank" rel="noopener noreferrer" class="text-xs text-brand-600 dark:text-brand-400 hover:underline">View in Outlook on the web →</a></p>`;
             }
             htmlContent += `</div>`;
 
@@ -1082,7 +1097,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
             </div>
 
             {!msToken && (
-                <div className="mb-4 rounded-lg bg-blue-500/10 border border-blue-500/30 px-4 py-3 text-sm text-blue-900 dark:text-blue-200/90 flex items-center justify-between gap-4">
+                <div className="mb-4 rounded-lg bg-brand-500/10 border border-brand-500/30 px-4 py-3 text-sm text-brand-900 dark:text-brand-200/90 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <IconMicrosoft size={28} />
                         <div>
@@ -1298,9 +1313,9 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                             </div>
 
                             {!eventAllDay && (
-                                <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 p-3 flex items-center justify-between">
+                                <div className="rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900/50 p-3 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <IconVideo className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                                        <IconVideo className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                                         <div>
                                             <p className="text-xs font-bold text-gray-800 dark:text-white">Microsoft Teams Meeting</p>
                                             <p className="text-[11px] text-gray-500 dark:text-gray-400">Generate an online Teams meeting link</p>
@@ -1308,7 +1323,7 @@ export const CompanyMicrosoftCalendar = ({ variant = 'page' }: CompanyCalendarPr
                                     </div>
                                     <input
                                         type="checkbox"
-                                        className="form-checkbox text-indigo-600 h-5 w-5"
+                                        className="form-checkbox text-brand-600 h-5 w-5"
                                         checked={eventWithTeams}
                                         onChange={(e) => setEventWithTeams(e.target.checked)}
                                     />

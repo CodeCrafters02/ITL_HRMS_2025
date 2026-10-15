@@ -930,10 +930,18 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         if is_active is not None and is_active != '':
             qs = qs.filter(is_active=(is_active.lower() in ['true', '1', 'active']))
 
+        company_id = self.request.query_params.get('company')
+        if company_id and user.role == 'master':
+            qs = qs.filter(company_id=company_id)
+
+        ordering = (self.request.query_params.get('ordering') or '').strip()
+        sortable = {'employee_id', 'first_name', 'email', 'company__name', 'department__department_name', 'designation__designation_name', 'is_active'}
+        order = ordering if ordering.lstrip('-') in sortable else 'employee_id'
+
         return qs.select_related(
             'department', 'designation', 'level', 'reporting_manager', 
             'reporting_level', 'shift_assigned'
-        ).order_by('employee_id')
+        ).order_by(order, 'id')
 
     def perform_destroy(self, instance):
         """
@@ -1069,7 +1077,12 @@ class AssetRequestViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(requested_by=emp)
             else:
                 qs = qs.none()
-        return qs
+        kind = self.request.query_params.get('kind')
+        if kind == 'core':
+            qs = qs.filter(related_fixed_asset__isnull=False)
+        elif kind == 'supply':
+            qs = qs.filter(related_supply_item__isnull=False)
+        return qs.order_by('-created_at', '-id')
     def perform_create(self, serializer):
         u = self.request.user
         emp = getattr(u, 'employee_profile', None) if getattr(u, 'role', None) == 'employee' else None
@@ -1264,10 +1277,12 @@ class ReimbursementRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def stats(self, request):
         user = self.request.user
-        if user.role not in ['admin', 'master']:
-            return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
-            
-        queryset = self.get_queryset()
+        is_admin = user.role in ['admin', 'master']
+        # employees get totals for their own claims only; search/status/date filters apply to both
+        queryset = self.filter_queryset(self.get_queryset())
+        if not is_admin:
+            emp = getattr(user, 'employee_profile', None)
+            queryset = queryset.filter(employee=emp) if emp else queryset.none()
         
         # Overall totals
         overall = queryset.aggregate(
@@ -1289,7 +1304,7 @@ class ReimbursementRequestViewSet(viewsets.ModelViewSet):
 
         return Response({
             "overall": overall,
-            "employee_wise": employee_wise
+            "employee_wise": employee_wise if is_admin else []
         })
 
     def perform_create(self, serializer):
