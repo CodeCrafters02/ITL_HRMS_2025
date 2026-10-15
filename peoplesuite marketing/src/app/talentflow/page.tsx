@@ -1,12 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import PlatformOverview from "@/components/PlatformOverview";
 import BookDemoModal from "@/components/BookDemoModal";
 import { ProductMedia } from "@/components/home/HomeSections";
+import { CrossSell, TrustBar } from "@/components/ProductMarketing";
 
 const beforeList = [
   "Sourcing credits wasted on candidates already in your database.",
@@ -23,7 +22,7 @@ const afterList = [
   ["Tokenized Client Approval Links", "Clients review match scores and accept candidates in seconds with zero login friction."],
   ["Hierarchical Quality Gates", "Enforce Recruiter ➔ Team Lead ➔ Delivery Manager sign-offs before client release."],
   ["Full Team Governance & Quotas", "Manage recruiter portal credit allocations and real-time candidate Kanban pipelines."],
-  ["Stateless DPDP-Compliant Onboarding", "Structured 11-point document checklist transitions seamlessly to PeopleSuite."],
+  ["Stateless DPDP-Compliant Onboarding", "Structured 11-point document checklist with clear verification workflows."],
 ];
 
 const features = [
@@ -84,7 +83,7 @@ const steps = [
   {
     step: "4",
     title: "Client Review & Onboarding",
-    desc: "Clients click their personalized review link to approve candidates, triggering automated 11-point document collection for PeopleSuite.",
+    desc: "Clients click their personalized review link to approve candidates, triggering automated 11-point document collection.",
   },
 ];
 
@@ -391,7 +390,7 @@ export default function TalentFlowPage() {
                   </div>
                   <h3 className="font-semibold text-xl text-white">For {r.role}</h3>
                   <p className="text-sm text-[#C5D0F5] leading-relaxed italic border-l-2 border-[#4A6CFF] pl-3 py-1">
-                    "{r.text}"
+                    &ldquo;{r.text}&rdquo;
                   </p>
                 </div>
               ))}
@@ -431,6 +430,8 @@ export default function TalentFlowPage() {
         {/* ============================================================== */}
         {/* 7. TALENTFLOW SPECIFIC FAQS                                    */}
         {/* ============================================================== */}
+        <TrustBar product="ats" />
+
         <section id="faq" className="bg-white py-20 border-b border-[#DCE4F5]/60">
           <div className="max-w-4xl mx-auto px-6 lg:px-12">
             <div className="text-center mb-10">
@@ -473,10 +474,9 @@ export default function TalentFlowPage() {
           </div>
         </section>
 
-        {/* Unified Bridge to PeopleSuite */}
-        <PlatformOverview />
-
         {/* Closing Action Banner */}
+        <CrossSell product="ats" />
+
         <section className="bg-[#141834] text-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
@@ -498,7 +498,7 @@ export default function TalentFlowPage() {
         </section>
       </main>
 
-      <Footer theme="light" onOpenDemo={openDemo} />
+      <Footer theme="dark" onOpenDemo={openDemo} />
       <BookDemoModal isOpen={demo} onClose={() => setDemo(false)} defaultPlatform="talentflow" />
     </div>
   );

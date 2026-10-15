@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   BENEFITS,
   PRODUCTS,
+  SPOTLIGHTS,
   TESTIMONIALS,
   type Feature,
   type ProductId,
@@ -303,9 +304,77 @@ function ScreenBody({ screen }: { screen: Screen }) {
   );
 }
 
+/* ------------------------------ Feature spotlight ------------------------------ */
+
+const SPOT_BG = [
+  "from-[#1E1AB8] via-[#2D3BE0] to-[#4A6CFF]",
+  "from-[#141834] via-[#1B2160] to-[#1E1AB8]",
+  "from-[#0B5BD3] via-[#2F6BEA] to-[#6D5BFF]",
+];
+
+function SpotlightCard({ slide, brand, i }: { slide: Slide; brand: string; i: number }) {
+  const s = SPOTLIGHTS[slide.title];
+  if (!s) return null;
+  return (
+    <div className={`relative h-full overflow-hidden rounded-2xl bg-gradient-to-br ${SPOT_BG[i % SPOT_BG.length]} px-5 py-4 text-white sm:px-6 sm:py-5`}>
+      <div className="relative grid h-full items-center gap-4 sm:grid-cols-[1.3fr_1fr]">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+              <Icon name={s.icon} className="!text-[24px]" />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">
+              {brand} · Feature {String(i + 1).padStart(2, "0")}
+            </span>
+          </div>
+          <h3 className="font-display text-xl leading-tight tracking-tight sm:text-2xl lg:text-[1.7rem]">{slide.title}</h3>
+          <p className="max-w-sm text-sm leading-relaxed text-white/75">{slide.desc}</p>
+          <ul className="space-y-1.5">
+            {s.points.map((pt) => (
+              <li key={pt} className="flex items-start gap-2 text-sm font-medium">
+                <Icon name="check_circle" className="mt-px shrink-0 !text-[18px] text-[#7DC8FF]" />
+                {pt}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="relative hidden h-full flex-col items-center justify-center gap-3 sm:flex">
+          <Icon name={s.icon} className="pointer-events-none absolute !text-[160px] text-white/[0.07]" />
+          <div className="relative w-full max-w-[14rem] rounded-2xl bg-white/10 p-4 text-center ring-1 ring-white/20 backdrop-blur-md">
+            <div className="font-display whitespace-nowrap text-3xl font-bold tracking-tight lg:text-4xl">{s.stat[0]}</div>
+            <div className="mt-1 text-xs font-medium text-white/75">{s.stat[1]}</div>
+            <div aria-hidden className="mt-3 flex h-8 items-end justify-center gap-1.5">
+              {[40, 65, 50, 80, 70, 95].map((h, k) => (
+                <span key={k} className="w-3 rounded-t bg-white/60" style={{ height: `${h}%`, opacity: 0.35 + k * 0.12 }} />
+              ))}
+            </div>
+          </div>
+          <div className="animate-float relative flex max-w-full items-center gap-2 rounded-xl bg-white px-3 py-2 text-[#0B0F2E] shadow-xl">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EAF0FF] text-[#1E1AB8]">
+              <Icon name={s.chip[0]} className="!text-[16px]" />
+            </span>
+            <span className="truncate text-xs font-bold">{s.chip[1]}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* --------------------------------- Carousel --------------------------------- */
 
-function ScreenshotCarousel({ slides, brand, nav }: { slides: Slide[]; brand: string; nav: string[] }) {
+function ScreenshotCarousel({
+  slides,
+  brand,
+  nav,
+  variant = "screens",
+}: {
+  slides: Slide[];
+  brand: string;
+  nav: string[];
+  variant?: "screens" | "spotlight";
+}) {
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
 
@@ -349,17 +418,25 @@ function ScreenshotCarousel({ slides, brand, nav }: { slides: Slide[]; brand: st
       >
         {slides.map((s, i) => (
           <figure key={s.title} aria-hidden={i !== index} className="m-0 w-full shrink-0 snap-center px-4 pt-2 lg:px-8">
-            <div className="rounded-2xl shadow-[0_18px_36px_-18px_rgba(30,26,184,0.35)]">
-              <div className="aspect-[16/11] sm:aspect-[16/9.5]">
-                <AppFrame brand={brand} nav={nav} active={i % nav.length} title={s.title}>
-                  <ScreenBody screen={s.screen} />
-                </AppFrame>
-              </div>
+            <div className={`rounded-2xl shadow-[0_18px_36px_-18px_rgba(30,26,184,0.35)] ${variant === "spotlight" ? "h-full" : ""}`}>
+              {variant === "spotlight" ? (
+                <div className="h-full">
+                  <SpotlightCard slide={s} brand={brand} i={i} />
+                </div>
+              ) : (
+                <div className="aspect-[16/11] sm:aspect-[16/9.5]">
+                  <AppFrame brand={brand} nav={nav} active={i % nav.length} title={s.title}>
+                    <ScreenBody screen={s.screen} />
+                  </AppFrame>
+                </div>
+              )}
             </div>
-            <figcaption className="mt-3 text-center">
-              <div className="text-sm font-bold text-[#0B0F2E]">{s.title}</div>
-              <div className="text-xs text-[#5B6488]">{s.desc}</div>
-            </figcaption>
+            {variant === "screens" && (
+              <figcaption className="mt-3 text-center">
+                <div className="text-sm font-bold text-[#0B0F2E]">{s.title}</div>
+                <div className="text-xs text-[#5B6488]">{s.desc}</div>
+              </figcaption>
+            )}
           </figure>
         ))}
       </div>
@@ -508,7 +585,7 @@ export function ProductExplorer({ product, onChange }: { product: ProductId; onC
 
         <div className="mt-10 grid items-center gap-10 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-8">
-            <ScreenshotCarousel key={product} slides={p.slides} brand={p.brand} nav={p.sidebar} />
+            <ScreenshotCarousel key={product} slides={p.slides} brand={p.brand} nav={p.sidebar} variant="spotlight" />
           </div>
           <div className="lg:col-span-4">
             <ul className="space-y-6">
@@ -554,8 +631,9 @@ export function BenefitsRow() {
 
 /* ------------------------------- Video section ------------------------------- */
 
-function VideoPlayer({ product }: { product: ProductId }) {
-  const v = PRODUCTS[product].video;
+function VideoPlayer({ product, cover = "screen" }: { product: ProductId; cover?: "screen" | "brand" }) {
+  const p = PRODUCTS[product];
+  const v = p.video;
   const ref = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const [notice, setNotice] = useState(false);
@@ -567,17 +645,30 @@ function VideoPlayer({ product }: { product: ProductId }) {
   };
 
   return (
-    <div className="relative aspect-video overflow-hidden rounded-2xl bg-[#0B0F2E] shadow-2xl">
+    <div className="relative aspect-video overflow-hidden rounded-2xl bg-[#0B0F2E] lg:aspect-[16/7.5]">
       {v.src ? (
         <video ref={ref} className="h-full w-full object-cover" controls={started} preload="none" poster={v.poster || undefined} playsInline aria-label={v.title}>
           <source src={v.src} />
           {v.captions && <track kind="captions" src={v.captions} srcLang="en" label="English" default />}
         </video>
+      ) : cover === "brand" ? (
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1E1AB8] via-[#2D3BE0] to-[#6D5BFF] p-5 text-white">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70">Product tour</div>
+          <div className="font-display text-2xl tracking-tight sm:text-3xl">{p.brand}</div>
+          <ul className="absolute inset-x-5 bottom-5 flex flex-wrap gap-2">
+            {p.features.map((f) => (
+              <li key={f.title} className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold ring-1 ring-white/25 backdrop-blur">
+                <Icon name={f.icon} className="!text-[14px]" />
+                {f.title}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#232A4E] to-[#0F1226]">
-          <div className="absolute inset-4 opacity-70">
-            <AppFrame brand={PRODUCTS[product].brand} nav={PRODUCTS[product].sidebar} title={PRODUCTS[product].slides[0].title}>
-              <ScreenBody screen={PRODUCTS[product].slides[0].screen} />
+          <div className="absolute inset-0 opacity-70">
+            <AppFrame brand={p.brand} nav={p.sidebar} title={p.slides[0].title}>
+              <ScreenBody screen={p.slides[0].screen} />
             </AppFrame>
           </div>
         </div>
@@ -635,13 +726,23 @@ export function ProductVideoSection({ product, onDemo }: { product: ProductId; o
   return (
     <section id="video" className="scroll-mt-24 bg-white pb-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-12">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#141834] via-[#171d4a] to-[#1E1AB8] p-6 text-white sm:p-10">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#141834] via-[#171d4a] to-[#1E1AB8] p-5 text-white sm:py-5 sm:pl-14 sm:pr-5">
           <div aria-hidden className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[#4A6CFF]/25 blur-3xl" />
-          <div className="relative grid items-center gap-8 lg:grid-cols-2">
-            <div className="space-y-4">
+          <div className="relative grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10">
+            <div className="space-y-3">
               <span className="inline-block rounded-full border border-white/25 px-3 py-1 text-[11px] font-semibold">See It in Action</span>
               <h2 className="font-display text-2xl tracking-tight md:text-3xl">Experience the Power of {PRODUCTS[active].brand}</h2>
               <p className="max-w-md text-sm leading-relaxed text-white/75">{v.blurb}</p>
+              <button
+                type="button"
+                onClick={() => track.current?.children[VIDEO_ORDER.indexOf(active)]?.querySelector<HTMLButtonElement>("button")?.click()}
+                className="inline-flex items-center gap-2 rounded-full bg-[#4A6CFF] py-1.5 pl-1.5 pr-4 text-xs font-bold text-white shadow-md transition hover:bg-[#3B5BF0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[#4A6CFF]">
+                  <Icon name="play_arrow" className="!text-[16px]" />
+                </span>
+                Watch Full Video
+              </button>
             </div>
 
             <div className="relative min-w-0" role="region" aria-roledescription="carousel" aria-label="Product videos" {...motion}>
@@ -658,7 +759,7 @@ export function ProductVideoSection({ product, onDemo }: { product: ProductId; o
                   </div>
                 ))}
               </div>
-              <div className="mt-3 flex justify-center gap-2">
+              <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-2">
                 {VIDEO_ORDER.map((id) => (
                   <button
                     key={id}
@@ -700,7 +801,7 @@ export function SecondaryShowcase({ product, onDemo }: { product: ProductId; onD
           </div>
         </div>
         <div className="min-w-0 lg:col-span-8">
-          <ScreenshotCarousel key={product} slides={p.slides} brand={p.brand} nav={p.sidebar} />
+          <ScreenshotCarousel key={product} slides={p.slides} brand={p.brand} nav={p.sidebar} variant="spotlight" />
         </div>
       </div>
     </section>
@@ -797,19 +898,65 @@ export function CtaBanner({ onDemo }: { onDemo: () => void }) {
             <h2 className="font-display text-xl tracking-tight text-[#0B0F2E] md:text-2xl">Ready to Transform Your HR & Hiring Process?</h2>
             <p className="mt-1 text-sm text-[#5B6488]">Book a walkthrough of PeopleSuite, TalentFlow or both.</p>
           </div>
-          <button
-            type="button"
-            onClick={onDemo}
-            className="relative inline-flex items-center gap-2 rounded-full bg-[#141834] hover:bg-[#232A4E] hover:shadow-[0_6px_20px_rgba(20,24,52,0.35)] border border-[#4A6CFF]/40 px-6 py-3 text-sm font-bold text-white shadow-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4A6CFF]"
-          >
-            Book a Demo
-            <Icon name="arrow_forward" className="!text-[18px]" />
-          </button>
+          <div className="relative flex items-center gap-6">
+            <button
+              type="button"
+              onClick={onDemo}
+              className="relative inline-flex items-center gap-2 rounded-full bg-[#141834] hover:bg-[#232A4E] hover:shadow-[0_6px_20px_rgba(20,24,52,0.35)] border border-[#4A6CFF]/40 px-6 py-3 text-sm font-bold text-white shadow-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4A6CFF]"
+            >
+              Book a Demo
+              <Icon name="arrow_forward" className="!text-[18px]" />
+            </button>
+            <CtaIllustration className="-my-8 hidden h-36 w-auto shrink-0 md:block lg:h-40" />
+          </div>
         </div>
       </div>
     </section>
   );
 }
+
+const CtaIllustration = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 260 150" className={className} aria-hidden fill="none">
+    <ellipse cx="130" cy="140" rx="118" ry="7" fill="#4A6CFF" opacity=".12" />
+    {/* plants */}
+    <g fill="#4A6CFF">
+      <path d="M18 140c-6-18-4-34 6-46 2 16 0 32-6 46z" opacity=".85" />
+      <path d="M22 140c2-20 12-32 26-36-6 14-14 26-26 36z" fill="#6D5BFF" />
+      <path d="M14 140c-10-10-14-22-10-34 8 10 12 22 10 34z" opacity=".6" />
+      <path d="M242 140c6-18 4-34-6-46-2 16 0 32 6 46z" opacity=".85" />
+      <path d="M238 140c-2-20-12-32-26-36 6 14 14 26 26 36z" fill="#6D5BFF" />
+      <path d="M246 140c10-10 14-22 10-34-8 10-12 22-10 34z" opacity=".6" />
+    </g>
+    {/* desk + laptop */}
+    <rect x="74" y="108" width="112" height="5" rx="2.5" fill="#141834" />
+    <path d="M86 113v27M174 113v27" stroke="#141834" strokeWidth="3" strokeLinecap="round" />
+    <path d="M104 84h44l-6 24h-44z" fill="#232A4E" />
+    <path d="M114 92h22l-3 10h-22z" fill="#4A6CFF" opacity=".55" />
+    <rect x="96" y="106" width="56" height="3" rx="1.5" fill="#5B6488" />
+    {/* seated person (left) */}
+    <path d="M58 140v-22c0-6 4-10 10-10h14l4 30" stroke="#141834" strokeWidth="5" strokeLinecap="round" />
+    <path d="M60 112c-2-16 4-30 16-30s16 12 14 24l-10 4z" fill="#4A6CFF" />
+    <path d="M86 94l18 10" stroke="#4A6CFF" strokeWidth="6" strokeLinecap="round" />
+    <circle cx="78" cy="70" r="9" fill="#F2C3A3" />
+    <path d="M69 69c0-8 6-12 11-11 6 1 8 6 7 10-4-4-10-3-18 1z" fill="#141834" />
+    {/* standing person (center) */}
+    <path d="M136 140l2-38M146 140l-2-38" stroke="#141834" strokeWidth="5" strokeLinecap="round" />
+    <path d="M130 104c-2-20 2-38 11-38s13 18 11 38z" fill="#6D5BFF" />
+    <path d="M150 76l12 14-8 6" stroke="#6D5BFF" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="141" cy="54" r="9" fill="#C68B6E" />
+    <path d="M132 53c0-8 5-12 10-11 6 0 9 5 8 9-5-3-10-3-18 2z" fill="#141834" />
+    {/* seated person (right) */}
+    <path d="M206 140v-22c0-6-4-10-10-10h-14l-4 30" stroke="#141834" strokeWidth="5" strokeLinecap="round" />
+    <path d="M204 112c2-16-4-30-16-30s-16 12-14 24l10 4z" fill="#232A4E" />
+    <path d="M176 94l-16 12" stroke="#232A4E" strokeWidth="6" strokeLinecap="round" />
+    <circle cx="186" cy="70" r="9" fill="#F2C3A3" />
+    <path d="M177 72c-2-10 4-15 10-14 7 1 9 8 8 14-3-5-10-6-18 0z" fill="#141834" />
+    {/* floating accents */}
+    <circle cx="112" cy="38" r="4" fill="#4A6CFF" opacity=".35" />
+    <circle cx="214" cy="40" r="6" fill="#6D5BFF" opacity=".25" />
+    <path d="M48 46l3 6 6 3-6 3-3 6-3-6-6-3 6-3z" fill="#4A6CFF" opacity=".5" />
+  </svg>
+);
 
 /* ------------------------- Dedicated product page media ------------------------- */
 
@@ -820,7 +967,7 @@ export function ProductMedia({ product, onDemo }: { product: ProductId; onDemo: 
       <div className="mx-auto max-w-7xl px-6 lg:px-12">
         <div className="grid items-center gap-10 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-8">
-            <ScreenshotCarousel slides={p.slides} brand={p.brand} nav={p.sidebar} />
+            <ScreenshotCarousel slides={p.slides} brand={p.brand} nav={p.sidebar} variant="spotlight" />
           </div>
           <ul className="space-y-6 lg:col-span-4">
             {p.features.map((f) => (
@@ -842,7 +989,7 @@ export function ProductMedia({ product, onDemo }: { product: ProductId; onDemo: 
                 Book a Walkthrough
               </button>
             </div>
-            <VideoPlayer product={product} />
+            <VideoPlayer product={product} cover="brand" />
           </div>
         </div>
       </div>

@@ -207,7 +207,7 @@ export default function BookDemoModal({
                     >
                       <span className="material-symbols-outlined text-[17px]">hub</span>
                       <span className="text-[11px] font-bold">Both</span>
-                      <span className="text-[9px] opacity-75 font-normal">Unified Suite</span>
+                      <span className="text-[9px] opacity-75 font-normal">Both platforms</span>
                     </button>
                   </div>
                 </div>

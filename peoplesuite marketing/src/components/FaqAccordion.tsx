@@ -92,11 +92,11 @@ const faqData: FaqItem[] = [
     category: "security",
     question: "Is candidate and employee data DPDP-compliant and securely protected?",
     answer:
-      "Yes. Both TalentFlow and PeopleSuite adhere strictly to enterprise data privacy principles. The platform features 256-bit SSL encryption, tamper-evident immutable audit trails for every profile access and status change, granular role-based access control (RBAC), and stateless DPDP-ready pre-onboarding document storage.",
+      "Yes. Both TalentFlow and PeopleSuite adhere strictly to enterprise data privacy principles. Each platform features 256-bit SSL encryption, tamper-evident immutable audit trails for every profile access and status change, granular role-based access control (RBAC), and stateless DPDP-ready pre-onboarding document storage.",
   },
   {
     category: "security",
-    question: "Who develops and supports the unified HRMS + ATS platform?",
+    question: "Who develops and supports PeopleSuite and TalentFlow?",
     answer:
       "PeopleSuite and TalentFlow are engineered and developed by Innovyx Tech Labs LLP. We deliver enterprise architecture, cloud deployment, custom statutory rule configurations, continuous compliance updates, and dedicated technical support.",
   },

@@ -4,9 +4,10 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PlatformOverview from "@/components/PlatformOverview";
 import BookDemoModal from "@/components/BookDemoModal";
 import FaqAccordion from "@/components/FaqAccordion";
-import { HeroDashboard, ProductExplorer, BenefitsRow, Reveal, WordReveal, ProductVideoSection, SecondaryShowcase, Testimonials, CtaBanner } from "@/components/home/HomeSections";
+import { HeroDashboard, ProductExplorer, BenefitsRow, Reveal, WordReveal, ProductVideoSection, SecondaryShowcase, CtaBanner } from "@/components/home/HomeSections";
 import type { ProductId } from "@/data/showcase";
 
 export default function HomePage() {
@@ -44,11 +45,11 @@ export default function HomePage() {
               <h1 className="font-display text-3xl sm:text-4xl lg:text-[36px] xl:text-[42px] leading-[1.12] tracking-tight text-[#0B0F2E]">
                 <WordReveal text="People operations. Hiring." />
                 <br />
-                <span className="text-shimmer">One connected platform.</span>
+                <span className="text-shimmer">Engineered for how India works.</span>
               </h1>
 
               <p className="text-base text-[#5B6488] max-w-lg leading-relaxed">
-                Empower your organization with a unified HRMS and ATS platform. Manage your workforce with geofenced attendance, Indian statutory payroll and 2D hot desking, and streamline recruitment with 1-click sourcing, AI fit scoring and tokenized client portals — all in one place.
+                From Innovyx Tech Labs: PeopleSuite HRMS to manage your workforce with geofenced attendance, Indian statutory payroll and 2D hot desking, and TalentFlow ATS to streamline recruitment with 1-click sourcing, AI fit scoring and tokenized client portals.
               </p>
 
               <div className="flex flex-wrap gap-3 pt-2">
@@ -100,7 +101,7 @@ export default function HomePage() {
         <BenefitsRow />
         <Reveal><ProductVideoSection product={product} onDemo={() => openDemo("both")} /></Reveal>
         <Reveal><SecondaryShowcase product={product === "hrms" ? "ats" : "hrms"} onDemo={() => openDemo(product === "hrms" ? "talentflow" : "peoplesuite")} /></Reveal>
-        <Reveal><Testimonials /></Reveal>
+        <Reveal><PlatformOverview /></Reveal>
 
         {/* ============================================================== */}
         {/* TALENTFLOW: BEFORE VS. AFTER COMPARISON                        */}
@@ -109,7 +110,7 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <div className="max-w-2xl text-center mx-auto mb-12 space-y-3">
               <div className="text-xs font-semibold text-[#0B5BD3] uppercase tracking-wider">
-                Unified Architectural FAQ
+                Platform FAQ
               </div>
               <h2 className="font-display text-3xl lg:text-4xl tracking-tight text-[#0B0F2E]">
                 Answers based on our real architecture
