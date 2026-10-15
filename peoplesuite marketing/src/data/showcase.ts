@@ -135,7 +135,7 @@ export const PRODUCTS: Record<ProductId, ProductConfig> = {
     slides: [
       {
         title: "Candidate Pipeline",
-        desc: "Applied → Screening → Interview → Offer with recruiter, TL and DM gates.",
+        desc: "Zero lost candidates — one Kanban from Applied to Offer with real-time stage alerts.",
         screen: {
           kind: "pipeline",
           cols: [
@@ -147,18 +147,8 @@ export const PRODUCTS: Record<ProductId, ProductConfig> = {
         },
       },
       {
-        title: "AI Fit & Skill Gap Engine",
-        desc: "0–100% scoring across skills, experience, education and location.",
-        screen: {
-          kind: "scores",
-          headline: "Siddharth Verma · Senior Backend Lead",
-          badge: "89% AI Match",
-          items: [["Skills", 92], ["Experience", 88], ["Education", 84], ["Location", 90]],
-        },
-      },
-      {
-        title: "1-Click Sourcing & Dedup",
-        desc: "Naukri Resdex capture with 3-tier deduplication before credits are spent.",
+        title: "Resdex to ATS in Minutes",
+        desc: "Sourcing-to-submission drops from 3–4 hours to under 10 minutes per candidate.",
         screen: {
           kind: "stats",
           stats: [["312", "Profiles Synced"], ["96", "Duplicates Blocked"], ["0", "Credits Burned"], ["2 min", "Avg. Dossier Time"]],
@@ -167,8 +157,38 @@ export const PRODUCTS: Record<ProductId, ProductConfig> = {
         },
       },
       {
-        title: "Tokenized Client Portal",
-        desc: "Passwordless links with match scores and 1-click Accept, Reject or Interview.",
+        title: "Portal Credit Protection",
+        desc: "Stop paying twice for the same CV — duplicates are caught before credits are debited.",
+        screen: {
+          kind: "stats",
+          stats: [["96", "Duplicates Blocked"], ["0", "Credits Burned"], ["3", "Dedup Checks"], ["312", "Profiles Synced"]],
+          listTitle: "Dedup Checks",
+          rows: [["Email match", "Primary", "info"], ["Phone match", "Secondary", "info"], ["Name + company", "Tertiary", "info"]],
+        },
+      },
+      {
+        title: "Objective Screening Scorecards",
+        desc: "Standardized rubrics remove recruiter bias and make every shortlist comparable.",
+        screen: {
+          kind: "scores",
+          headline: "Siddharth Verma · Senior Backend Lead",
+          badge: "89% AI Match",
+          items: [["Skills", 92], ["Experience", 88], ["Education", 84], ["Location", 90]],
+        },
+      },
+      {
+        title: "Instant Client-Ready Dossiers",
+        desc: "Branded, contact-masked PDF profiles rendered on demand by pre-warmed workers.",
+        screen: {
+          kind: "stats",
+          stats: [["< 2 min", "Dossier Time"], ["24", "Dossiers Today"], ["100%", "Contacts Masked"], ["0", "Cold Starts"]],
+          listTitle: "Recent Dossiers",
+          rows: [["Backend Lead", "Branded PDF", "ok"], ["QA Engineer", "Contact masked", "info"], ["DevOps", "Rendering", "warn"]],
+        },
+      },
+      {
+        title: "3x Faster Client Decisions",
+        desc: "Client feedback lands in hours, not days — straight from a secure review link.",
         screen: {
           kind: "stats",
           stats: [["24", "Dossiers Shared"], ["19", "Reviewed"], ["7", "Interviews Requested"], ["6 h", "Avg. Feedback"]],
@@ -177,12 +197,22 @@ export const PRODUCTS: Record<ProductId, ProductConfig> = {
         },
       },
       {
-        title: "DPDP Pre-Onboarding",
-        desc: "11-point verification checklist converting into PeopleSuite employees.",
+        title: "Quality Gates & Role Control",
+        desc: "No unvetted candidate reaches a client — every submission passes TL and DM sign-off.",
+        screen: {
+          kind: "scores",
+          headline: "Submission Approvals",
+          badge: "DM Sign-off",
+          items: [["Recruiter screening", 100], ["TL verification", 92], ["DM quality sign-off", 85]],
+        },
+      },
+      {
+        title: "Audit-Ready Onboarding",
+        desc: "From offer to day-one joining with zero compliance risk and a full audit trail.",
         screen: {
           kind: "scores",
           headline: "Pre-Onboarding Checklist",
-          badge: "Ready for PeopleSuite",
+          badge: "Verified",
           items: [["Identity proofs", 100], ["Academic degrees", 100], ["Relieving letters", 82]],
         },
       },
@@ -202,6 +232,101 @@ export const PRODUCTS: Record<ProductId, ProductConfig> = {
       title: "TalentFlow product walkthrough",
       blurb: "Watch how sourcing, AI scoring and client review work together in TalentFlow.",
     },
+  },
+};
+
+export interface Spotlight {
+  icon: string;
+  stat: [string, string];
+  points: [string, string, string];
+  chip: [string, string];
+}
+
+/** Marketing spotlight per carousel slide, keyed by slide title. */
+export const SPOTLIGHTS: Record<string, Spotlight> = {
+  "Live Attendance Dashboard": {
+    icon: "pin_drop",
+    stat: ["GPS", "Geofenced check-ins"],
+    points: ["Geofence check-in & check-out", "Shift rosters and break discipline", "Multi-level leave approvals"],
+    chip: ["notifications_active", "Leave request approved"],
+  },
+  "Statutory Payroll Engine": {
+    icon: "account_balance_wallet",
+    stat: ["4-in-1", "EPF · ESIC · PT · TDS"],
+    points: ["Indian statutory slabs built in", "Attendance-linked salary runs", "Branded PDF payslips"],
+    chip: ["receipt_long", "Payslips locked & disbursed"],
+  },
+  "2D Desk & Room Booking": {
+    icon: "meeting_room",
+    stat: ["2D", "Interactive floor plans"],
+    points: ["Hot desk booking", "Conflict-free meeting rooms", "Permanent & flexible seating"],
+    chip: ["event_seat", "Desk B-14 booked"],
+  },
+  "Performance & 360° Appraisals": {
+    icon: "track_changes",
+    stat: ["360°", "Multi-rater reviews"],
+    points: ["KRA / KPI library", "Self, manager & peer reviews", "Rating-to-hike matrix"],
+    chip: ["trending_up", "Appraisal cycle in review"],
+  },
+  "IT Assets & Inventory": {
+    icon: "devices",
+    stat: ["Live", "Low-stock alerts"],
+    points: ["Serialized hardware & warranties", "Custodian hand-offs", "Consumable reorder alerts"],
+    chip: ["inventory_2", "Reorder alert · cables"],
+  },
+  "Corporate LMS & HR Letters": {
+    icon: "school",
+    stat: ["Auto", "Offer & relieving letters"],
+    points: ["Learning paths & certificates", "Compliance training tracking", "Automated HR letters"],
+    chip: ["workspace_premium", "Certificate issued"],
+  },
+  "Candidate Pipeline": {
+    icon: "view_kanban",
+    stat: ["0", "Lost candidates"],
+    points: ["Centralized Kanban across every stage", "Real-time stage notifications", "Scheduled management reports"],
+    chip: ["notifications_active", "Moved to Interview"],
+  },
+  "Resdex to ATS in Minutes": {
+    icon: "bolt",
+    stat: ["75%", "Shorter sourcing cycle"],
+    points: ["Profiles captured straight from Resdex", "Zero manual re-typing", "Per-recruiter weekly & monthly quotas"],
+    chip: ["extension", "Profile synced in 1 click"],
+  },
+  "Portal Credit Protection": {
+    icon: "savings",
+    stat: ["30–40%", "Saved on portal spend"],
+    points: ["Email → Phone → Name + Company checks", "Duplicates flagged before credits debit", "Concurrency limits prevent portal lockouts"],
+    chip: ["block", "Duplicate blocked · credit saved"],
+  },
+  "Objective Screening Scorecards": {
+    icon: "fact_check",
+    stat: ["0–100%", "Multivariate fit score"],
+    points: ["Skills, experience, education & location", "Confirmed vs. missing skills side by side", "One rating rubric for every recruiter"],
+    chip: ["psychology", "89% AI match"],
+  },
+  "Instant Client-Ready Dossiers": {
+    icon: "picture_as_pdf",
+    stat: ["< 2 min", "Per client submission"],
+    points: ["Pre-warmed workers — no cold starts", "Agency branding injected automatically", "Contact details masked by default"],
+    chip: ["description", "Dossier ready · contact masked"],
+  },
+  "3x Faster Client Decisions": {
+    icon: "speed",
+    stat: ["3x", "Faster client responses"],
+    points: ["From 4 days to under 12 hours", "No login — works on mobile & desktop", "Rejection reasons captured in the ATS"],
+    chip: ["thumb_up", "Client requested interview"],
+  },
+  "Quality Gates & Role Control": {
+    icon: "account_tree",
+    stat: ["4", "Roles: Recruiter · TL · DM · Admin"],
+    points: ["Recruiter scorecards & screening", "TL verification & pipeline assignment", "DM quality sign-off before release"],
+    chip: ["verified", "DM sign-off complete"],
+  },
+  "Audit-Ready Onboarding": {
+    icon: "verified_user",
+    stat: ["100%", "Audit compliance"],
+    points: ["Draft → Submitted → Verified lifecycle", "Aadhaar, PAN, payslips, degrees & relieving letters", "Tamper-evident audit trail"],
+    chip: ["task_alt", "11/11 documents verified"],
   },
 };
 

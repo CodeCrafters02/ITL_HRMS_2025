@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import BookDemoModal from "@/components/BookDemoModal";
 import FaqAccordion from "@/components/FaqAccordion";
 import { ProductMedia } from "@/components/home/HomeSections";
+import RoiCalculator from "@/components/RoiCalculator";
+import { AudienceGrid, ComparisonTable, CrossSell, RolloutSteps, TrustBar, ValueStrip } from "@/components/ProductMarketing";
 import { hrmsModules, hrmsStories } from "@/data/peoplesuite";
 
 export default function PeopleSuitePage() {
@@ -42,6 +44,8 @@ export default function PeopleSuitePage() {
           </div>
         </section>
 
+        <ValueStrip product="hrms" />
+
         <ProductMedia product="hrms" onDemo={openDemo} />
 
         <section id="modules" className="scroll-mt-20 bg-[#F5F8FF] py-20 border-y border-[#DCE4F5]">
@@ -63,6 +67,8 @@ export default function PeopleSuitePage() {
             </div>
           </div>
         </section>
+
+        <AudienceGrid product="hrms" />
 
         <section className="max-w-7xl mx-auto px-6 lg:px-12 py-20 space-y-24">
           {hrmsStories.map((s) => (
@@ -100,12 +106,26 @@ export default function PeopleSuitePage() {
           ))}
         </section>
 
+        <ComparisonTable product="hrms" />
+
+        <section id="roi" className="scroll-mt-24 bg-white py-20">
+          <div className="max-w-7xl mx-auto px-6 lg:px-12">
+            <RoiCalculator onOpenDemo={openDemo} />
+          </div>
+        </section>
+
+        <RolloutSteps product="hrms" onDemo={openDemo} />
+
+        <TrustBar product="hrms" />
+
         <section id="faq" className="scroll-mt-20 bg-[#F5F8FF] border-y border-[#DCE4F5] py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-12">
             <h2 className="font-display text-3xl lg:text-4xl tracking-tight text-center mb-10">Frequently asked questions</h2>
             <FaqAccordion />
           </div>
         </section>
+
+        <CrossSell product="hrms" />
 
         <section className="bg-[#141834] text-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 py-16 flex flex-col md:flex-row md:items-center justify-between gap-6">

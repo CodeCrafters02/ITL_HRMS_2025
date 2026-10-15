@@ -38,7 +38,7 @@ const products = [
 
 export default function PlatformOverview() {
   return (
-    <section id="platform" className="bg-white py-20 border-b border-[#DCE4F5]/60">
+    <section id="platform" className="scroll-mt-24 bg-white py-20 border-b border-[#DCE4F5]/60">
       <div className="max-w-7xl mx-auto px-6 lg:px-12">
         <div className="max-w-3xl mb-12">
           <p className="text-xs font-semibold text-[#0B5BD3] uppercase tracking-wider mb-2">
@@ -48,7 +48,7 @@ export default function PlatformOverview() {
             Modern software for recruitment and workforce management.
           </h2>
           <p className="mt-3 text-[#5B6488] leading-relaxed">
-            Discover our two dedicated platforms: <strong>TalentFlow</strong> for intelligent candidate sourcing and applicant tracking, and <strong>PeopleSuite</strong> for enterprise employee operations and payroll.
+            Discover <strong>TalentFlow</strong> for intelligent candidate sourcing and applicant tracking, and <strong>PeopleSuite</strong> for enterprise employee operations and payroll.
           </p>
         </div>
 

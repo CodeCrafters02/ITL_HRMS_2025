@@ -2,545 +2,259 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import BrandLogo from "@/components/BrandLogo";
+import { usePathname } from "next/navigation";
 
 interface NavbarProps {
   onOpenDemo?: () => void;
   onSelectProduct?: (p: "hrms" | "ats") => void;
 }
 
-export default function Navbar({ onOpenDemo, onSelectProduct }: NavbarProps) {
+type NavItem = { icon: string; title: string; desc: string; href: string };
+type MenuId = "products" | "solutions" | "resources";
+
+const PRODUCTS: { name: string; tag: string; href: string; cta: string; items: NavItem[] }[] = [
+  {
+    name: "TalentFlow",
+    tag: "AI-Powered ATS",
+    href: "/talentflow",
+    cta: "Explore TalentFlow",
+    items: [
+      { icon: "extension", title: "1-Click Sourcing", desc: "Naukri Resdex sync with 3-tier dedup", href: "/talentflow#features" },
+      { icon: "query_stats", title: "AI Fit Scoring", desc: "0–100% match & skill-gap analysis", href: "/talentflow#features" },
+      { icon: "forum", title: "Client Review Portal", desc: "Password-free, 1-click decisions", href: "/talentflow#features" },
+      { icon: "verified_user", title: "DPDP Pre-Onboarding", desc: "11-point verified document checklist", href: "/talentflow#how" },
+    ],
+  },
+  {
+    name: "PeopleSuite",
+    tag: "Statutory HRMS",
+    href: "/peoplesuite",
+    cta: "Explore PeopleSuite",
+    items: [
+      { icon: "pin_drop", title: "Geofenced Attendance", desc: "GPS check-ins, shifts & breaks", href: "/peoplesuite#attendance" },
+      { icon: "account_balance_wallet", title: "Statutory Payroll", desc: "EPF · ESIC · PT · TDS & payslips", href: "/peoplesuite#payroll" },
+      { icon: "meeting_room", title: "Desk & Asset Hub", desc: "2D floor plans & IT inventory", href: "/peoplesuite#workspace" },
+      { icon: "track_changes", title: "Performance & LMS", desc: "360° appraisals & learning paths", href: "/peoplesuite#performance" },
+    ],
+  },
+];
+
+const SOLUTIONS: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Recruitment · TalentFlow",
+    items: [
+      { icon: "groups", title: "Recruitment Agencies & RPO", desc: "Cut portal spend and submit faster", href: "/talentflow" },
+      { icon: "work", title: "Enterprise Talent Acquisition", desc: "Governed hiring with TL & DM gates", href: "/talentflow#how" },
+      { icon: "handshake", title: "Client Delivery Teams", desc: "Branded dossiers & password-free reviews", href: "/talentflow#features" },
+    ],
+  },
+  {
+    label: "Workforce · PeopleSuite",
+    items: [
+      { icon: "badge", title: "HR & People Operations", desc: "12 modules for the full employee lifecycle", href: "/peoplesuite#modules" },
+      { icon: "gavel", title: "Payroll & Compliance", desc: "Indian statutory payroll, audit-ready", href: "/peoplesuite#payroll" },
+      { icon: "chair_alt", title: "Hybrid Workplaces", desc: "Hot desks, rooms and asset custody", href: "/peoplesuite#workspace" },
+    ],
+  },
+];
+
+const RESOURCES: NavItem[] = [
+  { icon: "play_circle", title: "Product Tour", desc: "Watch TalentFlow and PeopleSuite tours", href: "/#video" },
+  { icon: "calculate", title: "ROI Calculator", desc: "Estimate HR hours saved", href: "/peoplesuite#roi" },
+  { icon: "compare_arrows", title: "Why Switch", desc: "Compare against spreadsheets & legacy tools", href: "/peoplesuite#compare" },
+  { icon: "shield_lock", title: "Security & Compliance", desc: "SSL, RBAC, audit trails, DPDP", href: "/peoplesuite#security" },
+  { icon: "help", title: "FAQ", desc: "Answers on architecture & rollout", href: "/#faq" },
+];
+
+const MENUS: { id: MenuId; label: string }[] = [
+  { id: "products", label: "Products" },
+  { id: "solutions", label: "Solutions" },
+  { id: "resources", label: "Resources" },
+];
+
+const Icon = ({ name, className = "" }: { name: string; className?: string }) => (
+  <span className={`material-symbols-outlined ${className}`} aria-hidden="true">
+    {name}
+  </span>
+);
+
+const ItemLink = ({ item, onClick }: { item: NavItem; onClick: () => void }) => (
+  <Link href={item.href} onClick={onClick} className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-[#F5F8FF]">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF0FF] text-[#1E1AB8] transition-colors group-hover:bg-[#1E1AB8] group-hover:text-white">
+      <Icon name={item.icon} className="!text-[20px]" />
+    </span>
+    <span>
+      <span className="block text-sm font-semibold text-[#0B0F2E] group-hover:text-[#0B5BD3]">{item.title}</span>
+      <span className="block text-[11px] text-[#5B6488]">{item.desc}</span>
+    </span>
+  </Link>
+);
+
+export default function Navbar({ onOpenDemo }: NavbarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const talentDropdownRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<MenuId | null>(null);
+  const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+    const onDown = (e: MouseEvent) => !navRef.current?.contains(e.target as Node) && setOpen(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(null);
+      setMobileMenuOpen(false);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        talentDropdownRef.current &&
-        !talentDropdownRef.current.contains(event.target as Node)
-      ) {
-        setActiveDropdown(null);
-      }
-    };
-    document.addEventListener("mousedown", handleOutsideClick);
-    return () => document.removeEventListener("mousedown", handleOutsideClick);
-  }, []);
+  const close = () => {
+    setOpen(null);
+    setMobileMenuOpen(false);
+  };
+  const isActive = (id: MenuId) => open === id || (id === "products" && (pathname === "/talentflow" || pathname === "/peoplesuite"));
 
-  // Close menus on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setActiveDropdown(null);
-        setMobileMenuOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  const closeDropdown = () => setActiveDropdown(null);
-
-  const isDarkNav = false;
+  const panel = (id: MenuId) => {
+    if (id === "products")
+      return (
+        <div className="w-[640px]">
+          <div className="grid grid-cols-2 gap-4 p-4">
+            {PRODUCTS.map((p) => (
+              <div key={p.name}>
+                <Link href={p.href} onClick={close} className="mb-1 flex items-baseline justify-between rounded-lg px-2.5 py-1.5 hover:bg-[#F5F8FF]">
+                  <span className="font-display text-base text-[#0B0F2E]">{p.name}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#0B5BD3]">{p.tag}</span>
+                </Link>
+                {p.items.map((it) => (
+                  <ItemLink key={it.title} item={it} onClick={close} />
+                ))}
+                <Link href={p.href} onClick={close} className="mt-1 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-[#0B5BD3] hover:underline">
+                  {p.cta}
+                  <Icon name="arrow_forward" className="!text-[14px]" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    if (id === "solutions")
+      return (
+        <div className="grid w-[600px] grid-cols-2 gap-4 p-4">
+          {SOLUTIONS.map((g) => (
+            <div key={g.label}>
+              <div className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#0B5BD3]">{g.label}</div>
+              {g.items.map((it) => (
+                <ItemLink key={it.title} item={it} onClick={close} />
+              ))}
+            </div>
+          ))}
+        </div>
+      );
+    return (
+      <div className="grid w-[320px] gap-1 p-3">
+        {RESOURCES.map((it) => (
+          <ItemLink key={it.title} item={it} onClick={close} />
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
-        isDarkNav
-          ? "bg-[#0A0B14]/95 backdrop-blur-md shadow-[0_1px_12px_rgba(74,108,255,0.12)] border-b border-[#4A6CFF]/20"
-          : "bg-white/95 backdrop-blur-md shadow-[0_1px_8px_rgba(11,91,211,0.06)] border-b border-[#DCE4F5]/70"
-      }`}
-    >
-      <div className="h-[76px] max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between gap-6">
-        {/* Brand Logo & Name */}
-        <div className="flex items-center gap-7">
-          <Link href="/" onClick={closeDropdown} className="flex items-center gap-3">
-            <img src="/logo.png" alt="Innovyx Tech Labs" className="h-14 w-auto bg-white rounded-lg p-0.5 object-contain" />
-            <div className="hidden sm:flex flex-col">
-              <span className="font-bold text-sm tracking-tight text-[#0B0F2E] leading-tight">
-                Innovyx <span className="text-[#0B5BD3]">Tech Labs</span>
-              </span>
-              <span className="text-[10px] text-[#5B6488] font-medium leading-none">
-                People & Talent Cloud
-              </span>
-            </div>
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#DCE4F5]/70 bg-white/95 shadow-[0_1px_8px_rgba(11,91,211,0.06)] backdrop-blur-md transition-all duration-200">
+      <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between gap-6 px-6 lg:px-12">
+        <div className="flex items-center gap-8">
+          <Link href="/" onClick={close} aria-label="Innovyx Tech Labs home">
+            <BrandLogo className="h-14 -translate-y-2" />
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-6">
-            {/* TalentFlow Dropdown */}
-            <div
-              ref={talentDropdownRef}
-              className="relative py-2"
-              onMouseEnter={() => setActiveDropdown("talentflow")}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectProduct?.("ats");
-                  router.push("/talentflow");
-                  setActiveDropdown((prev) => (prev === "talentflow" ? null : "talentflow"));
-                }}
-                aria-expanded={activeDropdown === "talentflow"}
-                aria-haspopup="true"
-                className={`flex items-center gap-1 font-label-lg text-label-lg transition-colors cursor-pointer select-none ${
-                  activeDropdown === "talentflow" || pathname === "/talentflow"
-                    ? "text-[#0B5BD3] font-semibold"
-                    : "text-[#5B6488] hover:text-[#0B0F2E]"
-                }`}
-              >
-                <span>TalentFlow</span>
-                <span
-                  className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
-                    activeDropdown === "talentflow" ? "rotate-180 text-[#0B5BD3]" : ""
+          <nav ref={navRef} aria-label="Main" className="hidden items-center gap-1 lg:flex">
+            {MENUS.map(({ id, label }) => (
+              <div key={id} className="relative py-2" onMouseEnter={() => setOpen(id)} onMouseLeave={() => setOpen(null)}>
+                <button
+                  type="button"
+                  onClick={() => setOpen((o) => (o === id ? null : id))}
+                  aria-expanded={open === id}
+                  aria-haspopup="true"
+                  className={`flex items-center gap-1 rounded-full px-3 py-1.5 font-label-lg text-label-lg transition-colors ${
+                    isActive(id) ? "font-semibold text-[#0B5BD3]" : "text-[#5B6488] hover:text-[#0B0F2E]"
                   }`}
                 >
-                  expand_more
-                </span>
-              </button>
-
-              <div
-                className={`absolute top-full left-0 w-[420px] pt-2 transition-all duration-200 ${
-                  activeDropdown === "talentflow"
-                    ? "opacity-100 translate-y-0 visible pointer-events-auto"
-                    : "opacity-0 translate-y-1 invisible pointer-events-none"
-                }`}
-              >
-                <div className="rounded-2xl p-4 shadow-xl border bg-white border-[#DCE4F5] shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)] space-y-1.5">
-                  <div className="px-2 py-1 text-[11px] font-bold text-[#0B5BD3] uppercase tracking-wider">
-                    Candidate Sourcing & Screening
-                  </div>
-
-                  <Link
-                    href="/talentflow"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      extension
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">1-Click Sourcing Gateway</div>
-                      <div className="text-[11px] text-[#5B6488]">
-                        Chrome MV3 sync for Naukri Resdex + 3-tier dedup
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/talentflow"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#4A6CFF] mt-0.5">
-                      query_stats
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">AI Fit & Gap Scorecards</div>
-                      <div className="text-[11px] text-[#5B6488]">
-                        0-100% multivariate match against Job Description
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/talentflow"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#1E1AB8] mt-0.5">
-                      picture_as_pdf
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Playwright PDF Dossiers</div>
-                      <div className="text-[11px] text-[#5B6488]">
-                        Branded candidate CVs with contact privacy masking
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/talentflow"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      forum
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Tokenized Client Portal</div>
-                      <div className="text-[11px] text-[#5B6488]">
-                        Passwordless links with 1-click Accept / Reject
-                      </div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/talentflow"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      verified_user
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">DPDP Pre-Onboarding Verification</div>
-                      <div className="text-[11px] text-[#5B6488]">
-                        11-point doc checklist ➔ converts directly to PeopleSuite
-                      </div>
-                    </div>
-                  </Link>
-
-                  <div className="pt-2 border-t border-[#DCE4F5]/60 mt-1">
-                    <Link
-                      href="/talentflow"
-                      onClick={closeDropdown}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#0B5BD3] hover:bg-[#EAF0FF] transition-colors"
-                    >
-                      <span>Explore Dedicated TalentFlow Page</span>
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PeopleSuite Platform Modules Dropdown */}
-            <div
-              ref={dropdownRef}
-              className="relative py-2"
-              onMouseEnter={() => setActiveDropdown("product")}
-              onMouseLeave={() => setActiveDropdown(null)}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  onSelectProduct?.("hrms");
-                  router.push("/peoplesuite");
-                  setActiveDropdown((prev) => (prev === "product" ? null : "product"));
-                }}
-                aria-expanded={activeDropdown === "product"}
-                aria-haspopup="true"
-                className={`flex items-center gap-1 font-label-lg text-label-lg transition-colors cursor-pointer select-none ${
-                  activeDropdown === "product"
-                    ? "text-[#0B5BD3] font-semibold"
-                    : "text-[#5B6488] hover:text-[#0B0F2E]"
-                }`}
-              >
-                <span>PeopleSuite</span>
-                <span
-                  className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
-                    activeDropdown === "product" ? "rotate-180 text-[#0B5BD3]" : ""
+                  {label}
+                  <Icon name="expand_more" className={`!text-[18px] transition-transform duration-200 ${open === id ? "rotate-180" : ""}`} />
+                </button>
+                <div
+                  className={`absolute left-0 top-full pt-2 transition-all duration-200 ${
+                    open === id ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible translate-y-1 opacity-0"
                   }`}
                 >
-                  expand_more
-                </span>
-              </button>
-              <div
-                className={`absolute top-full left-0 w-[580px] pt-2 transition-all duration-200 ${
-                  activeDropdown === "product"
-                    ? "opacity-100 translate-y-0 visible pointer-events-auto"
-                    : "opacity-0 translate-y-1 invisible pointer-events-none"
-                }`}
-              >
-                <div className="rounded-2xl p-4 shadow-xl border grid grid-cols-2 gap-2 bg-white border-[#DCE4F5] shadow-[0_10px_25px_-5px_rgba(11,91,211,0.12)]">
-                  <Link
-                    href="/peoplesuite#modules"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      badge
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Core HR & Directory</div>
-                      <div className="text-[11px] opacity-75">Profiles, hierarchy & vault</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#attendance"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#4A6CFF] mt-0.5">
-                      pin_drop
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Geofenced Attendance</div>
-                      <div className="text-[11px] opacity-75">GPS perimeter & Wi-Fi IP sync</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#payroll"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#1E1AB8] mt-0.5">
-                      account_balance_wallet
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Statutory Payroll</div>
-                      <div className="text-[11px] opacity-75">EPF, ESIC, PT, TDS & Payslips</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#workspace"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      meeting_room
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">2D Desk & Rooms</div>
-                      <div className="text-[11px] opacity-75">Visual interactive floor map</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#assets"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#4A6CFF] mt-0.5">
-                      laptop_mac
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Fixed IT Assets</div>
-                      <div className="text-[11px] opacity-75">Hardware lifecycle & custody</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#performance"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#4A6CFF] mt-0.5">
-                      track_changes
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Performance & PMS</div>
-                      <div className="text-[11px] opacity-75">KRA/KPIs & 360° appraisals</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#lms"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#0B5BD3] mt-0.5">
-                      school
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Corporate LMS</div>
-                      <div className="text-[11px] opacity-75">Courses & digital certificates</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    href="/peoplesuite#payroll"
-                    onClick={closeDropdown}
-                    className="flex items-start gap-3 p-2.5 rounded-xl font-body-sm text-body-sm transition-colors cursor-pointer text-[#0B0F2E] hover:bg-[#F5F8FF] hover:text-[#0B5BD3]"
-                  >
-                    <span className="material-symbols-outlined text-[20px] text-[#1E1AB8] mt-0.5">
-                      request_quote
-                    </span>
-                    <div>
-                      <div className="font-semibold text-sm">Loans & Advances</div>
-                      <div className="text-[11px] opacity-75">Approval workflow & EMI deduct</div>
-                    </div>
-                  </Link>
+                  <div className="rounded-2xl border border-[#DCE4F5] bg-white shadow-[0_10px_25px_-5px_rgba(11,91,211,0.15)]">{panel(id)}</div>
                 </div>
               </div>
-            </div>
-
-
-            {/* Direct 2D Desk Link */}
-            <Link
-              href="/peoplesuite#workspace"
-              onClick={closeDropdown}
-              className="font-label-lg text-label-lg text-[#5B6488] hover:text-[#0B0F2E] transition-colors cursor-pointer"
-            >
-              2D Desk Booking
-            </Link>
-
-            {/* Real FAQ link */}
-            <Link
-              href="/#faq"
-              onClick={closeDropdown}
-              className="font-label-lg text-label-lg text-[#5B6488] hover:text-[#0B0F2E] transition-colors cursor-pointer"
-            >
-              FAQ
+            ))}
+            <Link href="/#video" onClick={close} className="rounded-full px-3 py-1.5 font-label-lg text-label-lg text-[#5B6488] transition-colors hover:text-[#0B0F2E]">
+              Product Tour
             </Link>
           </nav>
         </div>
 
-        {/* Right Action Buttons */}
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => {
-              closeDropdown();
+              close();
               onOpenDemo?.();
             }}
-            className="inline-flex items-center justify-center bg-[#141834] hover:bg-[#232A4E] hover:shadow-lg hover:shadow-[#4A6CFF]/30 text-white font-label-lg text-label-lg px-5 py-2.5 rounded-full shadow-md transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center justify-center rounded-full bg-[#141834] px-5 py-2.5 font-label-lg text-label-lg text-white shadow-md transition-all hover:bg-[#232A4E] hover:shadow-lg hover:shadow-[#4A6CFF]/30 active:scale-[0.98]"
           >
             Book a Demo
           </button>
-
-          {/* Mobile menu hamburger toggle */}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-xl text-[#0B0F2E] hover:bg-[#F5F8FF] transition-colors cursor-pointer"
-            aria-label="Toggle Navigation Menu"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="rounded-xl p-2 text-[#0B0F2E] transition-colors hover:bg-[#F5F8FF] lg:hidden"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
           >
-            <span className="material-symbols-outlined text-[24px]">
-              {mobileMenuOpen ? "close" : "menu"}
-            </span>
+            <Icon name={mobileMenuOpen ? "close" : "menu"} className="!text-[24px]" />
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-b px-6 py-5 space-y-4 shadow-xl bg-white border-[#DCE4F5] text-[#0B0F2E]">
-          <div className="flex flex-col space-y-3 font-label-lg">
-            <Link
-              href="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer font-medium"
-            >
-              Home
-            </Link>
-
-            <div className="pt-2 pb-1 border-t border-gray-100 font-bold text-xs text-[#0B5BD3] uppercase tracking-wider">
-              TalentFlow (Recruitment)
+        <div className="max-h-[calc(100vh-76px)] space-y-5 overflow-y-auto border-b border-[#DCE4F5] bg-white px-6 py-5 shadow-xl lg:hidden">
+          {PRODUCTS.map((p) => (
+            <div key={p.name}>
+              <Link href={p.href} onClick={close} className="flex items-baseline justify-between pb-1">
+                <span className="font-display text-base text-[#0B0F2E]">{p.name}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#0B5BD3]">{p.tag}</span>
+              </Link>
+              {p.items.map((it) => (
+                <ItemLink key={it.title} item={it} onClick={close} />
+              ))}
             </div>
-
-            <Link
-              href="/talentflow"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer flex items-center justify-between"
-            >
-              <span>TalentFlow</span>
-              <span className="text-[10px] bg-[#EAF0FF] text-[#0B5BD3] px-2 py-0.5 rounded font-bold">
-                NEW
-              </span>
-            </Link>
-
-
-            <Link
-              href="/talentflow"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 text-sm text-[#5B6488] hover:text-[#0B5BD3] transition-colors cursor-pointer pl-3"
-            >
-              ➔ Dedicated TalentFlow Page
-            </Link>
-            <Link
-              href="/peoplesuite"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 text-sm text-[#5B6488] hover:text-[#0B5BD3] transition-colors cursor-pointer pl-3"
-            >
-              ➔ Dedicated PeopleSuite Page
-            </Link>
-
-            <div className="pt-2 pb-1 border-t border-gray-100 font-bold text-xs text-[#0B5BD3] uppercase tracking-wider">
-              PeopleSuite (Workforce Operations)
+          ))}
+          {[...SOLUTIONS.map((g) => [`Solutions · ${g.label.split(" · ")[1]}`, g.items] as const), ["Resources", RESOURCES] as const].map(([label, items]) => (
+            <div key={label} className="border-t border-[#DCE4F5] pt-4">
+              <div className="pb-1 text-xs font-bold uppercase tracking-wider text-[#0B5BD3]">{label}</div>
+              {items.map((it) => (
+                <ItemLink key={it.title} item={it} onClick={close} />
+              ))}
             </div>
-
-            <Link
-              href="/peoplesuite#modules"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              All 12 Modules
-            </Link>
-            <Link
-              href="/peoplesuite#attendance"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Attendance & Geofencing
-            </Link>
-            <Link
-              href="/peoplesuite#payroll"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Statutory Payroll Engine
-            </Link>
-            <Link
-              href="/peoplesuite#workspace"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              2D Desk & Room Booking
-            </Link>
-            <Link
-              href="/peoplesuite#assets"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Fixed IT Assets & Consumables
-            </Link>
-            <Link
-              href="/peoplesuite#performance"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Performance & Appraisals
-            </Link>
-            <Link
-              href="/peoplesuite#lms"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Corporate LMS & Letters
-            </Link>
-
-            <Link
-              href="/#faq"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 hover:text-[#0B5BD3] transition-colors cursor-pointer"
-            >
-              Frequently Asked Questions
-            </Link>
-          </div>
-
-          <div className="pt-3 border-t border-gray-200 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                onOpenDemo?.();
-              }}
-              className="w-full py-3 bg-[#141834] hover:bg-[#232A4E] hover:border-[#7DC8FF] transition-all text-white border border-[#4A6CFF]/40 font-label-lg rounded-xl text-center shadow-md font-semibold cursor-pointer"
-            >
-              Book a 1-on-1 Demo
-            </button>
-          </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              close();
+              onOpenDemo?.();
+            }}
+            className="w-full rounded-xl border border-[#4A6CFF]/40 bg-[#141834] py-3 text-center font-semibold text-white shadow-md transition-all hover:bg-[#232A4E]"
+          >
+            Book a 1-on-1 Demo
+          </button>
         </div>
       )}
     </header>

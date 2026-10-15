@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 
 interface FooterProps {
   theme?: "dark" | "light";
@@ -25,12 +26,12 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-8 pb-16">
           {/* Brand info column */}
           <div className="lg:col-span-1 space-y-5">
-            <Link href="/" className="inline-block">
-              <img src="/logo.png" alt="Innovyx Tech Labs" className="h-14 w-auto bg-white rounded-lg p-1.5 object-contain" />
+            <Link href="/" className="inline-block" aria-label="Innovyx Tech Labs home">
+              <BrandLogo dark={isDark} className="h-16" />
             </Link>
 
             <p className="font-body-sm text-body-sm leading-relaxed">
-              Everything People. One Suite. Enterprise People &amp; Talent Cloud with <strong>TalentFlow</strong> and <strong>PeopleSuite</strong>, developed and engineered by <strong>Innovyx Tech Labs LLP</strong>.
+              <strong>TalentFlow</strong> ATS and <strong>PeopleSuite</strong> HRMS, developed and engineered by <strong>Innovyx Tech Labs LLP</strong>.
             </p>
 
             {/* Live Operational Status */}
@@ -328,7 +329,7 @@ export default function Footer({ theme = "dark", onOpenDemo }: FooterProps) {
         >
           <div className="flex items-center gap-4 flex-wrap">
             <span>
-              © 2026 Innovyx HRMS + ATS Platform. Developed and engineered by{" "}
+              © 2026 Innovyx HRMS & ATS Platform. Developed and engineered by{" "}
               <strong className="font-semibold text-current">Innovyx Tech Labs LLP</strong>. All rights reserved.
             </span>
             <div
