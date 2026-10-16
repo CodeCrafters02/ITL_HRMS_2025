@@ -201,6 +201,7 @@ def send_fcm_to_users(
     extra_data=None,
     create_user_notifications=True,
     image_url=None,
+    send_teams=True,
 ):
     """
     Create UserNotification, then send FCM push to all user devices.
@@ -221,8 +222,9 @@ def send_fcm_to_users(
                 message=message,
                 related_object_id=related_object_id
             )
-    from .teams import send_teams_notification
-    send_teams_notification(user_ids, title or notif_type.capitalize(), message, notif_type)
+    if send_teams:
+        from .teams import send_teams_notification
+        send_teams_notification(user_ids, title or notif_type.capitalize(), message, notif_type)
     # Prepare mappings from user_id to company logo and name (or empty string)
     employees = Employee.objects.filter(user_id__in=user_ids).select_related('company')
     # Try to get request from extra_data if passed (for absolute URL)

@@ -61,6 +61,7 @@ def _send_missing_checkout_fcm_and_inapp(employee, attendance, title, message):
             title=title,
             related_object_id=attendance.id,
             create_user_notifications=False,
+            send_teams=False,
         )
     except Exception:
         pass
