@@ -994,11 +994,11 @@ const EmployeeDashboard = () => {
                             {presence?.working && presence.shift?.assigned && presence.shift.working?.seconds !== undefined && (() => {
                                 const sh = presence.shift!;
                                 const toMin = (v?: string) => { const [h, m] = (v || '0:0').split(':').map(Number); return h * 60 + m; };
-                                const d = new Date(nowMs);
+                                const d = new Date();
                                 const cur = d.getHours() * 60 + d.getMinutes();
                                 const st = toMin(sh.start), en = toMin(sh.end);
                                 const inShift = st <= en ? cur >= st && cur < en : cur >= st || cur < en;
-                                const t = sh.working!.seconds! + (presence.punch?.live && inShift ? Math.floor((nowMs - presenceAt) / 1000) : 0);
+                                const t = sh.working!.seconds! + (presence.punch?.live && inShift ? Math.floor((Date.now() - presenceAt) / 1000) : 0);
                                 const p2 = (n: number) => String(n).padStart(2, '0');
                                 return (
                                     <p className="mt-1.5 border-t border-white/15 pt-1.5 text-[10px] uppercase tracking-wide text-brand-100">
