@@ -554,7 +554,7 @@ const Header = () => {
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
                         <Link to="/" className="main-logo flex items-center shrink-0">
                             <img className="w-14 ltr:-ml-1 rtl:-mr-1 inline object-contain" src={hrmsLogo} alt="logo" />
-                            <span className="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-bold align-middle hidden md:inline dark:text-white-light transition-all duration-300 tracking-tight pb-1">People Suite</span>
+                            <span className="text-2xl ltr:ml-1.5 rtl:mr-1.5 font-bold align-middle hidden lg:inline dark:text-white-light transition-all duration-300 tracking-tight pb-1">People Suite</span>
                         </Link>
                         <button
                             type="button"
@@ -577,7 +577,7 @@ const Header = () => {
                                         ) : (
                                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-mid text-sm font-extrabold uppercase text-white shadow-sm">{companyName.charAt(0)}</span>
                                         )}
-                                        <span className="hidden sm:inline max-w-[140px] truncate text-sm font-bold tracking-tight text-slate-800 dark:text-white sm:max-w-[220px]">{companyName}</span>
+                                        <span className="hidden sm:inline max-w-[140px] truncate text-sm font-bold tracking-tight text-slate-800 dark:text-white sm:max-w-[120px] lg:max-w-[220px]">{companyName}</span>
                                     </div>
                                 </li>
                             )}
@@ -590,7 +590,7 @@ const Header = () => {
                                         title="Workspace Home"
                                     >
                                         <IconHome className="w-4 h-4" />
-                                        <span>Workspace Home</span>
+                                        <span className="hidden lg:inline whitespace-nowrap">Workspace Home</span>
                                     </Link>
                                 </li>
                             )}
@@ -603,7 +603,7 @@ const Header = () => {
                                         title="Workspace Home"
                                     >
                                         <IconHome className="w-4 h-4" />
-                                        <span>Workspace Home</span>
+                                        <span className="hidden lg:inline whitespace-nowrap">Workspace Home</span>
                                     </Link>
                                 </li>
                             )}

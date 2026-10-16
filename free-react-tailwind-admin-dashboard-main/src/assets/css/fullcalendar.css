@@ -9,6 +9,20 @@
 .calendar-wrapper .fc-daygrid-body-balanced .fc-scrollgrid-sync-table {
     min-height: 450px;
 }
+
+@media (max-width: 640px) {
+    .calendar-wrapper .fc-view-harness-active > .fc-dayGridMonth-view {
+        min-width: 0;
+    }
+    .calendar-wrapper .fc-daygrid-body-balanced .fc-scrollgrid-sync-table {
+        min-height: 0;
+    }
+    .calendar-wrapper .fc .fc-toolbar {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+}
 .calendar-wrapper table > thead > tr > th[role='presentation'],
 .calendar-wrapper table > tbody > tr > td {
     @apply !p-0;
