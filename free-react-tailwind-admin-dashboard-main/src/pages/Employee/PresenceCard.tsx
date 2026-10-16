@@ -28,7 +28,7 @@ const COLORS: Record<string, string> = {
     Away: '#e2a03f', BeRightBack: '#e2a03f', Offline: '#888ea8',
 };
 
-const Dot = ({ c }: { c: string }) => (
+export const Dot = ({ c }: { c: string }) => (
     <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[c] || '#888ea8' }} />
 );
 

@@ -4926,12 +4926,19 @@ class PresenceSummaryAPIView(APIView):
         from employee import presence_engine as pe
         from employee.models import PresenceState
         user = request.user
-        if _employee_access_denied(user):
-            return Response({"detail": "Unauthorized."}, status=403)
-        try:
-            employee = Employee.objects.get(email=user.email)
-        except Employee.DoesNotExist:
-            return Response({"detail": "Employee not found."}, status=404)
+        code = request.query_params.get('employee_code')
+        is_admin_view = bool(code) and getattr(user, 'role', None) == 'admin'
+        if is_admin_view:
+            employee = Employee.objects.filter(employee_id=code, company_id=user.company_id).first()
+            if not employee:
+                return Response({"detail": "Employee not found."}, status=404)
+        else:
+            if _employee_access_denied(user):
+                return Response({"detail": "Unauthorized."}, status=403)
+            try:
+                employee = Employee.objects.get(email=user.email)
+            except Employee.DoesNotExist:
+                return Response({"detail": "Employee not found."}, status=404)
 
         tz, now = pe.TZ, timezone.now()
         raw = request.query_params.get('date')
@@ -4940,7 +4947,8 @@ class PresenceSummaryAPIView(APIView):
         except ValueError:
             return Response({"detail": "Invalid date."}, status=400)
         att = Attendance.objects.filter(employee=employee, date=day, check_in__isnull=False).order_by('-check_in').first()
-        st = pe.refresh_one(employee) or PresenceState.objects.filter(employee=employee).first()
+        st = PresenceState.objects.filter(employee=employee).first() if (is_admin_view or day != timezone.localdate()) \
+            else (pe.refresh_one(employee) or PresenceState.objects.filter(employee=employee).first())
         fmt = lambda d: d.astimezone(tz).strftime('%H:%M') if d else None
         hm = lambda td: {"seconds": int(td.total_seconds()), "label": f"{int(td.total_seconds()//3600)}h {int(td.total_seconds()%3600//60):02d}m"}
         ci, co = pe.manual_locked(employee)

@@ -10,6 +10,7 @@ import PageHeader from '../../components/Common/PageHeader';
 
 import Modal from '../../components/Common/Modal';
 import Button from '../../components/Common/Button';
+import { Dot, type Summary as PresenceSummary } from '../Employee/PresenceCard';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
 
 type DeptWorkingDayConfig = {
@@ -102,6 +103,25 @@ const AdminAttendanceLogs = () => {
         remarks: '',
     });
     const [saving, setSaving] = useState(false);
+    const [modalTab, setModalTab] = useState<'adjust' | 'teams'>('adjust');
+    const [teams, setTeams] = useState<PresenceSummary | null>(null);
+    const [teamsLoading, setTeamsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!editModalOpen || modalTab !== 'teams' || !editingData) return;
+        let stop = false;
+        setTeams(null);
+        setTeamsLoading(true);
+        const q = new URLSearchParams({ date: editingData.date, employee_code: editingData.employee.employee_id });
+        fetch(`${API_BASE_URL}/employee/presence-summary/?${q}`, { headers: headers() })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => !stop && setTeams(d))
+            .catch(() => !stop && setTeams(null))
+            .finally(() => !stop && setTeamsLoading(false));
+        return () => {
+            stop = true;
+        };
+    }, [editModalOpen, modalTab, editingData?.date, editingData?.employee.employee_id]);
 
     const todayISO = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -256,6 +276,7 @@ const AdminAttendanceLogs = () => {
             working_hours: record && record.worked_hours ? String(record.worked_hours) : '',
             remarks: record?.remarks || '',
         });
+        setModalTab('adjust');
         setEditModalOpen(true);
     };
 
@@ -533,7 +554,90 @@ const AdminAttendanceLogs = () => {
                                                             </div>
                                                         </div>
 
-                                                        <div className="space-y-4">
+                                                        <div className="flex gap-1 border-b border-[#ebedf2] dark:border-[#1b2e4b]">
+                                                            {([['adjust', 'Adjustment'], ['teams', 'Teams breakdown']] as const).map(([k, label]) => (
+                                                                <button
+                                                                    key={k}
+                                                                    type="button"
+                                                                    onClick={() => setModalTab(k)}
+                                                                    className={`px-4 py-2 text-sm font-bold -mb-px border-b-2 ${modalTab === k ? 'border-primary text-primary' : 'border-transparent text-gray-500'}`}
+                                                                >
+                                                                    {label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+
+                                                        {modalTab === 'teams' && (
+                                                            <div className="space-y-4">
+                                                                {teamsLoading && <p className="text-sm text-white-dark">Loading Teams activity...</p>}
+                                                                {!teamsLoading && !(teams && (teams.statuses?.length || teams.timeline?.length)) && (
+                                                                    <p className="text-sm text-white-dark">No Teams activity recorded for this day.</p>
+                                                                )}
+                                                                {teams && (!!teams.statuses?.length || !!teams.timeline?.length) && (
+                                                                    <>
+                                                                        <div className="grid grid-cols-3 gap-3 text-center">
+                                                                            <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                                                                <p className="text-[10px] uppercase tracking-wide text-gray-500">Working</p>
+                                                                                <p className="text-lg font-black">{teams.working?.label || '0h 00m'}</p>
+                                                                            </div>
+                                                                            <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                                                                <p className="text-[10px] uppercase tracking-wide text-gray-500">Overtime</p>
+                                                                                <p className="text-lg font-black">{teams.overtime?.label || '0h 00m'}</p>
+                                                                            </div>
+                                                                            <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                                                                <p className="text-[10px] uppercase tracking-wide text-gray-500">Punch</p>
+                                                                                <p className="text-sm font-bold mt-1.5">{teams.punch?.in || '--:--'} / {teams.punch?.out || '--:--'}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        {teams.shift?.assigned && (
+                                                                            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-sm space-y-1.5">
+                                                                                <div className="flex justify-between"><span>{teams.shift.type || 'Shift'}</span><b>{teams.shift.start} – {teams.shift.end}</b></div>
+                                                                                <div className="flex justify-between"><span>Working hours in shift</span><b>{teams.shift.working?.label}</b></div>
+                                                                                <div className="flex justify-between"><span>Outside shift timings</span><b>{teams.shift.outside?.label}</b></div>
+                                                                            </div>
+                                                                        )}
+                                                                        {!!teams.statuses?.length && (
+                                                                            <section>
+                                                                                <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Time by status</h5>
+                                                                                <div className="space-y-1.5">
+                                                                                    {teams.statuses.map((r) => (
+                                                                                        <div key={r.status} className="flex items-center justify-between text-sm">
+                                                                                            <span className="flex items-center gap-2"><Dot c={r.status} /> {r.status}</span>
+                                                                                            <b>{r.label}</b>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </section>
+                                                                        )}
+                                                                        {!!teams.timeline?.length && (
+                                                                            <section>
+                                                                                <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Status timeline</h5>
+                                                                                <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                                                                                    {teams.timeline.map((t, i) => (
+                                                                                        <div key={i} className="flex items-center justify-between text-sm">
+                                                                                            <span className="flex items-center gap-2"><Dot c={t.status} /> {t.status}</span>
+                                                                                            <span className="text-gray-600 dark:text-gray-300">{t.start} – {t.end} <span className="text-gray-400">({t.label})</span></span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </section>
+                                                                        )}
+                                                                        {!!teams.sessions?.length && (
+                                                                            <section>
+                                                                                <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Working sessions</h5>
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {teams.sessions.map((x, i) => (
+                                                                                        <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5">{x.start} – {x.end}</span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </section>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        <div className={`space-y-4 ${modalTab !== 'adjust' ? 'hidden' : ''}`}>
                                                             <div>
                                                                 <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300 uppercase tracking-wider">Attendance Status</label>
                                                                 <div className="grid grid-cols-2 gap-3">
@@ -603,7 +707,7 @@ const AdminAttendanceLogs = () => {
                                                             )}
                                                         </div>
 
-                                                            <div>
+                                                            <div className={modalTab !== 'adjust' ? 'hidden' : ''}>
                                                                 <label className="text-sm font-bold mb-2 block text-gray-700 dark:text-gray-300">Administrative Remarks</label>
                                                                 <textarea
                                                                     className="form-textarea min-h-[100px]"
@@ -613,7 +717,7 @@ const AdminAttendanceLogs = () => {
                                                                 ></textarea>
                                                             </div>
                                                         </div>
-                                                    <div className="flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3">
+                                                    <div className={`flex items-center justify-end p-5 border-t border-[#ebedf2] dark:border-[#1b2e4b] gap-3 ${modalTab !== 'adjust' ? 'hidden' : ''}`}>
                                                         {editingData?.record?.source === 'admin' && (
                                                             <Button variant="outline-danger" type="button" onClick={handleResetToTeams} disabled={saving}>
                                                                 Reset to Teams

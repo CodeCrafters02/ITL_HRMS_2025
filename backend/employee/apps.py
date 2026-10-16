@@ -104,9 +104,10 @@ class EmployeeConfig(AppConfig):
                               id='entra_auto_sync', replace_existing=True, max_instances=1, misfire_grace_time=120)
             scheduler.add_job(_teams_job('teams_birthday_digest', 3600), CronTrigger(hour=9, minute=0, timezone='Asia/Kolkata'),
                               id='teams_birthday_digest', replace_existing=True, misfire_grace_time=600)
-            scheduler.add_job(_teams_job('teams_missing_checkout_admin_digest', 3600),
-                              CronTrigger(day_of_week='mon-fri', hour=9, minute=30, timezone='Asia/Kolkata'),
-                              id='teams_missing_checkout_admin_digest', replace_existing=True, misfire_grace_time=600)
+            try:
+                scheduler.remove_job('teams_missing_checkout_admin_digest')
+            except Exception:
+                pass
             scheduler.add_job(_teams_job('teams_pending_approvals_digest', 3600),
                               CronTrigger(day_of_week='mon-fri', hour=10, minute=0, timezone='Asia/Kolkata'),
                               id='teams_pending_approvals_digest', replace_existing=True, misfire_grace_time=600)

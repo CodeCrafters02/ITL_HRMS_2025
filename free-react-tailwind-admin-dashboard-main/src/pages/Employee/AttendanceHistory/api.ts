@@ -1,4 +1,5 @@
 import { authFetch } from '../../../utils/authFetch';
+import type { Summary as PresenceSummary } from '../PresenceCard';
 
 export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day' | 'weekend' | 'checked_in' | 'no_data';
 
@@ -83,6 +84,11 @@ export const fetchAttendanceHistory = async (params: {
 
     const res = await authFetch(url.toString());
     return parseJson<AttendanceHistoryResponse>(res);
+};
+
+export const fetchPresenceForDate = async (date: string): Promise<PresenceSummary> => {
+    const res = await authFetch(`${EMPLOYEE_API}/presence-summary/?date=${date}`);
+    return parseJson<PresenceSummary>(res);
 };
 
 export const fetchCompanyHolidays = async (): Promise<CalendarHolidayEvent[]> => {

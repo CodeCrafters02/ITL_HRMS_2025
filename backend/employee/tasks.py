@@ -137,6 +137,10 @@ def send_missing_checkout_alerts():
             continue
         seen_employees.add(emp.id)
 
+        from employee.presence_engine import is_working_day
+        if not is_working_day(emp, today):
+            continue
+
         # Prefer employee's own assigned shift; fall back to any company shift
         shift = emp.shift_assigned
         if not shift:

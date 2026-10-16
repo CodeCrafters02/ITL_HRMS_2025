@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import OutlookInboxWidget from '../../components/Outlook/OutlookInboxWidget';
+import CompanyMicrosoftCalendar from '../../components/Calendar/CompanyMicrosoftCalendar';
+import IconMicrosoft from '../../components/Icon/IconMicrosoft';
 import { createPortal } from 'react-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { setPageTitle } from '../../store/themeConfigSlice';
@@ -1132,7 +1134,29 @@ const EmployeeDashboard = () => {
                 />
             </StatGrid>
 
-            <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            {/* ─── Outlook Workspace (Calendar & Mail Side-by-Side) ─── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+                <div className="panel !p-0 overflow-hidden rounded-2xl border border-slate-200/90 dark:border-slate-800/90 shadow-sm bg-white dark:bg-[#0e1726] flex flex-col justify-between">
+                    <div className="flex items-center justify-between border-b border-slate-200/80 px-4 py-3 dark:border-slate-800 bg-slate-50/60 dark:bg-[#0b1320]/60">
+                        <h5 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                            <IconMicrosoft size={20} />
+                            <span>Outlook Calendar</span>
+                        </h5>
+                        <Link to="/employee/calendar" className="text-brand hover:underline text-xs font-semibold flex items-center gap-1">
+                            <span>Full Calendar</span>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                        </Link>
+                    </div>
+                    <div className="p-3 sm:p-4 flex-1">
+                        <CompanyMicrosoftCalendar variant="widget" />
+                    </div>
+                </div>
+                <OutlookInboxWidget className="h-full" maxHeight="max-h-[460px]" />
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
                 <div className="xl:col-span-3 panel p-5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                         <div className="flex items-center gap-3">
@@ -1341,17 +1365,15 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            <OutlookInboxWidget />
-
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
-                    <div className="flex items-center justify-between mb-5">
-                        <h5 className="font-bold text-lg dark:text-white">Today's Timeline</h5>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                <div className="panel xl:col-span-1 p-4 shadow-sm rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-bold text-base dark:text-white">Today's Timeline</h5>
                         <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-500/15">
                             <IconClock className="w-5 h-5 text-amber-600 dark:text-amber-300" />
                         </div>
                     </div>
-                    <div className="space-y-4">
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                         {data?.recent_breaks && data.recent_breaks.length > 0 ? (
                             data.recent_breaks.map((b, i) => (
                                 <div key={i} className="flex gap-3.5 relative">
@@ -1367,7 +1389,7 @@ const EmployeeDashboard = () => {
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                            <div className="text-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                                 <IconClock className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
                                 <p className="text-sm text-slate-500">No activity logged yet today.</p>
                             </div>
@@ -1375,18 +1397,18 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
 
-                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
-                    <div className="flex items-center justify-between mb-5">
-                        <h5 className="font-bold text-lg dark:text-white">Upcoming Events</h5>
+                <div className="panel xl:col-span-1 p-4 shadow-sm rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-bold text-base dark:text-white">Upcoming Events</h5>
                         <div className="p-2 rounded-lg bg-brand-100 dark:bg-brand-mid/15">
                             <IconCalendar className="w-5 h-5 text-brand-700 dark:text-brand-300" />
                         </div>
                     </div>
-                    <div className="space-y-3.5">
+                    <div className="space-y-2">
                         {events.length > 0 ? (
-                            events.map((event) => (
-                                <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-black/15 hover:-translate-y-0.5 transition-transform">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${event.is_holiday ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-emerald-500 to-brand-mid'}`}>
+                            events.slice(0, 4).map((event) => (
+                                <div key={event.id} className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-black/15 hover:-translate-y-0.5 transition-transform">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${event.is_holiday ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-emerald-500 to-brand-mid'}`}>
                                         {event.is_holiday ? <IconSun className="w-5 h-5 text-white" /> : <IconCalendar className="w-5 h-5 text-white" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -1399,7 +1421,7 @@ const EmployeeDashboard = () => {
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-8 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                            <div className="text-center py-5 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                                 <IconCalendar className="w-8 h-8 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
                                 <p className="text-xs text-slate-500">No upcoming events</p>
                             </div>
@@ -1407,14 +1429,14 @@ const EmployeeDashboard = () => {
                     </div>
                 </div>
 
-                <div className="panel xl:col-span-1 p-5 shadow-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
-                    <div className="flex items-center justify-between mb-4">
-                        <h5 className="font-bold text-lg dark:text-white">Quick Navigation</h5>
+                <div className="panel xl:col-span-1 p-4 shadow-sm rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
+                    <div className="flex items-center justify-between mb-3">
+                        <h5 className="font-bold text-base dark:text-white">Quick Navigation</h5>
                         <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-accent/15 dark:text-brand-300">Shortcuts</span>
                     </div>
-                    <div className="space-y-3">
-                        <button type="button" onClick={() => openTeamsChat()} className="group flex w-full items-center text-left gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all" >
-                            <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-2">
+                        <button type="button" onClick={() => openTeamsChat()} className="group flex w-full items-center text-left gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all" >
+                            <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconMenuChat className="w-5 h-5" />
                             </div>
                             <div>
@@ -1422,8 +1444,8 @@ const EmployeeDashboard = () => {
                                 <p className="text-xs text-slate-500">Opens in Microsoft Teams</p>
                             </div>
                         </button>
-                        <Link to="/employee/calendar" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-mid/15 dark:text-brand-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Link to="/employee/calendar" className="group flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                            <div className="w-9 h-9 rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-mid/15 dark:text-brand-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconCalendar className="w-5 h-5" />
                             </div>
                             <div>
@@ -1431,8 +1453,8 @@ const EmployeeDashboard = () => {
                                 <p className="text-xs text-slate-500">View holidays and events</p>
                             </div>
                         </Link>
-                        <Link to="/employee/asset-requests" className="group flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
-                            <div className="w-10 h-10 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Link to="/employee/asset-requests" className="group flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-white to-slate-50 dark:from-[#172036] dark:to-[#101827] hover:shadow-md transition-all">
+                            <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 flex items-center justify-center group-hover:scale-105 transition-transform">
                                 <IconListCheck className="w-5 h-5" />
                             </div>
                             <div>

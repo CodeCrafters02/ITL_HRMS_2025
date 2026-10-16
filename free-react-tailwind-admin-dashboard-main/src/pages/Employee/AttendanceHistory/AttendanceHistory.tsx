@@ -3,7 +3,8 @@ import { useDispatch } from 'react-redux';
 import { setPageTitle } from '../../../store/themeConfigSlice';
 import IconCalendar from '../../../components/Icon/IconCalendar';
 import PageHeader from '../../../components/Common/PageHeader';
-import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays } from './api';
+import { AttendanceHistoryResponse, AttendanceStatus, fetchAttendanceHistory, fetchCompanyHolidays, fetchPresenceForDate } from './api';
+import { Dot, type Summary as PresenceSummary } from '../PresenceCard';
 
 import Button from '../../../components/Common/Button';
 import Modal from '../../../components/Common/Modal';
@@ -43,6 +44,23 @@ const AttendanceHistory = () => {
     const [holidayMap, setHolidayMap] = useState<Record<string, string>>({});
     const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+    const [teams, setTeams] = useState<PresenceSummary | null>(null);
+    const [teamsLoading, setTeamsLoading] = useState(false);
+
+    useEffect(() => {
+        if (!isDetailsModalOpen || !selectedDateKey) return;
+        let stop = false;
+        setTeams(null);
+        setTeamsLoading(true);
+        fetchPresenceForDate(selectedDateKey)
+            .then((d) => !stop && setTeams(d))
+            .catch(() => !stop && setTeams(null))
+            .finally(() => !stop && setTeamsLoading(false));
+        return () => {
+            stop = true;
+        };
+    }, [isDetailsModalOpen, selectedDateKey]);
 
     const loadAttendance = useCallback(async () => {
         setLoading(true);
@@ -337,6 +355,70 @@ const AttendanceHistory = () => {
                                     <div><span className="text-white-dark">Shift:</span> <span className="font-semibold">{selectedDayRow?.shift || '-'}</span></div>
                                     <div><span className="text-white-dark">Overtime:</span> <span className="font-semibold">{selectedDayRow?.overtime_hours ?? '-'}</span></div>
                                     <div><span className="text-white-dark">Late:</span> <span className="font-semibold">{selectedDayRow?.late_duration || (selectedDayRow?.is_late ? 'Yes' : 'No')}</span></div>
+                                </div>
+                            )}
+
+                            {!selectedHolidayName && teamsLoading && <p className="mt-5 text-xs text-white-dark">Loading Teams activity...</p>}
+                            {!selectedHolidayName && teams && (!!teams.statuses?.length || !!teams.timeline?.length) && (
+                                <div className="mt-5 space-y-4 border-t border-[#ebedf2] dark:border-[#1b2e4b] pt-4">
+                                    <h4 className="text-sm font-bold">Microsoft Teams activity</h4>
+
+                                    <div className="grid grid-cols-3 gap-3 text-center">
+                                        <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                            <p className="text-[10px] uppercase tracking-wide text-gray-500">Working</p>
+                                            <p className="text-lg font-black">{teams.working?.label || '0h 00m'}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                            <p className="text-[10px] uppercase tracking-wide text-gray-500">Overtime</p>
+                                            <p className="text-lg font-black">{teams.overtime?.label || '0h 00m'}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                                            <p className="text-[10px] uppercase tracking-wide text-gray-500">Punch</p>
+                                            <p className="text-sm font-bold mt-1.5">{teams.punch?.in || '--:--'} / {teams.punch?.out || '--:--'}</p>
+                                        </div>
+                                    </div>
+
+                                    {!!teams.statuses?.length && (
+                                        <section>
+                                            <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Time by status</h5>
+                                            <div className="space-y-1.5">
+                                                {teams.statuses.map((r) => (
+                                                    <div key={r.status} className="flex items-center justify-between text-sm">
+                                                        <span className="flex items-center gap-2"><Dot c={r.status} /> {r.status}</span>
+                                                        <b>{r.label}</b>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {!!teams.timeline?.length && (
+                                        <section>
+                                            <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Status timeline</h5>
+                                            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                                                {teams.timeline.map((t, i) => (
+                                                    <div key={i} className="flex items-center justify-between text-sm">
+                                                        <span className="flex items-center gap-2"><Dot c={t.status} /> {t.status}</span>
+                                                        <span className="text-gray-600 dark:text-gray-300">
+                                                            {t.start} – {t.end} <span className="text-gray-400">({t.label})</span>
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+
+                                    {!!teams.sessions?.length && (
+                                        <section>
+                                            <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Working sessions</h5>
+                                            <div className="flex flex-wrap gap-2">
+                                                {teams.sessions.map((x, i) => (
+                                                    <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5">{x.start} – {x.end}</span>
+                                                ))}
+                                            </div>
+                                            <p className="text-[11px] text-gray-500 mt-2">Working time counts Available, Busy and Do Not Disturb only.</p>
+                                        </section>
+                                    )}
                                 </div>
                             )}
                         </div>

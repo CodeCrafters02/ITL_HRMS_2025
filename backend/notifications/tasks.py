@@ -7,11 +7,6 @@ from django.utils import timezone
 from .teams import claim, send_teams_notification
 
 
-def _admin_ids(company_id):
-    from app.models import UserRegister
-    return list(UserRegister.objects.filter(company_id=company_id, role='admin').values_list('id', flat=True))
-
-
 @shared_task
 def teams_birthday_digest():
     from app.models import Employee
@@ -45,21 +40,6 @@ def teams_pending_approvals_digest():
     for uid, counts in per_mgr.items():
         parts = ", ".join(f"{n} {k}" for k, n in counts.items())
         send_teams_notification([uid], "⏳ Pending approvals", f"You have pending requests: {parts}", "leave")
-
-
-@shared_task
-def teams_missing_checkout_admin_digest():
-    from app.models import Attendance
-    yesterday = timezone.localdate() - timedelta(days=1)
-    rows = Attendance.objects.filter(date=yesterday, check_in__isnull=False, check_out__isnull=True)
-    per_company = defaultdict(int)
-    for cid in rows.values_list('company_id', flat=True):
-        per_company[cid] += 1
-    for cid, n in per_company.items():
-        send_teams_notification(
-            _admin_ids(cid), "⏰ Missing check-outs",
-            f"{n} employee(s) did not check out on {yesterday:%d %b}.", "attendance",
-        )
 
 
 @shared_task
