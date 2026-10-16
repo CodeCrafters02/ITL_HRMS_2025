@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 TZ = pytz.timezone('Asia/Kolkata')
 GRAPH = 'https://graph.microsoft.com/v1.0'
-ACTIVE_STATES = {'Available', 'AvailableIdle', 'Busy', 'BusyIdle', 'DoNotDisturb'}  # working-hour states
+ACTIVE_STATES = {'Available', 'Busy', 'DoNotDisturb'}  # working-hour states (idle variants are not working time)
 OFFLINE_STATES = {'Offline'}
 EARLY_BUFFER = timedelta(hours=2)
 MIN_WORK = timedelta(hours=2)
