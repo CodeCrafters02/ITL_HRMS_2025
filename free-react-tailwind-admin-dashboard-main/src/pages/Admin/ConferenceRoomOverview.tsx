@@ -257,9 +257,9 @@ const ConferenceRoomOverview = () => {
 
             <div className="flex flex-col md:flex-row gap-4">
                 {/* Map Filters */}
-                <div className="flex-1 flex flex-col sm:flex-row items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
+                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
                     <select
-                        className="form-select w-48 font-bold"
+                        className="form-select w-full sm:w-48 font-bold"
                         value={selectedLocation?.id || ''}
                         onChange={(e) => handleLocationSelect(locations.find(l => l.id === parseInt(e.target.value)))}
                     >
@@ -268,7 +268,7 @@ const ConferenceRoomOverview = () => {
                     </select>
 
                     <select
-                        className="form-select w-48 font-bold"
+                        className="form-select w-full sm:w-48 font-bold"
                         value={selectedFloor?.id || ''}
                         onChange={(e) => handleFloorSelect(floors.find(f => f.id === parseInt(e.target.value)))}
                         disabled={!floors.length}
@@ -279,14 +279,14 @@ const ConferenceRoomOverview = () => {
 
                     <input
                         type="date"
-                        className="form-input w-40 font-bold text-center"
+                        className="form-input w-full sm:w-40 font-bold text-center"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
                     />
                 </div>
 
                 {/* Booking Policy Config */}
-                <div className="w-80 flex flex-col bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="w-full md:w-80 md:shrink-0 flex flex-col bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
                     <h6 className="font-bold text-xs uppercase tracking-widest text-gray-400 mb-3 flex items-center gap-2">
                         <IconClock className="w-4 h-4" /> Booking Policy
                     </h6>

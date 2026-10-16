@@ -347,7 +347,7 @@ const SeatBooking = () => {
                         ))}
                     </select>
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3 min-w-0 max-w-full">
                     <div className="flex items-center gap-3">
                         <label className="font-bold text-[10px] uppercase text-gray-400">Target Date</label>
                         <input
@@ -357,7 +357,7 @@ const SeatBooking = () => {
                             className="form-input w-40 h-9 font-bold"
                         />
                     </div>
-                    <div className="flex items-center gap-3 border-l border-gray-200 dark:border-gray-700 pl-6">
+                    <div className="flex flex-wrap items-center gap-3 sm:border-l border-gray-200 dark:border-gray-700 sm:pl-6">
                         <label className="font-bold text-[10px] uppercase text-gray-400">Target Time</label>
                         <div className="flex items-center gap-2">
                             <input

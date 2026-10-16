@@ -314,12 +314,12 @@ const AdminSeatBookingsOverview = () => {
             />
 
             <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm gap-4 border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4 min-w-0 max-w-full">
                     {loadingLocations ? (
                         <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                     ) : (
                         <select
-                            className="form-select w-48 font-bold"
+                            className="form-select w-full sm:w-48 font-bold"
                             value={selectedLocation?.id || ''}
                             onChange={(e) => {
                                 const loc = locations.find(l => l.id === parseInt(e.target.value));
@@ -337,7 +337,7 @@ const AdminSeatBookingsOverview = () => {
                         <div className="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
                     ) : (
                         <select
-                            className="form-select w-48 font-bold"
+                            className="form-select w-full sm:w-48 font-bold"
                             value={selectedFloor?.id || ''}
                             onChange={(e) => {
                                 const fl = floors.find(f => f.id === parseInt(e.target.value));

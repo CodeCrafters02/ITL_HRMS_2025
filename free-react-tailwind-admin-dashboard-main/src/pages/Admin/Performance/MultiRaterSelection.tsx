@@ -247,7 +247,7 @@ const MultiRaterSelection = () => {
                     {selectedEmployee ? (
                         <>
                             {/* Header */}
-                            <div className="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-4 mb-4 shrink-0">
+                            <div className="flex flex-wrap justify-between items-start gap-3 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4 shrink-0">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-sm font-bold shadow-sm shrink-0">
                                         {selectedEmployee.initials}
@@ -259,7 +259,7 @@ const MultiRaterSelection = () => {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-2 shrink-0">
+                                <div className="flex flex-col items-start sm:items-end gap-2 max-w-full">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[9px] font-black uppercase tracking-wider text-brand bg-brand/10 px-3 py-1 rounded-full">
                                             Peer Role · Same Department

@@ -18,7 +18,8 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
-import PresenceCard, { type Summary as PresenceSummary } from './PresenceCard';
+import PerfectScrollbar from 'react-perfect-scrollbar';
+import PresenceCard, { Dot as PresenceDot, type Summary as PresenceSummary } from './PresenceCard';
 import Dropdown from '../../components/Dropdown';
 import IconXCircle from '../../components/Icon/IconXCircle';
 import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
@@ -990,6 +991,22 @@ const EmployeeDashboard = () => {
                                       })()
                                     : liveRawSeconds}
                             </p>
+                            {presence?.working && presence.shift?.assigned && presence.shift.working?.seconds !== undefined && (() => {
+                                const sh = presence.shift!;
+                                const toMin = (v?: string) => { const [h, m] = (v || '0:0').split(':').map(Number); return h * 60 + m; };
+                                const d = new Date(nowMs);
+                                const cur = d.getHours() * 60 + d.getMinutes();
+                                const st = toMin(sh.start), en = toMin(sh.end);
+                                const inShift = st <= en ? cur >= st && cur < en : cur >= st || cur < en;
+                                const t = sh.working!.seconds! + (presence.punch?.live && inShift ? Math.floor((nowMs - presenceAt) / 1000) : 0);
+                                const p2 = (n: number) => String(n).padStart(2, '0');
+                                return (
+                                    <p className="mt-1.5 border-t border-white/15 pt-1.5 text-[10px] uppercase tracking-wide text-brand-100">
+                                        In working hours ({sh.start}–{sh.end})
+                                        <span className="mt-0.5 block text-sm font-black normal-case tracking-normal">{`${p2(Math.floor(t / 3600))}:${p2(Math.floor((t % 3600) / 60))}:${p2(t % 60)}`}</span>
+                                    </p>
+                                );
+                            })()}
                         </div>
                     </div>
 
@@ -1373,7 +1390,25 @@ const EmployeeDashboard = () => {
                             <IconClock className="w-5 h-5 text-amber-600 dark:text-amber-300" />
                         </div>
                     </div>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                    <PerfectScrollbar className="max-h-[300px] pr-3" options={{ suppressScrollX: true }}>
+                    <div className="space-y-2">
+                        {!!presence?.timeline?.length && (
+                            <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-black/15">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Teams status</p>
+                                    {presence.working && <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Working {presence.working.label}</span>}
+                                </div>
+                                <div className="space-y-1.5">
+                                    {presence.timeline.map((t, i) => (
+                                        <div key={i} className="flex items-center justify-between gap-2 text-xs">
+                                            <span className="flex min-w-0 items-center gap-2 font-semibold text-slate-800 dark:text-white"><PresenceDot c={t.status} /> <span className="truncate">{t.status}</span></span>
+                                            <span className="shrink-0 text-slate-500">{t.start} – {t.end} <span className="text-slate-400">({t.label})</span></span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {!!presence?.timeline?.length && !!data?.recent_breaks?.length && <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Breaks</p>}
                         {data?.recent_breaks && data.recent_breaks.length > 0 ? (
                             data.recent_breaks.map((b, i) => (
                                 <div key={i} className="flex gap-3.5 relative">
@@ -1388,13 +1423,14 @@ const EmployeeDashboard = () => {
                                     </div>
                                 </div>
                             ))
-                        ) : (
+                        ) : presence?.timeline?.length ? null : (
                             <div className="text-center py-6 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
                                 <IconClock className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
                                 <p className="text-sm text-slate-500">No activity logged yet today.</p>
                             </div>
                         )}
                     </div>
+                    </PerfectScrollbar>
                 </div>
 
                 <div className="panel xl:col-span-1 p-4 shadow-sm rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">

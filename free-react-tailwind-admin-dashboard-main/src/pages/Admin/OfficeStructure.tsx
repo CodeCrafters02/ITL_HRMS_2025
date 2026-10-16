@@ -378,9 +378,9 @@ const OfficeStructure = () => {
                 </div>
             </div>
 
-            <div className="flex flex-1 gap-6 overflow-hidden">
+            <div className="flex flex-1 flex-col gap-4 overflow-y-auto md:flex-row md:gap-6 md:overflow-hidden">
                 {/* Sidebar: Elements */}
-                <div className="w-64 flex flex-col gap-6">
+                <div className="w-full shrink-0 flex flex-col gap-6 md:w-64">
                     <div className="panel bg-white dark:bg-[#0e1726] p-4 rounded-xl shadow-sm relative overflow-hidden">
                         {!selectedFloor && (
                             <div className="absolute inset-0 bg-white/60 dark:bg-black/60 z-10 flex items-center justify-center text-center p-4">
@@ -452,7 +452,7 @@ const OfficeStructure = () => {
                 </div>
 
                 {/* Main Canvas */}
-                <div className="flex-1 bg-gray-100 dark:bg-black/20 rounded-2xl overflow-auto border border-gray-200 dark:border-gray-800 relative shadow-inner">
+                <div className="flex-1 min-h-[420px] min-w-0 bg-gray-100 dark:bg-black/20 rounded-2xl overflow-auto border border-gray-200 dark:border-gray-800 relative shadow-inner">
                     <Stage
                         width={stageSize.width}
                         height={stageSize.height}

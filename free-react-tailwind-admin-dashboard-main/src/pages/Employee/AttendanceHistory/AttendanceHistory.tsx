@@ -28,6 +28,16 @@ const statusLabelMap: Record<AttendanceStatus, string> = {
     no_data: 'No Data',
 };
 
+const statusDotMap: Record<AttendanceStatus, string> = {
+    present: 'bg-success',
+    absent: 'bg-danger',
+    leave: 'bg-info',
+    half_day: 'bg-warning',
+    weekend: 'bg-dark-light',
+    checked_in: 'bg-primary',
+    no_data: 'bg-secondary',
+};
+
 const weekDayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const AttendanceHistory = () => {
@@ -249,18 +259,18 @@ const AttendanceHistory = () => {
                 ) : (
                     <div className="p-4">
                         <div className="overflow-x-auto">
-                            <div className="min-w-[720px]">
-                                <div className="grid grid-cols-7 gap-2 mb-2">
+                            <div className="sm:min-w-[720px]">
+                                <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
                                     {weekDayHeaders.map((label) => (
-                                        <div key={label} className="text-center text-xs font-bold uppercase text-white-dark py-2">
+                                        <div key={label} className="text-center text-[10px] sm:text-xs font-bold uppercase text-white-dark py-1.5 sm:py-2">
                                             {label}
                                         </div>
                                     ))}
                                 </div>
-                                <div className="grid grid-cols-7 gap-2">
+                                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                                     {calendarWeeks.flat().map((cell, idx) => {
                                 if (!cell) {
-                                        return <div key={`blank-${idx}`} className="min-h-[92px] md:min-h-[128px] rounded-lg bg-transparent" />;
+                                        return <div key={`blank-${idx}`} className="min-h-[58px] sm:min-h-[92px] md:min-h-[128px] rounded-lg bg-transparent" />;
                                 }
 
                                 const row = recordsByDate.get(cell.dateKey);
@@ -275,43 +285,44 @@ const AttendanceHistory = () => {
                                             setSelectedDateKey(cell.dateKey);
                                             setIsDetailsModalOpen(true);
                                         }}
-                                        className={`min-h-[92px] md:min-h-[128px] min-w-0 overflow-hidden rounded-lg border bg-white dark:bg-[#0e1726] p-2 md:p-2.5 flex flex-col gap-1 text-left transition ${
+                                        className={`min-h-[58px] sm:min-h-[92px] md:min-h-[128px] min-w-0 overflow-hidden rounded-lg border bg-white dark:bg-[#0e1726] p-1 sm:p-2 md:p-2.5 flex flex-col gap-0.5 sm:gap-1 text-left transition ${
                                             isSelected
                                                 ? 'border-primary ring-1 ring-primary/40 shadow-md shadow-primary/10'
                                                 : 'border-[#ebedf2] dark:border-[#1b2e4b] hover:border-primary/50'
                                         }`}
                                     >
                                         <div className="flex w-full min-w-0 items-center justify-between gap-1">
-                                            <span className="text-sm font-bold">{cell.day}</span>
-                                            {!holidayName && status !== 'no_data' && <span className={`badge min-w-0 truncate ${statusClassMap[status]}`}>{statusLabelMap[status]}</span>}
+                                            <span className="text-xs sm:text-sm font-bold">{cell.day}</span>
+                                            {!holidayName && status !== 'no_data' && <span className={`badge min-w-0 truncate hidden sm:inline-block ${statusClassMap[status]}`}>{statusLabelMap[status]}</span>}
+                                            {(holidayName || status !== 'no_data') && <span className={`sm:hidden h-2 w-2 shrink-0 rounded-full ${holidayName ? 'bg-info' : statusDotMap[status]}`} />}
                                         </div>
-                                        <p className="w-full text-[11px] text-white-dark truncate">{row?.day_name || '-'}</p>
+                                        <p className="hidden sm:block w-full text-[11px] text-white-dark truncate">{row?.day_name || '-'}</p>
                                         {holidayName ? (
-                                            <div className="mt-1 w-full min-w-0">
+                                            <div className="mt-1 hidden w-full min-w-0 sm:block">
                                                 <span className="badge bg-info-light text-info">Holiday</span>
                                                 <p className="text-[11px] font-semibold text-info truncate mt-1" title={holidayName}>
                                                     {holidayName}
                                                 </p>
                                             </div>
                                         ) : (
-                                            <div className="w-full min-w-0 text-[11px] space-y-0.5 text-white-dark">
-                                                <p className="flex items-center justify-between gap-1">
+                                            <div className="w-full min-w-0 text-[10px] sm:text-[11px] space-y-0.5 text-white-dark">
+                                                <p className="hidden sm:flex items-center justify-between gap-1">
                                                     <span className="shrink-0 font-semibold">In</span>
                                                     <span className="min-w-0 truncate font-bold" title={row?.check_in || undefined}>{row?.check_in || '-'}</span>
                                                 </p>
-                                                <p className="flex items-center justify-between gap-1">
+                                                <p className="hidden sm:flex items-center justify-between gap-1">
                                                     <span className="shrink-0 font-semibold">Out</span>
                                                     <span className="min-w-0 truncate font-bold" title={row?.check_out || undefined}>{row?.check_out || '-'}</span>
                                                 </p>
                                                 <p className="flex items-center justify-between gap-1">
-                                                    <span className="shrink-0 font-semibold">Hrs</span>
+                                                    <span className="hidden shrink-0 font-semibold sm:inline">Hrs</span>
                                                     <span className="min-w-0 truncate font-bold text-primary" title="Working hours">
                                                         {typeof row?.total_hours === 'number' ? `${row.total_hours}h` : '-'}
                                                     </span>
                                                 </p>
                                             </div>
                                         )}
-                                        {row?.is_late && row.late_duration && <p className="w-full truncate text-[11px] font-semibold text-danger mt-auto" title={`Late: ${row.late_duration}`}>Late: {row.late_duration}</p>}
+                                        {row?.is_late && row.late_duration && <p className="hidden sm:block w-full truncate text-[11px] font-semibold text-danger mt-auto" title={`Late: ${row.late_duration}`}>Late: {row.late_duration}</p>}
                                     </button>
                                 );
                                     })}

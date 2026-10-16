@@ -16,7 +16,7 @@ export type Summary = {
         type?: string;
         start?: string;
         end?: string;
-        working?: { label: string };
+        working?: { label: string; seconds?: number };
         outside?: { label: string };
         full_day?: { label: string };
     };

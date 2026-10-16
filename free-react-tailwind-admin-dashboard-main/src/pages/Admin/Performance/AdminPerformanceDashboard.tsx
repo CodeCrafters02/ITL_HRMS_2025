@@ -214,12 +214,12 @@ const AdminPerformanceDashboard = () => {
                 <div className="flex flex-col lg:flex-row gap-6 animate__animated animate__fadeIn">
                     
                     {/* Left: Filters & Main 9-Box Grid */}
-                    <div className="flex-1 flex flex-col gap-6">
+                    <div className="flex-1 min-w-0 flex flex-col gap-6">
                         
                         {/* Interactive Filters Panel */}
                         <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-5 rounded-2xl shadow-sm flex flex-wrap gap-4 items-center justify-between">
-                            <div className="flex flex-wrap gap-4 items-center">
-                                <div className="relative min-w-[200px]">
+                            <div className="flex flex-wrap gap-4 items-center min-w-0 max-w-full">
+                                <div className="relative w-full sm:w-auto sm:min-w-[200px]">
                                     <input
                                         type="text"
                                         placeholder="Search employee or designation..."
@@ -230,7 +230,7 @@ const AdminPerformanceDashboard = () => {
                                     <IconSearch className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 max-w-full">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Dept:</span>
                                     <select value={deptFilter} onChange={e => handleDept(e.target.value)}
                                         className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-brand">
@@ -239,7 +239,7 @@ const AdminPerformanceDashboard = () => {
                                     </select>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-wrap items-center gap-2 max-w-full">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase">Designation:</span>
                                     <select value={desigFilter} onChange={e => handleDesig(e.target.value)}
                                         className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 dark:text-white focus:outline-none focus:border-brand">
