@@ -18,7 +18,6 @@ import IconListCheck from '../../components/Icon/IconListCheck';
 import IconTrendingUp from '../../components/Icon/IconTrendingUp';
 import IconSun from '../../components/Icon/IconSun';
 import CountUp from 'react-countup';
-import PerfectScrollbar from 'react-perfect-scrollbar';
 import PresenceCard, { Dot as PresenceDot, type Summary as PresenceSummary } from './PresenceCard';
 import Dropdown from '../../components/Dropdown';
 import IconXCircle from '../../components/Icon/IconXCircle';
@@ -1390,7 +1389,7 @@ const EmployeeDashboard = () => {
                             <IconClock className="w-5 h-5 text-amber-600 dark:text-amber-300" />
                         </div>
                     </div>
-                    <PerfectScrollbar className="max-h-[300px] pr-3" options={{ suppressScrollX: true }}>
+                    <div className="max-h-[220px] overflow-y-auto overflow-x-hidden overscroll-contain pr-2 [scrollbar-width:thin] [scrollbar-color:#94a3b8_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-400/70 [&::-webkit-scrollbar-track]:bg-slate-200/50 dark:[&::-webkit-scrollbar-track]:bg-slate-700/40">
                     <div className="space-y-2">
                         {!!presence?.timeline?.length && (
                             <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-black/15">
@@ -1430,7 +1429,7 @@ const EmployeeDashboard = () => {
                             </div>
                         )}
                     </div>
-                    </PerfectScrollbar>
+                    </div>
                 </div>
 
                 <div className="panel xl:col-span-1 p-4 shadow-sm rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1726]">
