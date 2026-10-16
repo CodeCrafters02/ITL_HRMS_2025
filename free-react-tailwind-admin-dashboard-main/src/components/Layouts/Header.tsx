@@ -550,7 +550,7 @@ const Header = () => {
         <>
             <header className={`w-full bg-white dark:bg-black shadow-sm ${themeConfig.semidark && themeConfig.menu === 'horizontal' ? 'dark' : ''}`}>
             <div className="shadow-sm">
-                <div className="relative bg-white flex w-full items-center px-5 py-2.5 dark:bg-black">
+                <div className="relative bg-white flex w-full items-center px-3 sm:px-5 py-2.5 dark:bg-black">
                     <div className="horizontal-logo flex lg:hidden justify-between items-center ltr:mr-2 rtl:ml-2">
                         <Link to="/" className="main-logo flex items-center shrink-0">
                             <img className="w-14 ltr:-ml-1 rtl:-mr-1 inline object-contain" src={hrmsLogo} alt="logo" />
@@ -571,13 +571,13 @@ const Header = () => {
                         <ul className="flex items-center space-x-2 rtl:space-x-reverse dark:text-[#d0d2d6]">
                             {companyName && userRole !== 'master' && (
                                 <li className="min-w-0">
-                                    <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/70 py-1 pl-1 pr-3 dark:border-slate-700/80 dark:bg-slate-800/40" title={companyName}>
+                                    <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/90 bg-slate-50/70 py-1 pl-1 pr-1 sm:pr-3 dark:border-slate-700/80 dark:bg-slate-800/40" title={companyName}>
                                         {companyLogo ? (
                                             <img src={companyLogo} alt={companyName} className="h-8 w-8 rounded-lg border border-slate-200 bg-white object-contain p-0.5 dark:border-slate-700" />
                                         ) : (
                                             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand to-brand-mid text-sm font-extrabold uppercase text-white shadow-sm">{companyName.charAt(0)}</span>
                                         )}
-                                        <span className="max-w-[140px] truncate text-sm font-bold tracking-tight text-slate-800 dark:text-white sm:max-w-[220px]">{companyName}</span>
+                                        <span className="hidden sm:inline max-w-[140px] truncate text-sm font-bold tracking-tight text-slate-800 dark:text-white sm:max-w-[220px]">{companyName}</span>
                                     </div>
                                 </li>
                             )}

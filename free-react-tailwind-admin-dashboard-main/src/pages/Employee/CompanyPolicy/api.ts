@@ -6,6 +6,7 @@ export interface CompanyPolicy {
     document: string | null;
     version: string;
     published_at: string | null;
+    published_time?: string | null;
     file_name: string;
 }
 

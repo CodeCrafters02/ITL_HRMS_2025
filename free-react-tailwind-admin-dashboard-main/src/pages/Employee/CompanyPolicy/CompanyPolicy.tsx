@@ -11,6 +11,12 @@ import { CompanyPolicy, fetchCompanyPolicies, fetchPolicyFile } from './api';
 
 import Button from '../../../components/Common/Button';
 import CardGrid from '../../../components/Common/CardGrid';
+const fmtPublished = (p: Pick<CompanyPolicy, 'published_at' | 'published_time'>) => {
+    const date = p.published_at ? new Date(p.published_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+    const time = p.published_time ? new Date(p.published_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+    return [date, time].filter(Boolean).join(', ');
+};
+
 const CompanyPolicyPage = () => {
     const dispatch = useDispatch();
     const [policies, setPolicies] = useState<CompanyPolicy[]>([]);
@@ -149,7 +155,7 @@ const CompanyPolicyPage = () => {
                                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                                     <span className="rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-extrabold text-brand">v{policy.version || '1.0'}</span>
                                     <span className="text-[11px] font-medium text-slate-500">
-                                        Published {policy.published_at ? new Date(policy.published_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        Published {fmtPublished(policy)}
                                     </span>
                                 </div>
                             </div>
@@ -180,7 +186,7 @@ const CompanyPolicyPage = () => {
                 size="5xl"
                 icon={<IconFile />}
                 title={viewing?.name}
-                subtitle={viewing ? `Version ${viewing.version || '1.0'} · Published ${viewing.published_at ? new Date(viewing.published_at).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '-'} · Latest version` : undefined}
+                subtitle={viewing ? `Version ${viewing.version || '1.0'} · Published ${fmtPublished(viewing)} · Latest version` : undefined}
                 bodyClassName="!p-0"
                 footer={
                     <>

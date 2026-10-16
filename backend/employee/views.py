@@ -2013,10 +2013,15 @@ class BreakLogAPIView(APIView):
 class EmployeePolicySerializer(serializers.ModelSerializer):
     """Employees only see the latest published version (no version history)."""
     file_name = serializers.SerializerMethodField()
+    published_time = serializers.SerializerMethodField()
 
     class Meta:
         model = CompanyPolicies
-        fields = ['id', 'name', 'document', 'version', 'published_at', 'file_name']
+        fields = ['id', 'name', 'document', 'version', 'published_at', 'published_time', 'file_name']
+
+    def get_published_time(self, obj):
+        v = obj.versions.first()
+        return v.created_at if v else None
 
     def get_file_name(self, obj):
         import os
