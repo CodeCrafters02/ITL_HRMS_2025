@@ -286,11 +286,23 @@ def _apply(emp, st, availability, activity, cfg, now, logs):
             record('check_out', f'last active {st.last_active_at.astimezone(TZ):%H:%M}')
 
 
+def ensure_configs():
+    from app.models import Company
+    from employee.models import TeamsAttendanceConfig
+    for c in Company.objects.filter(teams_attendance_config__isnull=True):
+        TeamsAttendanceConfig.objects.get_or_create(
+            company=c, defaults=dict(enabled=True, dry_run=False, auto_checkin=True, auto_checkout=True))
+
+
 def poll_once(now=None):
     from app.models import Employee
     from employee.models import TeamsAttendanceConfig, PresenceState
     now = now or timezone.now()
     logs = []
+    try:
+        ensure_configs()
+    except Exception as exc:
+        logger.error('ensure_configs failed: %s', exc)
     for cfg in TeamsAttendanceConfig.objects.filter(enabled=True).select_related('company'):
         emps = list(Employee.objects.filter(company=cfg.company).exclude(email__isnull=True).exclude(email='')
                     .select_related('user', 'company', 'shift_assigned'))
