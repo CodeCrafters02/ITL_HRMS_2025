@@ -18,9 +18,9 @@ type ViewMode = 'card' | 'table';
 
 const statusBadgeClass = (status?: string) => {
     const normalized = (status || '').toLowerCase();
-    if (normalized === 'online') return 'bg-success-light text-success';
-    if (normalized === 'away') return 'bg-warning-light text-warning';
-    if (normalized === 'dnd') return 'bg-danger-light text-danger';
+    if (['online', 'available', 'availableidle'].includes(normalized)) return 'bg-success-light text-success';
+    if (['away', 'berightback'].includes(normalized)) return 'bg-warning-light text-warning';
+    if (['dnd', 'busy', 'busyidle', 'donotdisturb'].includes(normalized)) return 'bg-danger-light text-danger';
     return 'bg-dark-light text-white-dark';
 };
 
@@ -67,7 +67,7 @@ const AdminReportees = () => {
         return () => clearTimeout(timer);
     }, [loadReportees]);
 
-    const onlineCount = useMemo(() => items.filter((r) => (r.status || '').toLowerCase() === 'online').length, [items]);
+    const onlineCount = useMemo(() => items.filter((r) => ['online', 'available', 'availableidle'].includes((r.teams_status || r.status || '').toLowerCase())).length, [items]);
     const checkedInCount = useMemo(() => items.filter((r) => r.is_checked_in).length, [items]);
 
     const getPageNumbers = () => {
@@ -125,7 +125,7 @@ const AdminReportees = () => {
             align: 'center',
             sortable: true,
             render: (_val, item: Reportee) => (
-                <span className={`badge ${statusBadgeClass(item.status)}`}>{item.status || 'Offline'}</span>
+                <span className={`badge ${statusBadgeClass(item.teams_status || item.status)}`}>{item.teams_status || item.status || 'Offline'}</span>
             ),
         },
         {
@@ -235,7 +235,7 @@ const AdminReportees = () => {
                                                 <p className="text-xs text-white-dark truncate">{item.employee_id || '-'}</p>
                                             </div>
                                         </div>
-                                        <span className={`badge ${statusBadgeClass(item.status)}`}>{item.status || 'Offline'}</span>
+                                        <span className={`badge ${statusBadgeClass(item.teams_status || item.status)}`}>{item.teams_status || item.status || 'Offline'}</span>
                                     </div>
                                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                                         <div className="rounded-md bg-[#f8f9fa] dark:bg-[#060818] p-2">

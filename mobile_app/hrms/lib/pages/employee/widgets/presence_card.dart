@@ -84,15 +84,8 @@ class PresenceCard extends StatelessWidget {
   }
 }
 
-class PresenceDetailsSheet extends StatelessWidget {
-  const PresenceDetailsSheet({super.key, required this.presence});
-  final PresenceSummary presence;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final p = presence;
-    final cur = p.availability ?? 'Unknown';
+List<Widget> presenceDetailChildren(BuildContext context, PresenceSummary p) {
+  final t = Theme.of(context).textTheme;
     final muted = t.labelSmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted, fontWeight: FontWeight.w800, letterSpacing: 0.5);
     final bold = t.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface);
     final soft = t.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted);
@@ -122,50 +115,7 @@ class PresenceDetailsSheet extends StatelessWidget {
         );
     Widget statusLabel(String s) => Row(mainAxisSize: MainAxisSize.min, children: [_Dot(s), const SizedBox(width: 8), Text(s, style: bold)]);
     final sh = p.shift;
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, controller) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, -4))],
-        ),
-        child: Column(children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 10, bottom: 8),
-              decoration: BoxDecoration(color: AppStitchTheme.lightOutline.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 8, 10),
-            child: Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Teams activity — today', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    _Dot(cur),
-                    const SizedBox(width: 8),
-                    Text('$cur${p.currentSince != null ? ' since ${p.currentSince}' : ''}', style: soft),
-                  ]),
-                ]),
-              ),
-              IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
-            ]),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              controller: controller,
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
-              children: [
+  return [
               Row(children: [
                 stat('Working', p.workingLabel ?? '0h 00m'),
                 stat('Overtime', p.overtimeLabel ?? '0h 00m'),
@@ -197,7 +147,64 @@ class PresenceDetailsSheet extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text('Working time counts Available, Busy and Do Not Disturb only.', style: soft),
                 ]),
-              ],
+  ];
+}
+
+class PresenceDetailsSheet extends StatelessWidget {
+  const PresenceDetailsSheet({super.key, required this.presence, this.title = 'Teams activity — today'});
+  final PresenceSummary presence;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final p = presence;
+    final cur = p.availability ?? 'Unknown';
+    final soft = t.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, controller) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, -4))],
+        ),
+        child: Column(children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 10, bottom: 8),
+              decoration: BoxDecoration(color: AppStitchTheme.lightOutline.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 10),
+            child: Row(children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+                  const SizedBox(height: 4),
+                  Row(children: [
+                    _Dot(cur),
+                    const SizedBox(width: 8),
+                    Text('$cur${p.currentSince != null ? ' since ${p.currentSince}' : ''}', style: soft),
+                  ]),
+                ]),
+              ),
+              IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(context)),
+            ]),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              controller: controller,
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+              children: presenceDetailChildren(context, p),
             ),
           ),
         ]),

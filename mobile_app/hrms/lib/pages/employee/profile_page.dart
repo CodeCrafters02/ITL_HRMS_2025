@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/employee_service.dart';
 import '../../models/profile_model.dart';
@@ -30,6 +31,7 @@ class _ProfilePageState extends State<ProfilePage>
   PersonalReportingLine? _reportingLine;
   List<Reportee>? _reportees;
   int? _currentUserId;
+  Timer? _statusTimer;
   bool _isLoading = true;
   String? _error;
 
@@ -38,10 +40,33 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadProfileData();
+    _statusTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshStatuses());
+  }
+
+  Future<void> _refreshStatuses() async {
+    if (_isLoading || !mounted) return;
+    final res = await Future.wait([
+      EmployeeService.getEmployeeHierarchy(),
+      EmployeeService.getOrganizationHierarchy(),
+      EmployeeService.getPersonalReportingLine(),
+    ]);
+    List<Reportee>? reportees;
+    if (_currentUserId != null) {
+      final rr = await EmployeeService.getReportees(_currentUserId!);
+      if (rr.success) reportees = rr.data;
+    }
+    if (!mounted) return;
+    setState(() {
+      if (res[0].success) _hierarchy = res[0].data as EmployeeHierarchy?;
+      if (res[1].success) _orgHierarchy = res[1].data as OrganizationHierarchy?;
+      if (res[2].success) _reportingLine = res[2].data as PersonalReportingLine?;
+      if (reportees != null) _reportees = reportees;
+    });
   }
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -119,6 +144,7 @@ class _ProfilePageState extends State<ProfilePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       backgroundColor: Colors.transparent,
       builder: (context) => EmployeeDetailModal(node: node),
     );

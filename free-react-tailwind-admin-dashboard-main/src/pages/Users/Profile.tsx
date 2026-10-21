@@ -110,7 +110,7 @@ const Profile = () => {
                                     node.status === 'dnd' ? 'bg-danger' :
                                     'bg-secondary'
                                 }`}
-                                title={node.status === 'dnd' ? 'Do Not Disturb' : node.status.charAt(0).toUpperCase() + node.status.slice(1)}
+                                title={(node as any).teams_status || (node.status === 'dnd' ? 'Do Not Disturb' : node.status.charAt(0).toUpperCase() + node.status.slice(1))}
                             ></span>
                         )}
                     </div>
@@ -529,31 +529,30 @@ const Profile = () => {
                                 leaveFrom="opacity-100 scale-100"
                                 leaveTo="opacity-0 scale-95"
                             >
-                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg text-black dark:text-white-dark shadow-2xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsInfoModalOpen(false)}
-                                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 outline-none transition-all duration-300 z-10"
-                                    >
-                                        <IconX />
-                                    </button>
-                                    
-                                    <div className="relative h-32 bg-gradient-to-r from-primary to-info"></div>
-                                    
-                                    <div className="px-6 pb-8">
-                                        <div className="relative -mt-16 mb-6 flex justify-center">
-                                            <img 
-                                                src={selectedNode?.photo || "/assets/images/profile-34.jpeg"} 
-                                                alt={selectedNode?.name} 
-                                                className="w-32 h-32 rounded-full object-cover border-4 border-white dark:border-[#191e3a] shadow-lg" 
+                                <Dialog.Panel className="panel border-0 p-0 rounded-2xl overflow-hidden w-full max-w-lg max-h-[88vh] flex flex-col text-black dark:text-white-dark shadow-2xl">
+                                    <div className="relative shrink-0 bg-gradient-to-r from-primary to-info px-6 py-5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsInfoModalOpen(false)}
+                                            className="absolute top-3 right-3 rounded-full p-1.5 text-white/80 hover:bg-white/20 hover:text-white outline-none transition-colors"
+                                        >
+                                            <IconX />
+                                        </button>
+                                        <div className="flex items-center gap-4 pr-8">
+                                            <img
+                                                src={selectedNode?.photo || "/assets/images/profile-34.jpeg"}
+                                                alt={selectedNode?.name}
+                                                className="h-20 w-20 shrink-0 rounded-full border-4 border-white/90 object-cover shadow-lg"
                                             />
+                                            <div className="min-w-0">
+                                                <h3 className="truncate text-xl font-bold text-white">{selectedNode?.name}</h3>
+                                                <p className="truncate text-sm font-medium text-white/85">{selectedNode?.designation}</p>
+                                            </div>
                                         </div>
-                                        
-                                        <div className="text-center mb-8">
-                                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white-light">{selectedNode?.name}</h3>
-                                            <p className="text-primary font-medium">{selectedNode?.designation}</p>
-                                        </div>
+                                    </div>
 
+                                    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                                    <div className="px-6 py-5">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="flex flex-col p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
                                                 <span className="text-xs text-white-dark mb-1 uppercase tracking-wider font-bold">Employee ID</span>
@@ -579,7 +578,8 @@ const Profile = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="p-4 bg-gray-50 dark:bg-gray-800/30 flex justify-end px-6">
+                                    </div>
+                                    <div className="p-4 shrink-0 bg-gray-50 dark:bg-gray-800/30 flex justify-end px-6">
                                         <button 
                                             type="button" 
                                             className="btn btn-outline-primary"

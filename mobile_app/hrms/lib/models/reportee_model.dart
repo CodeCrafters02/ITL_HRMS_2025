@@ -1,8 +1,11 @@
+import 'profile_model.dart';
+
 class Reportee {
   final int id;
   final String employeeId;
   final String fullName;
   final String? status;
+  final String? teamsStatus;
   final String? departmentName;
   final String? designationName;
   final String? photo;
@@ -13,6 +16,7 @@ class Reportee {
     required this.employeeId,
     required this.fullName,
     this.status,
+    this.teamsStatus,
     this.departmentName,
     this.designationName,
     this.photo,
@@ -25,12 +29,16 @@ class Reportee {
       employeeId: json['employee_id']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
       status: json['status']?.toString(),
+      teamsStatus: json['teams_status']?.toString(),
       departmentName: json['department_name']?.toString(),
       designationName: json['designation_name']?.toString(),
       photo: json['photo']?.toString(),
       isCheckedIn: json['is_checked_in'] == true,
     );
   }
+
+  String get statusBucket => teamsStatusBucket(teamsStatus, status);
+  String get statusLabel => teamsStatusLabel(teamsStatus, status);
 
   String get initials {
     final parts = fullName.trim().split(' ');

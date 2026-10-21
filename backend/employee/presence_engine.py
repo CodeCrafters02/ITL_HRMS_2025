@@ -12,6 +12,8 @@ TZ = pytz.timezone('Asia/Kolkata')
 GRAPH = 'https://graph.microsoft.com/v1.0'
 ACTIVE_STATES = {'Available', 'Busy', 'DoNotDisturb'}  # working-hour states (idle variants are not working time)
 OFFLINE_STATES = {'Offline'}
+STATUS_MAP = {'Available': 'online', 'AvailableIdle': 'online', 'Away': 'away', 'BeRightBack': 'away',
+              'Busy': 'dnd', 'BusyIdle': 'dnd', 'DoNotDisturb': 'dnd'}
 EARLY_BUFFER = timedelta(hours=2)
 MIN_WORK = timedelta(hours=2)
 DEBOUNCE = timedelta(seconds=60)
@@ -224,6 +226,11 @@ def _apply(emp, st, availability, activity, cfg, now, logs):
         PresenceLog.objects.create(employee=emp, availability=availability, activity=activity, started_at=now)
         st.since = now
     st.availability, st.activity, st.last_polled_at = availability, activity, now
+    if cfg.enabled and not cfg.dry_run:
+        new_status = STATUS_MAP.get(availability, 'offline')
+        if emp.status != new_status:
+            type(emp).objects.filter(pk=emp.pk).update(status=new_status)
+            emp.status = new_status
     active = availability in ACTIVE_STATES
     if active:
         st.last_active_at = now
@@ -549,3 +556,23 @@ def sync_attendance_rows(company_id, d, now=None):
         AttendanceTeamsInfo.objects.update_or_create(attendance=att, defaults={'shift': sh, 'source': 'teams'})
         n += 1
     return n
+
+
+def set_manual_status(employee, status):
+    """Manual online/away/offline writes are ignored when Teams presence drives status."""
+    if teams_managed(employee):
+        return
+    employee.status = status
+    employee.save(update_fields=['status'])
+
+
+def display_status(stored, availability):
+    """online/away/dnd/offline from live Teams presence, falling back to the stored value when there is none."""
+    if availability:
+        return STATUS_MAP.get(availability, 'offline')
+    return stored
+
+
+def teams_availability_map(employee_ids):
+    from employee.models import PresenceState
+    return dict(PresenceState.objects.filter(employee_id__in=list(employee_ids)).values_list('employee_id', 'availability'))

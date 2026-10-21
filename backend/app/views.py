@@ -281,8 +281,8 @@ class LoginAPIView(APIView):
 
             # Update status to online
             if hasattr(user, 'employee'):
-                user.employee.status = 'online'
-                user.employee.save(update_fields=['status'])
+                from employee.presence_engine import set_manual_status
+                set_manual_status(user.employee, 'online')
 
             return Response({
                 "access": access_token,
@@ -5250,6 +5250,13 @@ class EmployeeStatusViewSet(viewsets.ModelViewSet):
     serializer_class = EmployeeStatusSerializer
     permission_classes = [IsAuthenticated]
 
+    def update(self, request, *args, **kwargs):
+        from employee.presence_engine import teams_managed
+        emp = self.get_object()
+        if teams_managed(emp):
+            return Response({"detail": "Status is managed by Microsoft Teams."}, status=403)
+        return super().update(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         # If employee, filter by their company only
@@ -5911,6 +5918,9 @@ class OrganizationHierarchyView(APIView):
                 manager_map[mid] = []
             manager_map[mid].append(emp)
 
+        from employee.presence_engine import teams_availability_map, display_status
+        _teams = teams_availability_map(e.id for e in employees)
+
         def build_node(emp):
             return {
                 'id': emp.id,
@@ -5922,7 +5932,8 @@ class OrganizationHierarchyView(APIView):
                 'mobile': emp.mobile,
                 'employee_id': emp.employee_id,
                 'department': emp.department.department_name if emp.department else None,
-                'status': emp.status,
+                'status': display_status(emp.status, _teams.get(emp.id)),
+                'teams_status': _teams.get(emp.id) or None,
                 'children': [build_node(child) for child in manager_map.get(emp.id, [])]
             }
 
@@ -5945,6 +5956,9 @@ class PersonalReportingLineView(APIView):
         except Employee.DoesNotExist:
             return Response([])
 
+        from employee.presence_engine import teams_availability_map, display_status
+        _teams = {}
+
         def build_node_simple(emp, depth=0, max_depth=2):
             """
             Builds a node and potentially its children up to a certain depth.
@@ -5962,7 +5976,8 @@ class PersonalReportingLineView(APIView):
                 'mobile': emp.mobile,
                 'employee_id': emp.employee_id,
                 'department': emp.department.department_name if emp.department else None,
-                'status': emp.status,
+                'status': display_status(emp.status, teams_availability_map([emp.id]).get(emp.id)),
+                'teams_status': teams_availability_map([emp.id]).get(emp.id) or None,
                 'children': []
             }
 
@@ -6573,8 +6588,8 @@ def _process_sso_user_login(*, email: str, first_name: str = "", last_name: str 
 
     # Update status to online
     if hasattr(user, 'employee'):
-        user.employee.status = 'online'
-        user.employee.save(update_fields=['status'])
+        from employee.presence_engine import set_manual_status
+        set_manual_status(user.employee, 'online')
 
     # Return tokens
     refresh = RefreshToken.for_user(user)

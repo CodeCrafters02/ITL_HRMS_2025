@@ -326,28 +326,6 @@ const Header = () => {
         loadProfile();
     }, [API_BASE_URL, userRole]);
 
-    const handleStatusUpdate = async (newStatus: string) => {
-        try {
-            const token = localStorage.getItem('access_token');
-            if (!token) return;
-            
-            const response = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-
-            if (response.ok) {
-                setCurrentStatus(newStatus);
-            }
-        } catch (error) {
-            console.error('Failed to update status:', error);
-        }
-    };
-
     useEffect(() => {
         const savedSeenCount = Number(localStorage.getItem(notificationSeenKey) || 0);
         setNotificationSeenCount(Number.isFinite(savedSeenCount) ? savedSeenCount : 0);
@@ -793,17 +771,9 @@ const Header = () => {
                                     <li className="border-t border-white-light dark:border-white-light/10">
                                         <div className="px-4 py-3">
                                             <div className="text-xs text-white-dark mb-2 font-bold uppercase">Status</div>
-                                            <select 
-                                                className="form-select form-select-sm" 
-                                                value={currentStatus} 
-                                                onChange={(e) => handleStatusUpdate(e.target.value)}
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <option value="online">🟢 Online</option>
-                                                <option value="away">🟡 Away</option>
-                                                <option value="dnd">🔴 Do Not Disturb</option>
-                                                <option value="offline">⚪ Offline</option>
-                                            </select>
+                                            <div className="text-sm font-semibold capitalize" title="Status is controlled by Microsoft Teams">
+                                                {currentStatus === 'dnd' ? 'Do Not Disturb' : currentStatus} <span className="text-xs font-normal text-white-dark">(Teams)</span>
+                                            </div>
                                         </div>
                                     </li>
                                     {/* {userRole !== 'master' && (

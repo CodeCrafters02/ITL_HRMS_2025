@@ -127,7 +127,8 @@ class PresenceShift {
   final bool assigned;
   final String? type, start, end, workingLabel, outsideLabel, fullDayLabel;
   final int? workingSeconds;
-  PresenceShift({required this.assigned, this.workingSeconds, this.type, this.start, this.end, this.workingLabel, this.outsideLabel, this.fullDayLabel});
+  final int? fullDaySeconds;
+  PresenceShift({this.fullDaySeconds, required this.assigned, this.workingSeconds, this.type, this.start, this.end, this.workingLabel, this.outsideLabel, this.fullDayLabel});
   factory PresenceShift.fromJson(Map<String, dynamic> j) => PresenceShift(
         assigned: j['assigned'] == true,
         type: j['type']?.toString(),
@@ -136,6 +137,7 @@ class PresenceShift {
         workingLabel: (j['working'] as Map?)?['label']?.toString(),
         workingSeconds: ((j['working'] as Map?)?['seconds'] as num?)?.toInt(),
         outsideLabel: (j['outside'] as Map?)?['label']?.toString(),
+        fullDaySeconds: ((j['full_day'] as Map?)?['seconds'] as num?)?.toInt(),
         fullDayLabel: (j['full_day'] as Map?)?['label']?.toString(),
       );
 }

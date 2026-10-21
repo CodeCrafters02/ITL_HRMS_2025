@@ -1851,6 +1851,8 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
     aadhar_card = serializers.SerializerMethodField()
     pan_card = serializers.SerializerMethodField()
     is_checked_in = serializers.SerializerMethodField()
+    teams_status = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
  
     class Meta:
         model = Employee
@@ -1859,6 +1861,7 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
             'employee_id',
             'full_name',
             'status',
+            'teams_status',
             'department_name',
             'designation_name',
             'photo',
@@ -1867,6 +1870,14 @@ class ReportingEmployeesSerializer(serializers.ModelSerializer):
             'is_checked_in',
         ]
  
+    def get_status(self, obj):
+        from employee.presence_engine import display_status
+        return display_status(obj.status, self.get_teams_status(obj))
+
+    def get_teams_status(self, obj):
+        from employee.presence_engine import teams_availability_map
+        return teams_availability_map([obj.id]).get(obj.id) or None
+
     def get_department_name(self, obj):
         return obj.department.department_name if obj.department else None
  

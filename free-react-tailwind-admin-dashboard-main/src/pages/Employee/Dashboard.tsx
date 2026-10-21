@@ -89,8 +89,6 @@ interface DashboardData {
     break_quota_used_percent?: number;
     server_time: string;
     birthday_message: string | null;
-    missing_checkout_yesterday?: boolean;
-    missing_checkout_date?: string | null;
 }
 
 interface BreakConfig {
@@ -529,27 +527,6 @@ const EmployeeDashboard = () => {
                 // Always show success first
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Successfully Checked In!', showConfirmButton: false, timer: 2500 });
 
-                if (result.missing_checkout_yesterday) {
-                    const rawDate: string = result.missing_checkout_date || '';
-                    const dateLabel = rawDate
-                        ? new Date(rawDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-                        : 'a previous working day';
-                    // Small delay so the success toast is visible before the modal takes over
-                    await new Promise((r) => setTimeout(r, 600));
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'Missed Checkout — Action Required',
-                        html: `
-                            <p>You forgot to check out on <strong>${dateLabel}</strong>.</p>
-                            <p style="margin-top:10px">Your attendance for that day has been marked as <strong style="color:#e7515a">Absent</strong>.</p>
-                            <p style="margin-top:8px">Please contact your <strong>Admin</strong> to correct your attendance record.</p>
-                        `,
-                        confirmButtonText: 'I Understand',
-                        confirmButtonColor: '#e2a03f',
-                        allowOutsideClick: false,
-                    });
-                }
-
                 fetchAllData(true);
             } else {
                 showCompactError(result.detail || 'Could not check in');
@@ -578,26 +555,6 @@ const EmployeeDashboard = () => {
             }
         } catch (e: any) {
             showCompactError(e.message || 'Could not check out');
-        }
-    };
-
-    const handleStatusUpdate = async (newStatus: string) => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
-                method: 'PATCH',
-                headers: authHeaders,
-                body: JSON.stringify({ status: newStatus })
-            });
-            if (res.ok) {
-                const responseData = await res.json();
-                setData(prev => prev ? { ...prev, status: responseData.status || newStatus } : null);
-                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Status Updated', showConfirmButton: false, timer: 3000 });
-            } else {
-                const errData = await res.json();
-                showCompactError(errData.detail || 'Could not update status');
-            }
-        } catch (e: any) {
-            showCompactError(e.message || 'Could not update status');
         }
     };
 
@@ -1016,35 +973,15 @@ const EmployeeDashboard = () => {
                             <p className="text-xs font-semibold uppercase tracking-wider text-brand-100 mr-1">Status & Breaks</p>
                             
                             {/* Live Status Dropdown inside Breaks Section */}
-                            <div className="dropdown relative">
-                                <Dropdown
-                                    offset={[0, 5]}
-                                    placement="bottom-start"
-                                    usePortal={true}
-                                    strategy="fixed"
-                                    button={
-                                        <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-200/45 bg-brand-200/10 text-brand-100 hover:bg-brand-200/20 transition-colors capitalize flex items-center gap-1">
-                                            <span className={`w-2 h-2 rounded-full ${
-                                                data.status === 'online' ? 'bg-success' :
-                                                data.status === 'away' ? 'bg-warning' :
-                                                data.status === 'dnd' ? 'bg-danger' :
-                                                'bg-secondary'
-                                            }`}></span>
-                                            {data.status === 'dnd' ? 'Do Not Disturb' : (data.status || 'Online')}
-                                            <svg className="w-4 h-4 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <polyline points="6 9 12 15 18 9"></polyline>
-                                            </svg>
-                                        </span>
-                                    }
-                                >
-                                    <ul className="text-black dark:text-white-dark bg-white dark:bg-[#1b2e4b] shadow-[0_0_10px_rgba(0,0,0,0.1)] dark:shadow-[0_0_10px_rgba(0,0,0,0.4)] rounded-md border border-white-light dark:border-[#253b5c] py-1 min-w-[160px]">
-                                        <li><button type="button" onClick={() => handleStatusUpdate('online')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-success"></span> Online</button></li>
-                                        <li><button type="button" onClick={() => handleStatusUpdate('away')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-warning"></span> Away</button></li>
-                                        <li><button type="button" onClick={() => handleStatusUpdate('dnd')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-danger"></span> Start dont disturb</button></li>
-                                        <li><button type="button" onClick={() => handleStatusUpdate('offline')} className="w-full text-left px-4 py-2 hover:bg-black/5 dark:hover:bg-black/10 text-sm flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-secondary"></span> Offline</button></li>
-                                    </ul>
-                                </Dropdown>
-                            </div>
+                            <span className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-brand-200/45 bg-brand-200/10 text-brand-100 flex items-center gap-2" title="Status is controlled by Microsoft Teams">
+                                <span className={`w-2 h-2 rounded-full ${
+                                    data.status === 'online' ? 'bg-success' :
+                                    data.status === 'away' ? 'bg-warning' :
+                                    data.status === 'dnd' ? 'bg-danger' :
+                                    'bg-secondary'
+                                }`}></span>
+                                {presence?.current?.availability ? `${presence.current.availability} (Teams)` : data.status === 'dnd' ? 'Do Not Disturb' : (data.status || 'Offline')}
+                            </span>
 
                             {!active_break ? (
                                 Object.entries(groupedBreaks).map(([choice, configs]) => {

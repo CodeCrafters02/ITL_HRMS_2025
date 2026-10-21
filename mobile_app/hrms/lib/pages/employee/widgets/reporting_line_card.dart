@@ -228,6 +228,28 @@ class _AnimatedEntry extends StatelessWidget {
 }
 
 // Manager card
+class _TeamsStatusChip extends StatelessWidget {
+  final String bucket;
+  final String label;
+  const _TeamsStatusChip({required this.bucket, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = bucket == 'online'
+        ? const Color(0xFF22C55E)
+        : bucket == 'away'
+            ? const Color(0xFFF59E0B)
+            : bucket == 'dnd'
+                ? const Color(0xFFEF4444)
+                : const Color(0xFF94A3B8);
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 5),
+      Text('$label (Teams)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+    ]);
+  }
+}
+
 class _ManagerCard extends StatelessWidget {
   final HierarchyEmployee manager;
   const _ManagerCard({required this.manager});
@@ -282,6 +304,8 @@ class _ManagerCard extends StatelessWidget {
                 Text('${manager.designation} • ${manager.level}',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppStitchTheme.lightOnSurfaceMuted),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                _TeamsStatusChip(bucket: manager.statusBucket, label: manager.statusLabel),
               ],
             ),
           ),
@@ -498,7 +522,7 @@ class _ReporteeTile extends StatelessWidget {
   const _ReporteeTile({required this.reportee});
 
   Color get _statusColor {
-    switch (reportee.status) {
+    switch (reportee.statusBucket) {
       case 'online': return const Color(0xFF22C55E);
       case 'away': return const Color(0xFFF59E0B);
       case 'dnd': return const Color(0xFFEF4444);
@@ -555,7 +579,7 @@ class _ReporteeTile extends StatelessWidget {
               ]),
               const SizedBox(height: 2),
               Text(
-                '${reportee.designationName ?? ''}${reportee.departmentName != null ? ' · ${reportee.departmentName}' : ''}',
+                '${reportee.statusLabel} (Teams) · ${reportee.designationName ?? ''}${reportee.departmentName != null ? ' · ${reportee.departmentName}' : ''}',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppStitchTheme.lightOnSurfaceMuted),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
@@ -618,6 +642,8 @@ class _HierarchyReporteeTile extends StatelessWidget {
               Text('${employee.designation} · ${employee.level}',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppStitchTheme.lightOnSurfaceMuted),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 3),
+              _TeamsStatusChip(bucket: employee.statusBucket, label: employee.statusLabel),
             ],
           )),
         ]),

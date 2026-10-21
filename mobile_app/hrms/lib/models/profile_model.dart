@@ -134,15 +134,22 @@ class EmployeeProfile {
 }
 
 class HierarchyEmployee {
+  String get statusBucket => teamsStatusBucket(teamsStatus, status);
+  String get statusLabel => teamsStatusLabel(teamsStatus, status);
+
   final int? id;
   final String name;
   final String level;
   final String designation;
   final String? photo;
+  final String? status;
+  final String? teamsStatus;
   final List<HierarchyEmployee>? reportees;
 
   HierarchyEmployee({
     this.id,
+    this.status,
+    this.teamsStatus,
     required this.name,
     required this.level,
     required this.designation,
@@ -158,6 +165,8 @@ class HierarchyEmployee {
       level: s(json['level']),
       designation: s(json['designation']),
       photo: json['photo']?.toString(),
+      status: json['status']?.toString(),
+      teamsStatus: json['teams_status']?.toString(),
       reportees: json['reportees'] != null
           ? (json['reportees'] as List)
               .map((item) => HierarchyEmployee.fromJson(item))
@@ -229,6 +238,7 @@ class OrganizationNode {
   final String designation;
   final String? photo;
   final String? status;
+  final String? teamsStatus;
   final String? employeeId;
   final String? department;
   final String? email;
@@ -241,6 +251,7 @@ class OrganizationNode {
     required this.designation,
     this.photo,
     this.status,
+    this.teamsStatus,
     this.employeeId,
     this.department,
     this.email,
@@ -255,6 +266,7 @@ class OrganizationNode {
       designation: json['designation']?.toString() ?? '',
       photo: json['photo']?.toString(),
       status: json['status']?.toString(),
+      teamsStatus: json['teams_status']?.toString(),
       employeeId: json['employee_id']?.toString(),
       department: json['department']?.toString(),
       email: json['email']?.toString(),
@@ -267,11 +279,62 @@ class OrganizationNode {
     );
   }
 
-  bool get isOnline => status == 'online';
-  bool get isAway => status == 'away';
-  bool get isDnd => status == 'dnd';
-  bool get isOffline => status == null || status == 'offline';
+  String get _bucket => teamsStatusBucket(teamsStatus, status);
+  bool get isOnline => _bucket == 'online';
+  bool get isAway => _bucket == 'away';
+  bool get isDnd => _bucket == 'dnd';
+  bool get isOffline => _bucket == 'offline';
+  String get statusLabel => teamsStatusLabel(teamsStatus, status);
 }
+
+String teamsStatusLabel(String? teams, String? fallback) {
+  switch (teams) {
+    case 'Available':
+    case 'AvailableIdle':
+      return 'Available';
+    case 'Busy':
+    case 'BusyIdle':
+      return 'Busy';
+    case 'DoNotDisturb':
+      return 'Do Not Disturb';
+    case 'Away':
+      return 'Away';
+    case 'BeRightBack':
+      return 'Be Right Back';
+    case 'Offline':
+      return 'Offline';
+  }
+  switch (fallback) {
+    case 'online':
+      return 'Online';
+    case 'away':
+      return 'Away';
+    case 'dnd':
+      return 'Do Not Disturb';
+    default:
+      return 'Offline';
+  }
+}
+
+/// Normalised bucket (online/away/dnd/offline) for a Teams availability, falling back to the stored status.
+String teamsStatusBucket(String? teams, String? fallback) {
+  switch (teams) {
+    case 'Available':
+    case 'AvailableIdle':
+      return 'online';
+    case 'Away':
+    case 'BeRightBack':
+      return 'away';
+    case 'Busy':
+    case 'BusyIdle':
+    case 'DoNotDisturb':
+      return 'dnd';
+    case 'Offline':
+      return 'offline';
+  }
+  return fallback ?? 'offline';
+}
+
 
 class OrganizationHierarchy {
   final List<OrganizationNode> roots;

@@ -602,10 +602,7 @@ class EmployeeDetailModal extends StatelessWidget {
   }
 
   String get _statusLabel {
-    if (node.isOnline) return 'Online';
-    if (node.isAway) return 'Away';
-    if (node.isDnd) return 'Do Not Disturb';
-    return 'Offline';
+    return node.statusLabel;
   }
 
   @override
@@ -741,12 +738,27 @@ class EmployeeDetailModal extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    node.teamsStatus != null
+                        ? 'Live from Microsoft Teams: ${node.teamsStatus}'
+                        : 'No Teams data from server - showing stored status',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: node.teamsStatus != null ? const Color(0xFF16A34A) : const Color(0xFFD97706),
+                    ),
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 20),
 
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(children: [
             // Details grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -789,6 +801,9 @@ class EmployeeDetailModal extends StatelessWidget {
             ),
 
             const SizedBox(height: 28),
+                ]),
+              ),
+            ),
           ],
         ),
       ),

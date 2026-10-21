@@ -143,24 +143,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleStatusUpdate = async (newStatus: string) => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/employee/employee-profile/`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('access_token')}`,
-                },
-                body: JSON.stringify({ status: newStatus }),
-            });
-            if (res.ok) {
-                setCurrentStatus(newStatus);
-            }
-        } catch (e) {
-            console.error('Failed to update status:', e);
-        }
-    };
-
     const presentPercentage =
         data && data.employee_overview.total > 0
             ? Math.round((data.attendance_snapshot.present / data.employee_overview.total) * 100)
@@ -261,16 +243,7 @@ const AdminDashboard = () => {
                         <span className="h-1 w-1 rounded-full bg-white/50" />
                         <span className="inline-flex items-center gap-1.5">
                             <span className="text-white/70">Status:</span>
-                            <select
-                                className="cursor-pointer rounded-lg border border-white/25 bg-white/15 px-2 py-0.5 text-xs font-semibold text-white outline-none focus:border-white/50"
-                                value={currentStatus}
-                                onChange={(e) => handleStatusUpdate(e.target.value)}
-                            >
-                                <option value="online" className="text-black">🟢 Online</option>
-                                <option value="away" className="text-black">🟡 Away</option>
-                                <option value="dnd" className="text-black">🔴 Do Not Disturb</option>
-                                <option value="offline" className="text-black">⚪ Offline</option>
-                            </select>
+                            <span className="text-xs font-semibold text-white capitalize" title="Status is controlled by Microsoft Teams">{currentStatus === 'dnd' ? 'Do Not Disturb' : currentStatus} (Teams)</span>
                         </span>
                     </span>
                 }

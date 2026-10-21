@@ -4,6 +4,7 @@ import '../../services/employee_service.dart';
 import '../../services/storage_service.dart';
 import '../../config/api_config.dart';
 import '../../theme/app_stitch_theme.dart';
+import 'widgets/presence_card.dart';
 import '../../widgets/glass_card.dart';
 import '../../widgets/stitch_background.dart';
 import 'dart:convert';
@@ -276,6 +277,17 @@ class _ReporteesPageState extends State<ReporteesPage> {
                       Expanded(
                         flex: 2,
                         child: Text(
+                          'Teams Status',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Text(
                           'Designation',
                           style: TextStyle(
                             fontSize: 12,
@@ -337,6 +349,29 @@ class _ReporteesPageState extends State<ReporteesPage> {
                                 fontSize: 14,
                                 color: Color(0xFF6B7280),
                               ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: presenceColor(reportee.teamsStatus ?? 'Offline'),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    reportee.statusLabel,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF111827)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           Expanded(

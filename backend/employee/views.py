@@ -357,9 +357,8 @@ class CheckInAPIView(APIView):
                 is_present=True,
             )
 
-        # Update status to online
-        employee.status = 'online'
-        employee.save(update_fields=['status'])
+        from employee.presence_engine import set_manual_status
+        set_manual_status(employee, 'online')
 
         # Detect missing checkout, skipping weekends and holidays
         missing_checkout_att, missing_checkout_date_val = get_missing_checkout(employee, today)
@@ -447,9 +446,8 @@ class CheckOutAPIView(APIView):
         attendance.calculate_work_duration()
         attendance.save()
 
-        # Update status to offline
-        employee.status = 'offline'
-        employee.save(update_fields=['status'])
+        from employee.presence_engine import set_manual_status
+        set_manual_status(employee, 'offline')
 
         serializer = EmployeeAttendanceSerializer(attendance)
         return Response({
@@ -1851,6 +1849,16 @@ class EmployeeProfileAPIView(generics.RetrieveUpdateAPIView):
     queryset = Employee.objects.all()
     permission_classes = [IsAuthenticated]
 
+    def update(self, request, *args, **kwargs):
+        if 'status' in request.data:
+            from employee.presence_engine import teams_managed
+            emp = Employee.objects.filter(user=request.user).first()
+            if emp and teams_managed(emp):
+                data = request.data.copy()
+                data.pop('status', None)
+                request._full_data = data
+        return super().update(request, *args, **kwargs)
+
     def get_serializer_class(self):
         # Use detailed serializer for GET to return all fields
         if self.request.method == 'GET':
@@ -1979,9 +1987,8 @@ class BreakLogAPIView(APIView):
                 start=timezone.now()
             )
 
-            # Update status to away when break starts
-            employee.status = 'away'
-            employee.save(update_fields=['status'])
+            from employee.presence_engine import set_manual_status
+            set_manual_status(employee, 'away')
 
             return Response(EmployeeBreakLogSerializer(break_log).data, status=201)
 
@@ -2001,9 +2008,8 @@ class BreakLogAPIView(APIView):
                 active_break.duration_minutes = int(diff.total_seconds() // 60)
             active_break.save()
 
-            # Update status to online when break ends
-            employee.status = 'online'
-            employee.save(update_fields=['status'])
+            from employee.presence_engine import set_manual_status
+            set_manual_status(employee, 'online')
 
             return Response(EmployeeBreakLogSerializer(active_break).data)
 
@@ -2079,6 +2085,12 @@ class EmployeeHierarchyAPIView(APIView):
         current_level = employee.level
         current_designation = employee.designation
 
+        from employee.presence_engine import teams_availability_map, display_status
+
+        def _live(emp):
+            av = teams_availability_map([emp.id]).get(emp.id) or None
+            return {'status': display_status(emp.status, av), 'teams_status': av}
+
         # Reporting manager info
         reporting_manager = getattr(employee, 'reporting_manager', None)
         reportees = []
@@ -2090,10 +2102,13 @@ class EmployeeHierarchyAPIView(APIView):
                     'id': rep.id,
                     'name': rep.full_name,
                     'designation': rep.designation.designation_name if rep.designation else None,
+                    **_live(rep),
                 }
                 for rep in reportees_qs
             ]
             manager_info = {
+                'id': reporting_manager.id,
+                **_live(reporting_manager),
                 'name': reporting_manager.full_name,
                 'level': reporting_manager.level.level_name if reporting_manager.level else None,
                 'designation': reporting_manager.designation.designation_name if reporting_manager.designation else None,
@@ -2107,6 +2122,7 @@ class EmployeeHierarchyAPIView(APIView):
                     'id': rep.id,
                     'name': rep.full_name,
                     'designation': rep.designation.designation_name if rep.designation else None,
+                    **_live(rep),
                 }
                 for rep in reportees_qs
             ]

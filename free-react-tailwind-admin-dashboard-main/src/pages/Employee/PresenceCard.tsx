@@ -32,6 +32,99 @@ export const Dot = ({ c }: { c: string }) => (
     <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ background: COLORS[c] || '#888ea8' }} />
 );
 
+export const PresenceDetailsBody = ({ s }: { s: Summary }) => (
+        <div className="p-5 space-y-5">
+            <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Working</p>
+                    <p className="text-lg font-black">{s.working?.label || '0h 00m'}</p>
+                </div>
+                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Overtime</p>
+                    <p className="text-lg font-black">{s.overtime?.label || '0h 00m'}</p>
+                </div>
+                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
+                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Punch</p>
+                    <p className="text-sm font-bold mt-1.5">
+                        {s.punch?.in || '--:--'} / {s.punch?.live ? 'Live' : s.punch?.out || '--:--'}
+                    </p>
+                </div>
+            </div>
+
+            {s.shift && (
+                <section className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Shift</h4>
+                    {s.shift.assigned ? (
+                        <div className="space-y-1.5 text-sm">
+                            <div className="flex justify-between">
+                                <span>{s.shift.type || 'Shift'}</span>
+                                <b>{s.shift.start} – {s.shift.end}</b>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Working hours in shift</span>
+                                <b>{s.shift.working?.label}</b>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Outside shift timings</span>
+                                <b>{s.shift.outside?.label}</b>
+                            </div>
+                            <div className="flex justify-between text-gray-500">
+                                <span>Expected per day</span>
+                                <span>{s.shift.full_day?.label}</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-amber-600 dark:text-amber-300">Not assigned to any shift</p>
+                    )}
+                </section>
+            )}
+
+            {s.statuses.length > 0 && (
+                <section>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Time by status</h4>
+                    <div className="space-y-1.5">
+                        {s.statuses.map((r) => (
+                            <div key={r.status} className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2"><Dot c={r.status} /> {r.status}</span>
+                                <b>{r.label}</b>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {!!s.timeline?.length && (
+                <section>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Status timeline</h4>
+                    <div className="space-y-1.5">
+                        {s.timeline.map((t, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-2"><Dot c={t.status} /> {t.status}</span>
+                                <span className="text-gray-600 dark:text-gray-300">
+                                    {t.start} – {t.end} <span className="text-gray-400">({t.label})</span>
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {s.sessions.length > 0 && (
+                <section>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Working sessions</h4>
+                    <div className="flex flex-wrap gap-2">
+                        {s.sessions.map((x, i) => (
+                            <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5">
+                                {x.start} – {x.end}
+                            </span>
+                        ))}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">Working time counts Available, Busy and Do Not Disturb only.</p>
+                </section>
+            )}
+        </div>
+);
+
 const PresenceCard = ({ apiBase, headers, onLoad }: { apiBase: string; headers: Record<string, string>; onLoad?: (s: Summary) => void }) => {
     const [s, setS] = useState<Summary | null>(null);
     const [open, setOpen] = useState(false);
@@ -131,96 +224,7 @@ const PresenceCard = ({ apiBase, headers, onLoad }: { apiBase: string; headers: 
                             </button>
                         </div>
 
-                        <div className="p-5 space-y-5">
-                            <div className="grid grid-cols-3 gap-3 text-center">
-                                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Working</p>
-                                    <p className="text-lg font-black">{s.working?.label || '0h 00m'}</p>
-                                </div>
-                                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Overtime</p>
-                                    <p className="text-lg font-black">{s.overtime?.label || '0h 00m'}</p>
-                                </div>
-                                <div className="rounded-xl bg-gray-100 dark:bg-white/5 py-3">
-                                    <p className="text-[10px] uppercase tracking-wide text-gray-500">Punch</p>
-                                    <p className="text-sm font-bold mt-1.5">
-                                        {s.punch?.in || '--:--'} / {s.punch?.live ? 'Live' : s.punch?.out || '--:--'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {s.shift && (
-                                <section className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
-                                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Shift</h4>
-                                    {s.shift.assigned ? (
-                                        <div className="space-y-1.5 text-sm">
-                                            <div className="flex justify-between">
-                                                <span>{s.shift.type || 'Shift'}</span>
-                                                <b>{s.shift.start} – {s.shift.end}</b>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Working hours in shift</span>
-                                                <b>{s.shift.working?.label}</b>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Outside shift timings</span>
-                                                <b>{s.shift.outside?.label}</b>
-                                            </div>
-                                            <div className="flex justify-between text-gray-500">
-                                                <span>Expected per day</span>
-                                                <span>{s.shift.full_day?.label}</span>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-amber-600 dark:text-amber-300">Not assigned to any shift</p>
-                                    )}
-                                </section>
-                            )}
-
-                            {s.statuses.length > 0 && (
-                                <section>
-                                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Time by status</h4>
-                                    <div className="space-y-1.5">
-                                        {s.statuses.map((r) => (
-                                            <div key={r.status} className="flex items-center justify-between text-sm">
-                                                <span className="flex items-center gap-2"><Dot c={r.status} /> {r.status}</span>
-                                                <b>{r.label}</b>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {!!s.timeline?.length && (
-                                <section>
-                                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Status timeline</h4>
-                                    <div className="space-y-1.5">
-                                        {s.timeline.map((t, i) => (
-                                            <div key={i} className="flex items-center justify-between text-sm">
-                                                <span className="flex items-center gap-2"><Dot c={t.status} /> {t.status}</span>
-                                                <span className="text-gray-600 dark:text-gray-300">
-                                                    {t.start} – {t.end} <span className="text-gray-400">({t.label})</span>
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {s.sessions.length > 0 && (
-                                <section>
-                                    <h4 className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Working sessions</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {s.sessions.map((x, i) => (
-                                            <span key={i} className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-white/5">
-                                                {x.start} – {x.end}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <p className="text-[11px] text-gray-500 mt-2">Working time counts Available, Busy and Do Not Disturb only.</p>
-                                </section>
-                            )}
-                        </div>
+                        <PresenceDetailsBody s={s} />
                     </div>
                 </div>,
                 document.body

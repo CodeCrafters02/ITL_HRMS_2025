@@ -5,6 +5,7 @@ export interface Reportee {
     employee_id: string | null;
     full_name: string;
     status: string;
+    teams_status?: string | null;
     department_name: string | null;
     designation_name: string | null;
     photo: string | null;
