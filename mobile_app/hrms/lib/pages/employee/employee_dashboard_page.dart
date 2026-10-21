@@ -4,6 +4,7 @@ import 'widgets/outlook_mail_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/dashboard_model.dart';
+import '../../models/presence_model.dart';
 import '../../models/calendar_model.dart';
 import '../../models/task_model.dart';
 import '../../models/leave_model.dart';
@@ -17,6 +18,7 @@ import '../../services/break_notification_service.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/glass_card.dart';
 import 'widgets/timer_widget.dart';
+import 'widgets/presence_card.dart';
 
 class EmployeeDashboardPage extends StatefulWidget {
   const EmployeeDashboardPage({super.key});
@@ -47,6 +49,8 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   bool _locationLoading = false;
 
   Timer? _badgeRefreshTimer;
+  Timer? _presenceTimer;
+  PresenceSummary? _presence;
 
   int _tabIndex = 0; // 0=Events, 1=Announcements
   final PageController _announcementPager = PageController();
@@ -57,6 +61,13 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     _fetchDashboardData();
     _initGeofence();
     _startBadgeRefresh();
+    _refreshPresence();
+    _presenceTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshPresence());
+  }
+
+  Future<void> _refreshPresence() async {
+    final p = await EmployeeService.getPresenceSummary();
+    if (mounted && p != null) setState(() => _presence = p);
   }
 
   void _startBadgeRefresh() {
@@ -87,6 +98,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     _timer?.cancel();
     _breakTimerRef?.cancel();
     _badgeRefreshTimer?.cancel();
+    _presenceTimer?.cancel();
     _announcementPager.dispose();
     super.dispose();
   }
@@ -108,6 +120,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
             _dashboardData = response.data;
           });
           _startTimers();
+          _refreshPresence();
           _fetchOverviewData();
           _fetchBreakConfigs();
         } else {
@@ -728,7 +741,8 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
     final d = _dashboardData!;
     final isCheckedIn = d.isCheckedIn;
     final hasActiveBreak = d.hasActiveBreak;
-    final seconds = hasActiveBreak ? _breakTimer : _localTimer;
+    final pr = _presence;
+    final seconds = hasActiveBreak ? _breakTimer : (pr?.liveWorkingSeconds ?? _localTimer);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -755,7 +769,16 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     isLoading: _checkInOutLoading,
                     onRefresh: _fetchDashboardData,
                     onCheckInOut: _handleCheckInOut,
+                    presence: pr,
                   ),
+                  if (pr != null && pr.isVisible) ...[
+                    const SizedBox(height: 10),
+                    PresenceCard(presence: pr),
+                  ],
+                  if (pr != null && pr.timeline.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _TeamsStatusCard(presence: pr),
+                  ],
                   if (isCheckedIn) ...[
                     const SizedBox(height: 10),
                     _BreakButtons(
@@ -1216,8 +1239,10 @@ class _ReadyForDayStrip extends StatelessWidget {
     required this.isLoading,
     required this.onRefresh,
     required this.onCheckInOut,
+    this.presence,
   });
 
+  final PresenceSummary? presence;
   final bool isCheckedIn;
   final bool hasActiveBreak;
   final int seconds;
@@ -1228,6 +1253,7 @@ class _ReadyForDayStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final teamsLocked = presence?.locked ?? false;
     final statusColor = !isCheckedIn
         ? AppStitchTheme.lightOnSurfaceMuted
         : (hasActiveBreak ? const Color(0xFFF59E0B) : const Color(0xFF10B981));
@@ -1275,9 +1301,11 @@ class _ReadyForDayStrip extends StatelessWidget {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            isCheckedIn
-                                ? (hasActiveBreak ? 'On break' : 'Working')
-                                : 'Tap check-in to start',
+                            presence?.availability != null
+                                ? '${presence!.availability} (Teams)'
+                                : isCheckedIn
+                                    ? (hasActiveBreak ? 'On break' : 'Working')
+                                    : 'Tap check-in to start',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -1323,6 +1351,18 @@ class _ReadyForDayStrip extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
+                if (teamsLocked)
+                  Expanded(
+                    child: Text(
+                      'Controlled by Teams',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppStitchTheme.lightOnSurfaceMuted,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
+                else
                 Expanded(
                   child: SizedBox(
                     height: 46,
@@ -1354,6 +1394,61 @@ class _ReadyForDayStrip extends StatelessWidget {
               ],
             ),
           ),
+          if (presence != null && (presence!.punchIn != null || presence!.workingSeconds != null)) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _TeamsTile(
+                    label: 'Punch time',
+                    value: '${presence!.punchIn ?? '--:--'} / ${presence!.punchLive ? 'Live' : (presence!.punchOut ?? '--:--')}',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _TeamsTile(
+                    label: 'Active time (Teams)',
+                    value: PresenceSummary.hms(presence!.liveWorkingSeconds ?? 0),
+                    sub: presence!.liveShiftSeconds == null
+                        ? null
+                        : 'In working hours (${presence!.shift!.start}–${presence!.shift!.end}) ${PresenceSummary.hms(presence!.liveShiftSeconds!)}',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamsTile extends StatelessWidget {
+  const _TeamsTile({required this.label, required this.value, this.sub});
+
+  final String label, value;
+  final String? sub;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: AppStitchTheme.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label.toUpperCase(),
+              style: t.labelSmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
+          const SizedBox(height: 3),
+          Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface, fontFamily: 'monospace')),
+          if (sub != null) ...[
+            const SizedBox(height: 4),
+            Text(sub!, style: t.labelSmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted, fontWeight: FontWeight.w700)),
+          ],
         ],
       ),
     );
@@ -2173,3 +2268,83 @@ class _BreakButtons extends StatelessWidget {
 }
 
 
+
+
+class _TeamsStatusCard extends StatefulWidget {
+  const _TeamsStatusCard({required this.presence});
+
+  final PresenceSummary presence;
+
+  @override
+  State<_TeamsStatusCard> createState() => _TeamsStatusCardState();
+}
+
+class _TeamsStatusCardState extends State<_TeamsStatusCard> {
+  bool _open = false;
+
+  static Color _color(String s) {
+    switch (s) {
+      case 'Available':
+      case 'AvailableIdle':
+        return const Color(0xFF10B981);
+      case 'Busy':
+      case 'BusyIdle':
+      case 'DoNotDisturb':
+        return const Color(0xFFEF4444);
+      case 'Away':
+      case 'BeRightBack':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF888EA8);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final presence = widget.presence;
+    return GlassCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => setState(() => _open = !_open),
+        child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Teams status',
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+              ),
+              if (presence.workingLabel != null)
+                Text('Working ${presence.workingLabel}',
+                    style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700, color: AppStitchTheme.lightOnSurfaceMuted)),
+              const SizedBox(width: 4),
+              Icon(_open ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: AppStitchTheme.lightOnSurfaceMuted),
+            ],
+          ),
+          if (_open) const SizedBox(height: 8),
+          if (_open)
+          for (final t in presence.timeline.reversed)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  Container(width: 9, height: 9, decoration: BoxDecoration(shape: BoxShape.circle, color: _color(t.status))),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(t.status, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface))),
+                  Text('${t.start} – ${t.end} · ${t.label}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted)),
+                ],
+              ),
+            ),
+        ],
+      ),
+        ),
+      ),
+    );
+  }
+}

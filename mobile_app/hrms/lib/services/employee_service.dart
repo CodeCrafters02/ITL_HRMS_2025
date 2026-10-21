@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import '../config/api_config.dart';
 import '../models/dashboard_model.dart';
+import '../models/presence_model.dart';
 import '../models/break_config_model.dart';
 import '../models/task_model.dart';
 import '../models/attendance_history_model.dart';
@@ -241,6 +242,22 @@ class EmployeeService {
         success: false,
         message: 'Network error: ${e.toString()}',
       );
+    }
+  }
+
+  static Future<PresenceSummary?> getPresenceSummary({String? date}) async {
+    try {
+      if (await StorageService.isDemoMode()) return null;
+      final token = await StorageService.getAccessToken();
+      if (token == null) return null;
+      final r = await http.get(
+        Uri.parse(ApiConfig.presenceSummaryUrl(date)),
+        headers: ApiConfig.getAuthHeaders(token),
+      );
+      if (r.statusCode != 200) return null;
+      return PresenceSummary.fromJson(Map<String, dynamic>.from(jsonDecode(r.body) as Map));
+    } catch (_) {
+      return null;
     }
   }
 

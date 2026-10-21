@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/attendance_history_model.dart';
+import '../../models/presence_model.dart';
 import '../../services/employee_service.dart';
 import '../../theme/app_stitch_theme.dart';
 import '../../widgets/glass_card.dart';
@@ -1115,6 +1116,16 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
+                _buildDetailRow(
+                  'Source',
+                  record.source == 'teams'
+                      ? 'Microsoft Teams status'
+                      : record.source == 'admin'
+                          ? 'Edited by admin'
+                          : 'Manual punch',
+                  record.source == 'teams' ? Icons.groups : Icons.touch_app,
+                ),
+                const SizedBox(height: 16),
                 _buildDetailRow('Check In', record.checkIn, Icons.login),
                 const SizedBox(height: 16),
                 _buildDetailRow('Check Out', record.checkOut, Icons.logout),
@@ -1134,10 +1145,86 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                   const SizedBox(height: 16),
                   _buildDetailRow('Break Time', record.breakTime, Icons.coffee),
                 ],
+                if (!record.isWeekend && record.checkIn != '-')
+                  FutureBuilder<PresenceSummary?>(
+                    future: EmployeeService.getPresenceSummary(date: record.date),
+                    builder: (context, snap) {
+                      final p = snap.data;
+                      if (snap.connectionState != ConnectionState.done) {
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 16),
+                          child: Text('Loading Teams activity...'),
+                        );
+                      }
+                      if (p == null || !p.hasData) return const SizedBox.shrink();
+                      return _buildTeamsActivity(p);
+                    },
+                  ),
               ],
             ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamsActivity(PresenceSummary p) {
+    final t = Theme.of(context).textTheme;
+    final muted = t.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted, fontWeight: FontWeight.w700);
+    final bold = t.bodyMedium?.copyWith(fontWeight: FontWeight.w800, color: AppStitchTheme.lightOnSurface);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Microsoft Teams activity', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (final e in [
+                  ['Working', p.workingLabel ?? '0h 00m'],
+                  ['Overtime', p.overtimeLabel ?? '0h 00m'],
+                  ['Punch', '${p.punchIn ?? '--:--'} / ${p.punchLive ? 'Live' : (p.punchOut ?? '--:--')}'],
+                ])
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [Text(e[0], style: muted), const SizedBox(height: 2), Text(e[1], style: bold)],
+                    ),
+                  ),
+              ],
+            ),
+            if (p.statuses.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Status totals', style: muted),
+              for (final s in p.statuses)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(children: [Expanded(child: Text(s.status, style: bold)), Text(s.label, style: muted)]),
+                ),
+            ],
+            if (p.timeline.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Timeline', style: muted),
+              for (final x in p.timeline)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(children: [
+                    Expanded(child: Text(x.status, style: bold)),
+                    Text('${x.start} – ${x.end} · ${x.label}', style: muted),
+                  ]),
+                ),
+            ],
+            if (p.sessions.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Sessions', style: muted),
+              for (final x in p.sessions)
+                Padding(padding: const EdgeInsets.only(top: 4), child: Text('${x.start} – ${x.end}', style: bold)),
+            ],
+          ],
         ),
       ),
     );

@@ -37,6 +37,7 @@ class ApiConfig {
 
   // Employee Endpoints
   static const String employeeDashboardEndpoint = '/employee/dashboard/';
+  static const String presenceSummaryEndpoint = '/employee/presence-summary/';
   static const String employeeCheckInEndpoint = '/employee/checkin/';
   static const String employeeCheckOutEndpoint = '/employee/checkout/';
   static const String employeeBreakEndpoint = '/employee/employee-breaks/';
@@ -153,6 +154,8 @@ class ApiConfig {
 
   static String get employeeDashboardUrl =>
       '$baseUrl$employeeDashboardEndpoint';
+  static String presenceSummaryUrl([String? date]) =>
+      '$baseUrl$presenceSummaryEndpoint${date != null ? '?date=$date' : ''}';
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
   static String get employeeCheckOutUrl => '$baseUrl$employeeCheckOutEndpoint';
   static String get employeeBreakUrl => '$baseUrl$employeeBreakEndpoint';
