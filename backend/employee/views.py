@@ -4948,11 +4948,28 @@ class PresenceSummaryAPIView(APIView):
         from employee.models import PresenceState
         user = request.user
         code = request.query_params.get('employee_code')
+        target = request.query_params.get('target')
         is_admin_view = bool(code) and getattr(user, 'role', None) == 'admin'
         if is_admin_view:
             employee = Employee.objects.filter(employee_id=code, company_id=user.company_id).first()
             if not employee:
                 return Response({"detail": "Employee not found."}, status=404)
+        elif target:
+            me = Employee.objects.filter(email=user.email).first()
+            employee = Employee.objects.filter(pk=target, company_id=user.company_id).first() if str(target).isdigit() else None
+            if not me or not employee:
+                return Response({"detail": "Employee not found."}, status=404)
+            # only people in the caller's own downline: walk up from the target and require the caller on that chain
+            node, seen, ok = employee, set(), False
+            while node and node.pk not in seen:
+                seen.add(node.pk)
+                if node.reporting_manager_id == me.pk:
+                    ok = True
+                    break
+                node = node.reporting_manager
+            if not ok:
+                return Response({"detail": "Not in your reporting hierarchy."}, status=403)
+            is_admin_view = True
         else:
             if _employee_access_denied(user):
                 return Response({"detail": "Unauthorized."}, status=403)

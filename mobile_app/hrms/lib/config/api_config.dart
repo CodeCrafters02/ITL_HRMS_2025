@@ -154,8 +154,10 @@ class ApiConfig {
 
   static String get employeeDashboardUrl =>
       '$baseUrl$employeeDashboardEndpoint';
-  static String presenceSummaryUrl([String? date]) =>
-      '$baseUrl$presenceSummaryEndpoint${date != null ? '?date=$date' : ''}';
+  static String presenceSummaryUrl([String? date, int? target]) {
+    final q = [if (date != null) 'date=$date', if (target != null) 'target=$target'].join('&');
+    return '$baseUrl$presenceSummaryEndpoint${q.isEmpty ? '' : '?$q'}';
+  }
   static String get employeeCheckInUrl => '$baseUrl$employeeCheckInEndpoint';
   static String get employeeCheckOutUrl => '$baseUrl$employeeCheckOutEndpoint';
   static String get employeeBreakUrl => '$baseUrl$employeeBreakEndpoint';

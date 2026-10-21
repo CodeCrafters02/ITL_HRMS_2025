@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../services/employee_service.dart';
 import '../../../models/presence_model.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/glass_card.dart';
@@ -209,6 +210,89 @@ class PresenceDetailsSheet extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+}
+
+String todayKey() {
+  final d = DateTime.now();
+  return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+}
+
+/// Collapsible "Teams status - today" block for someone in the caller's own downline.
+/// Renders nothing when the server refuses (not in the caller's hierarchy) or has no data.
+class TeamsActivitySection extends StatefulWidget {
+  const TeamsActivitySection({super.key, required this.targetId});
+  final int targetId;
+
+  @override
+  State<TeamsActivitySection> createState() => _TeamsActivitySectionState();
+}
+
+class _TeamsActivitySectionState extends State<TeamsActivitySection> {
+  PresenceSummary? _p;
+  bool _loading = true;
+  bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    EmployeeService.getPresenceSummary(date: todayKey(), target: widget.targetId).then((p) {
+      if (mounted) {
+        setState(() {
+          _p = p;
+          _loading = false;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _p;
+    if (_loading) {
+      return const Padding(padding: EdgeInsets.fromLTRB(20, 0, 20, 12), child: LinearProgressIndicator(minHeight: 2));
+    }
+    if (p == null) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    final cur = p.availability ?? 'Unknown';
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+      decoration: BoxDecoration(
+        color: AppStitchTheme.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppStitchTheme.primary.withValues(alpha: 0.12)),
+      ),
+      child: Column(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(children: [
+              _Dot(cur),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Teams status - today', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+                  Text(
+                    '$cur${p.currentSince != null ? ' since ${p.currentSince}' : ''} - Working ${p.workingLabel ?? '0h 00m'}',
+                    style: t.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted),
+                  ),
+                ]),
+              ),
+              Icon(_open ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: AppStitchTheme.lightOnSurfaceMuted),
+            ]),
+          ),
+        ),
+        if (_open)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: p.hasData || p.availability != null
+                ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: presenceDetailChildren(context, p))
+                : Text('No Teams activity recorded today.', style: t.bodySmall),
+          ),
+      ]),
     );
   }
 }

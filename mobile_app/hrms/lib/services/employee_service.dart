@@ -245,13 +245,13 @@ class EmployeeService {
     }
   }
 
-  static Future<PresenceSummary?> getPresenceSummary({String? date}) async {
+  static Future<PresenceSummary?> getPresenceSummary({String? date, int? target}) async {
     try {
       if (await StorageService.isDemoMode()) return null;
       final token = await StorageService.getAccessToken();
       if (token == null) return null;
       final r = await http.get(
-        Uri.parse(ApiConfig.presenceSummaryUrl(date)),
+        Uri.parse(ApiConfig.presenceSummaryUrl(date, target)),
         headers: ApiConfig.getAuthHeaders(token),
       );
       if (r.statusCode != 200) return null;

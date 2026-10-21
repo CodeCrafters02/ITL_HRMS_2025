@@ -140,13 +140,33 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  /// True when [nodeId] is anywhere below the logged-in user in the organisation tree (own downline only).
+  bool _isInMyDownline(int nodeId) {
+    final me = _currentUserId;
+    final roots = _orgHierarchy?.roots;
+    if (me == null || roots == null) return false;
+    OrganizationNode? find(List<OrganizationNode> list) {
+      for (final n in list) {
+        if (n.id == me) return n;
+        final r = find(n.children ?? const []);
+        if (r != null) return r;
+      }
+      return null;
+    }
+
+    bool contains(List<OrganizationNode> list) =>
+        list.any((n) => n.id == nodeId || contains(n.children ?? const []));
+    final mine = find(roots);
+    return mine != null && contains(mine.children ?? const []);
+  }
+
   void _showEmployeeDetail(OrganizationNode node) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.9),
       backgroundColor: Colors.transparent,
-      builder: (context) => EmployeeDetailModal(node: node),
+      builder: (context) => EmployeeDetailModal(node: node, showTeamsActivity: _isInMyDownline(node.id)),
     );
   }
 

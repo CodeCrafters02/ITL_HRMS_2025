@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'presence_card.dart';
 import '../../../models/profile_model.dart';
 import '../../../theme/app_stitch_theme.dart';
 import '../../../widgets/glass_card.dart';
@@ -588,10 +589,12 @@ class _OrgTreeTileState extends State<_OrgTreeTile> {
 // Employee Detail Modal – Modernized
 class EmployeeDetailModal extends StatelessWidget {
   final OrganizationNode node;
+  final bool showTeamsActivity;
 
   const EmployeeDetailModal({
     super.key,
     required this.node,
+    this.showTeamsActivity = false,
   });
 
   Color get _statusColor {
@@ -759,6 +762,7 @@ class EmployeeDetailModal extends StatelessWidget {
             Flexible(
               child: SingleChildScrollView(
                 child: Column(children: [
+            if (showTeamsActivity) TeamsActivitySection(targetId: node.id),
             // Details grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

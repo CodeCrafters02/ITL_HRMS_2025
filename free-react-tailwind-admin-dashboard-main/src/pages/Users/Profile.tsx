@@ -17,6 +17,8 @@ import Swal from 'sweetalert2';
 
 import PageHeader from '../../components/Common/PageHeader';
 import IconUser from '../../components/Icon/IconUser';
+import { PresenceDetailsBody, type Summary as PresenceSummary } from '../Employee/PresenceCard';
+
 const Profile = () => {
     const dispatch = useDispatch();
     const [userData, setUserData] = useState<any>(null);
@@ -26,6 +28,48 @@ const Profile = () => {
     const [selectedNode, setSelectedNode] = useState<any>(null);
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+    const [teamsOpen, setTeamsOpen] = useState(false);
+    const [nodePresence, setNodePresence] = useState<PresenceSummary | null>(null);
+    const [nodePresenceState, setNodePresenceState] = useState<'idle' | 'loading' | 'error'>('idle');
+
+    // ids of everyone below the logged-in user in the organisation tree (own downline only)
+    const myDescendantIds = (() => {
+        const ids = new Set<number>();
+        const collect = (n: any) => (n.children || []).forEach((c: any) => { ids.add(c.id); collect(c); });
+        const find = (list: any[]): any => {
+            for (const n of list) {
+                if (n.user_id === userData?.id) return n;
+                const r = find(n.children || []);
+                if (r) return r;
+            }
+            return null;
+        };
+        const me = find(hierarchyData);
+        if (me) collect(me);
+        return ids;
+    })();
+    const canSeeTeams = !!selectedNode && myDescendantIds.has(selectedNode.id);
+
+    useEffect(() => {
+        setNodePresence(null);
+        setTeamsOpen(false);
+        if (!isInfoModalOpen || !canSeeTeams) {
+            setNodePresenceState('idle');
+            return;
+        }
+        let stop = false;
+        setNodePresenceState('loading');
+        const d = new Date();
+        const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        authFetch(`${import.meta.env.VITE_API_BASE_URL}/employee/presence-summary/?target=${selectedNode.id}&date=${day}`)
+            .then(async (r) => {
+                if (!r.ok) throw new Error();
+                const j = await r.json();
+                if (!stop) { setNodePresence(j); setNodePresenceState('idle'); }
+            })
+            .catch(() => !stop && setNodePresenceState('error'));
+        return () => { stop = true; };
+    }, [isInfoModalOpen, selectedNode?.id, canSeeTeams]);
     const profilePhotoInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
@@ -578,6 +622,30 @@ const Profile = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    {canSeeTeams && (
+                                        <div className="border-t border-gray-100 dark:border-gray-700">
+                                            <button type="button" className="flex w-full items-center justify-between px-6 py-4 text-left" onClick={() => setTeamsOpen((o) => !o)}>
+                                                <span>
+                                                    <span className="block text-sm font-bold">Teams status — today</span>
+                                                    <span className="block text-xs text-gray-500">
+                                                        {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                        {nodePresence?.current?.availability ? ` · ${nodePresence.current.availability}` : ''}
+                                                    </span>
+                                                </span>
+                                                <span className="text-gray-500">{teamsOpen ? '▾' : '▸'}</span>
+                                            </button>
+                                            {teamsOpen && (
+                                                <>
+                                                    {nodePresenceState === 'loading' && <p className="px-6 pb-4 text-xs text-gray-500">Loading Teams activity…</p>}
+                                                    {nodePresenceState === 'error' && <p className="px-6 pb-4 text-xs text-danger">Could not load Teams activity.</p>}
+                                                    {nodePresence && !nodePresence.statuses.length && !nodePresence.timeline?.length && !nodePresence.current && (
+                                                        <p className="px-6 pb-4 text-xs text-gray-500">No Teams activity recorded today.</p>
+                                                    )}
+                                                    {nodePresence && (nodePresence.statuses.length > 0 || !!nodePresence.timeline?.length || !!nodePresence.current) && <PresenceDetailsBody s={nodePresence} />}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                     </div>
                                     <div className="p-4 shrink-0 bg-gray-50 dark:bg-gray-800/30 flex justify-end px-6">
                                         <button 
