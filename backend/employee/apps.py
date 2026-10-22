@@ -103,7 +103,7 @@ class EmployeeConfig(AppConfig):
                 except Exception as exc:
                     logger.error('[Scheduler] promote_shifts failed: %s', exc)
 
-            scheduler.add_job(_promote_shifts, IntervalTrigger(minutes=10), next_run_time=datetime.now(tz),
+            scheduler.add_job(_promote_shifts, IntervalTrigger(minutes=10),
                               id='promote_shifts', replace_existing=True, max_instances=1, misfire_grace_time=300)
             scheduler.add_job(_midnight_sweep, CronTrigger(hour=0, minute=0, timezone='Asia/Kolkata'),
                               id='presence_midnight', replace_existing=True, misfire_grace_time=1800)

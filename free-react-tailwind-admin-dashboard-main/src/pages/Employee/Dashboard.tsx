@@ -1082,73 +1082,94 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            {data.day_info && (() => {
+            {(data.day_info || data.day_progress) && (() => {
                 const di = data.day_info;
-                const tone = {
-                    working: { cls: 'border-success/40 bg-success-light/50 text-success', icon: '💼', text: 'Working day' },
-                    holiday: { cls: 'border-info/40 bg-info-light/50 text-info', icon: '🎉', text: `Holiday${di.detail ? ` — ${di.detail}` : ''}` },
-                    weekly_off: { cls: 'border-slate-300 bg-dark-light text-dark', icon: '🛋️', text: `Weekly off${di.detail ? ` — ${di.detail}` : ''}` },
-                    leave: { cls: 'border-warning/40 bg-warning-light/50 text-warning', icon: '🏖️', text: `You're on leave today${di.detail ? ` — ${di.detail}` : ''}` },
-                    half_day_leave: { cls: 'border-warning/40 bg-warning-light/50 text-warning', icon: '🌗', text: `Half-day leave today${di.detail ? ` — ${di.detail}` : ''}` },
-                }[di.type];
-                return (
-                    <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${tone.cls}`}>
-                        <span className="text-xl">{tone.icon}</span>
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">Today</p>
-                            <p className="text-sm font-bold">{tone.text}</p>
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {data.day_progress && data.day_progress.state !== 'off_day' && (() => {
                 const dp = data.day_progress;
-                const halfMin = Math.round(dp.half_day_seconds / 60);
-                const fullMin = Math.round(dp.full_day_seconds / 60);
+                const dayTone = {
+                    working: { dot: 'bg-success', text: 'text-success', label: 'Working day' },
+                    holiday: { dot: 'bg-info', text: 'text-info', label: 'Holiday' },
+                    weekly_off: { dot: 'bg-slate-400', text: 'text-slate-500', label: 'Weekly off' },
+                    leave: { dot: 'bg-warning', text: 'text-warning', label: 'On leave' },
+                    half_day_leave: { dot: 'bg-warning', text: 'text-warning', label: 'Half-day leave' },
+                }[di?.type || 'working'];
+
+                const showProgress = !!dp && dp.state !== 'off_day';
+                const halfMin = dp ? Math.round(dp.half_day_seconds / 60) : 0;
+                const fullMin = dp ? Math.round(dp.full_day_seconds / 60) : 0;
                 const workedMin = checkin_time ? productiveMinutes : 0;
                 const state = !checkin_time ? 'not_started' : workedMin >= fullMin ? 'full_day' : workedMin >= halfMin ? 'half_day' : 'in_progress';
                 const meta = {
-                    not_started: { label: 'Not started', cls: 'bg-dark-light text-dark', bar: 'bg-slate-400' },
+                    not_started: { label: 'Not started', cls: 'bg-slate-100 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300', bar: 'bg-slate-400' },
                     in_progress: { label: 'In progress', cls: 'bg-warning-light text-warning', bar: 'bg-warning' },
-                    half_day: { label: 'Half day completed', cls: 'bg-info-light text-info', bar: 'bg-info' },
-                    full_day: { label: 'Full day completed', cls: 'bg-success-light text-success', bar: 'bg-success' },
+                    half_day: { label: 'Half day done', cls: 'bg-info-light text-info', bar: 'bg-info' },
+                    full_day: { label: 'Full day done', cls: 'bg-success-light text-success', bar: 'bg-success' },
                 }[state];
                 const pct = fullMin > 0 ? Math.min(100, (workedMin / fullMin) * 100) : 0;
                 const halfPct = fullMin > 0 ? Math.min(100, (halfMin / fullMin) * 100) : 50;
-                const step = (done: boolean, title: string, target: number) => (
-                    <div className={`flex-1 rounded-xl border p-3 ${done ? 'border-success/40 bg-success-light/40' : 'border-slate-200 dark:border-slate-700'}`}>
-                        <div className="flex items-center gap-2">
-                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${done ? 'bg-success text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{done ? '✓' : '•'}</span>
-                            <span className="text-sm font-semibold">{title}</span>
-                            <span className="ml-auto text-xs text-white-dark">{fmtHM(target)}</span>
-                        </div>
-                        <p className="mt-1 text-xs text-white-dark">{done ? 'Completed' : state === 'not_started' ? 'Check in to start counting' : `${fmtHM(target - workedMin)} to go`}</p>
+                const nextLeft = state === 'full_day' ? 0 : state === 'half_day' ? fullMin - workedMin : halfMin - workedMin;
+                const nextLabel = state === 'half_day' ? 'to full day' : 'to half day';
+
+                const milestone = (done: boolean, title: string, target: number) => (
+                    <div className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 ${done ? 'border-success/30 bg-success-light/40' : 'border-slate-200 dark:border-slate-700'}`}>
+                        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none ${done ? 'bg-success text-white' : 'border border-slate-300 text-transparent dark:border-slate-600'}`}>✓</span>
+                        <span className="text-xs font-semibold">{title}</span>
+                        <span className="text-xs text-white-dark">{fmtHM(target)}</span>
+                        <span className={`ml-auto text-[11px] font-medium ${done ? 'text-success' : 'text-white-dark'}`}>{done ? 'Done' : !checkin_time ? '—' : `${fmtHM(target - workedMin)} left`}</span>
                     </div>
                 );
+
                 return (
                     <div className="panel !p-4 rounded-2xl">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h5 className="text-base font-bold">Today&apos;s attendance status</h5>
-                                <p className="text-xs text-white-dark">Worked {fmtHM(workedMin)} so far{dp.running ? ' · counting live' : checkin_time && !checkout_time ? ' · paused (on break)' : ''}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-white-dark">Today</span>
+                                <span className={`inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold dark:bg-slate-700/50 ${dayTone.text}`}>
+                                    <span className={`h-1.5 w-1.5 rounded-full ${dayTone.dot}`} />
+                                    {dayTone.label}
+                                    {di?.detail && di.type !== 'working' ? <span className="font-medium opacity-80">· {di.detail}</span> : null}
+                                </span>
                             </div>
-                            <span className={`badge ${meta.cls} px-3 py-1 text-xs font-bold`}>{meta.label}</span>
+                            {showProgress && <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${meta.cls}`}>{meta.label}</span>}
                         </div>
-                        <div className="relative h-3 rounded-full bg-[#ebedf2] dark:bg-[#1b2e4b]">
-                            <div className={`h-full rounded-full transition-all ${meta.bar}`} style={{ width: `${pct}%` }} />
-                            <span className="absolute -top-1 h-5 w-0.5 bg-slate-500/70" style={{ left: `${halfPct}%` }} title={`Half day ${fmtHM(halfMin)}`} />
-                        </div>
-                        <div className="mt-1 flex justify-between text-[11px] text-white-dark">
-                            <span>0</span>
-                            <span style={{ marginLeft: `${Math.max(0, halfPct - 8)}%` }}>Half day</span>
-                            <span>Full day</span>
-                        </div>
-                        <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                            {step(workedMin >= halfMin && !!checkin_time, 'Half day', halfMin)}
-                            {step(workedMin >= fullMin && !!checkin_time, 'Full day', fullMin)}
-                        </div>
-                        <p className="mt-2 text-[11px] text-white-dark">Below the half-day hours is marked Absent; at or above the full-day hours is marked Present.</p>
+
+                        {showProgress && (
+                            <>
+                                <div className="mt-3 flex items-end justify-between gap-3">
+                                    <div>
+                                        <p className="text-2xl font-extrabold leading-none tracking-tight">{fmtHM(workedMin)}</p>
+                                        <p className="mt-1 text-[11px] text-white-dark">
+                                            worked{dp!.running ? ' · live' : checkin_time && !checkout_time ? ' · paused (break)' : ''}
+                                        </p>
+                                    </div>
+                                    <p className="text-right text-xs text-white-dark">
+                                        {state === 'full_day' ? (
+                                            <span className="font-semibold text-success">Full-day hours completed</span>
+                                        ) : !checkin_time ? (
+                                            'Check in to start counting'
+                                        ) : (
+                                            <>
+                                                <span className="font-bold text-slate-700 dark:text-slate-200">{fmtHM(nextLeft)}</span> {nextLabel}
+                                            </>
+                                        )}
+                                    </p>
+                                </div>
+
+                                <div className="relative mt-3 h-2 rounded-full bg-slate-200/80 dark:bg-slate-700/60">
+                                    <div className={`h-full rounded-full transition-all duration-500 ${meta.bar}`} style={{ width: `${pct}%` }} />
+                                    <span className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded bg-slate-500/70" style={{ left: `${halfPct}%` }} />
+                                </div>
+                                <div className="relative mt-1 h-3.5 text-[10px] font-medium text-white-dark">
+                                    <span className="absolute left-0">0</span>
+                                    <span className="absolute -translate-x-1/2" style={{ left: `${halfPct}%` }}>Half · {fmtHM(halfMin)}</span>
+                                    <span className="absolute right-0">Full · {fmtHM(fullMin)}</span>
+                                </div>
+
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row" title="Below the half-day hours is marked Absent; at or above the full-day hours is marked Present.">
+                                    {milestone(!!checkin_time && workedMin >= halfMin, 'Half day', halfMin)}
+                                    {milestone(!!checkin_time && workedMin >= fullMin, 'Full day', fullMin)}
+                                </div>
+                            </>
+                        )}
                     </div>
                 );
             })()}
