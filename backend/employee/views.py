@@ -49,6 +49,7 @@ class EmployeePagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 from .utils import calculate_worked_time, calculate_effective_time, get_missing_checkout
+from app.utils import is_rule_off_day
 import re
 from app.models import (
     Attendance,
@@ -905,18 +906,10 @@ class AttendanceHistoryAPIView(APIView):
             key = str(value or '').strip().lower()
             return day_aliases.get(key, key)
 
-        configured_working_days = working_days_config.working_days if working_days_config else []
-        configured_weekend_days = working_days_config.weekend_days if working_days_config else []
-        working_day_names = {
-            normalize_day_name(day_name)
-            for day_name in (configured_working_days if isinstance(configured_working_days, list) else [])
-            if normalize_day_name(day_name)
-        }
-        weekend_day_names = {
-            normalize_day_name(day_name)
-            for day_name in (configured_weekend_days if isinstance(configured_weekend_days, list) else [])
-            if normalize_day_name(day_name)
-        }
+        def day_name_sets(on_date):
+            c = working_days_config.at(on_date) if working_days_config else None
+            names = lambda v: {normalize_day_name(x) for x in (v if isinstance(v, list) else []) if normalize_day_name(x)}
+            return names(c.working_days if c else []), names(c.weekend_days if c else [])
 
         start_date = datetime(selected_year, selected_month, 1).date()
         if selected_month == 12:
@@ -979,6 +972,7 @@ class AttendanceHistoryAPIView(APIView):
         day = start_date
         while day <= end_date:
             day_name = normalize_day_name(day.strftime('%A'))
+            working_day_names, weekend_day_names = day_name_sets(day)
             if working_day_names:
                 # Prefer explicit department working-days configuration.
                 is_weekend = day_name not in working_day_names
@@ -988,6 +982,8 @@ class AttendanceHistoryAPIView(APIView):
             else:
                 # Final fallback only when no department config exists.
                 is_weekend = day.weekday() >= 5
+            if is_rule_off_day(working_days_config, day):
+                is_weekend = True
             status = None  # Don't initialize as 'absent' to avoid double counting
             is_late = False
             late_duration = None
@@ -1661,38 +1657,26 @@ class EmpLeaveListCreateAPIView(generics.ListCreateAPIView):
         else:
             days_requested = float(span_days)
 
-        def _approved_leave_units(leave):
-            if not leave.from_date or not leave.to_date:
-                return 0.0
-            s = (leave.to_date - leave.from_date).days + 1
-            if getattr(leave, "leave_duration", None) == "half_day" and leave.from_date == leave.to_date:
-                return 0.5
-            return float(s)
+        if leave_type and not leave_type.applies_to(emp):
+            raise ValidationError(f"{leave_type.leave_name} is not applicable to your department.")
 
-        # Get approved leaves for this leave type
-        current_year = datetime.now().year
-        approved_leaves = EmpLeave.objects.filter(
-            employee=emp,
-            leave_type=leave_type,
-            status='Approved',
-            from_date__year=current_year
-        )
-
-        # Calculate total approved days used
-        days_used = 0.0
-        for leave in approved_leaves:
-            days_used += _approved_leave_units(leave)
-
-        # Get leave type count (available days per year)
-        available_days = float(leave_type.count) if leave_type else 0.0
-        remaining_days = available_days - days_used
-
-        # Validate requested days against remaining balance
-        if days_requested > remaining_days:
-            raise ValidationError(
-                f"Insufficient leave balance. You have {remaining_days} days remaining "
-                f"for {leave_type.leave_name}, but requested {days_requested} days."
-            )
+        # Validate each entitlement period (month or year) the request touches
+        from app.utils import leave_balance, leave_period_bounds
+        cursor = start_date
+        while cursor <= end_date and leave_type:
+            p_start, p_end = leave_period_bounds(leave_type, cursor)
+            if leave_duration == "half_day" and start_date == end_date:
+                requested = 0.5
+            else:
+                requested = float((min(end_date, p_end) - max(start_date, p_start)).days + 1)
+            bal = leave_balance(emp, leave_type, cursor)
+            if requested > bal['remaining']:
+                label = cursor.strftime('%B %Y') if bal['accrual'] == 'monthly' else str(cursor.year)
+                raise ValidationError(
+                    f"Insufficient leave balance for {label}. You have {bal['remaining']:g} days remaining "
+                    f"for {leave_type.leave_name}, but requested {requested:g} days."
+                )
+            cursor = p_end + timedelta(days=1)
 
         serializer.save(
             company=emp.company,
@@ -1707,7 +1691,8 @@ class LeaveListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         emp = self.request.user.employee_profile
-        return Leave.objects.filter(company=emp.company)
+        ids = [l.pk for l in Leave.objects.filter(company=emp.company).prefetch_related('departments') if l.applies_to(emp)]
+        return Leave.objects.filter(pk__in=ids)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -2322,7 +2307,7 @@ class AttendanceChartDataAPIView(APIView):
             department=employee.department, 
             company=employee.company
         ).first()
-        weekend_days = working_days_config.weekend_days if working_days_config else ['Saturday', 'Sunday']
+        weekend_days_at = lambda dd: (working_days_config.at(dd).weekend_days if working_days_config and working_days_config.at(dd) else ['Saturday', 'Sunday'])
 
         period_label = ""
         from employee import presence_engine as _pe
@@ -2364,7 +2349,7 @@ class AttendanceChartDataAPIView(APIView):
 
                 series_data.append(hours)
                 labels.append(day_name)
-                holidays_flags.append(d in holidays or day_full_name in weekend_days)
+                holidays_flags.append(d in holidays or day_full_name in weekend_days_at(d) or is_rule_off_day(working_days_config, d))
 
         elif range_type == 'month':
             # Offset shifts by 30-day buckets
@@ -2398,7 +2383,7 @@ class AttendanceChartDataAPIView(APIView):
 
                 series_data.append(hours)
                 labels.append(str(d.day))
-                holidays_flags.append(d in holidays or d.strftime('%A') in weekend_days)
+                holidays_flags.append(d in holidays or d.strftime('%A') in weekend_days_at(d) or is_rule_off_day(working_days_config, d))
 
         elif range_type == 'year':
             # Offset shifts by 12-month buckets

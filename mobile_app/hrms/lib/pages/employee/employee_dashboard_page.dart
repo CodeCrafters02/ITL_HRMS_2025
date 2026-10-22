@@ -2,6 +2,7 @@ import 'dart:async';
 import 'widgets/outlook_mail_widgets.dart';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import '../../models/dashboard_model.dart';
 import '../../models/presence_model.dart';
@@ -42,6 +43,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
   int _myTasksCount = 0;
   int _holidaysCount = 0;
   int _leavesCount = 0;
+  double? _leaveDaysLeft;
   int _calendarCount = 0;
   List<BreakConfig> _breakConfigs = [];
 
@@ -166,6 +168,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
         EmployeeService.getCalendarData(year: now.year, month: now.month, day: now.day),
         EmployeeService.getCalendarEvents(), // Fetch holidays from correct endpoint
         EmployeeService.getCustomNotificationsAsAnnouncements(),
+        EmployeeService.getLeaveTypes(),
       ]);
 
       final a = results[0] as ApiResponse<List<Announcement>>;
@@ -174,6 +177,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
       final c = results[3] as ApiResponse<CalendarData>;
       final holidaysResponse = results[4] as ApiResponse<List<CalendarEvent>>;
       final customNotifs = results[5] as ApiResponse<List<Announcement>>;
+      final leaveTypes = results[6] as ApiResponse<List<LeaveType>>;
 
       final upcomingEvents = <CalendarEvent>[];
       if (c.success && c.data != null) {
@@ -218,6 +222,9 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
           _announcements = mergedAnnouncements;
           _myTasksCount = t.data?.length ?? 0;
           _leavesCount = l.data?.length ?? 0;
+          _leaveDaysLeft = leaveTypes.success && leaveTypes.data != null
+              ? leaveTypes.data!.fold<double>(0, (sum, t) => sum + t.remainingCount)
+              : null;
           _calendarCount = upcomingEvents.length;
           _holidaysCount = holidaysCount;
           _events = upcomingEvents.take(3).toList();
@@ -645,6 +652,7 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                   _KpiGrid(
                     isLoading: _isLoadingOverview,
                     leavesCount: _leavesCount,
+                    leaveDaysLeft: _leaveDaysLeft,
                     holidaysCount: _holidaysCount,
                     myTasksCount: _myTasksCount,
                     calendarCount: _calendarCount,
@@ -698,8 +706,17 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
               child: _FloatingQuickAction(
                 label: 'Chat',
                 icon: Icons.forum_rounded,
-                onTap: () {
-                  Navigator.pushNamed(context, '/employee/chat');
+                onTap: () async {
+                  final m = ScaffoldMessenger.of(context);
+                  final app = Uri.parse('msteams://teams.microsoft.com/l/chat/0/0');
+                  final web = Uri.parse('https://teams.microsoft.com/l/chat/0/0');
+                  try {
+                    if (await launchUrl(app, mode: LaunchMode.externalApplication)) return;
+                  } catch (_) {}
+                  try {
+                    if (await launchUrl(web, mode: LaunchMode.externalApplication)) return;
+                  } catch (_) {}
+                  m.showSnackBar(const SnackBar(content: Text('Unable to open Microsoft Teams')));
                 },
               ),
             ),
@@ -1336,6 +1353,7 @@ class _KpiGrid extends StatelessWidget {
   const _KpiGrid({
     required this.isLoading,
     required this.leavesCount,
+    this.leaveDaysLeft,
     required this.holidaysCount,
     required this.myTasksCount,
     required this.calendarCount,
@@ -1347,6 +1365,7 @@ class _KpiGrid extends StatelessWidget {
 
   final bool isLoading;
   final int leavesCount;
+  final double? leaveDaysLeft;
   final int holidaysCount;
   final int myTasksCount;
   final int calendarCount;
@@ -1365,6 +1384,7 @@ class _KpiGrid extends StatelessWidget {
               _KpiPill(
                 icon: Icons.beach_access_outlined,
                 title: 'Leaves',
+                value: leaveDaysLeft == null ? null : '${leaveDaysLeft == leaveDaysLeft!.truncateToDouble() ? leaveDaysLeft!.toInt() : leaveDaysLeft} left',
                 accent: AppStitchTheme.kpiLeaves,
                 onTap: onTapLeaves,
               ),

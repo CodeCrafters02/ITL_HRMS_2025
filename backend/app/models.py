@@ -564,9 +564,49 @@ class Leave(models.Model):
     leave_name = models.CharField(max_length=50, null=True)
     count = models.PositiveIntegerField(default=0)
     is_paid = models.BooleanField(default=True)
+    # Empty = applies to every department
+    departments = models.ManyToManyField('Department', blank=True, related_name='leave_types')
+    # yearly: `count` is the annual quota; monthly: `count` is the quota per month
+    accrual = models.CharField(max_length=10, choices=[('yearly', 'Yearly'), ('monthly', 'Monthly')], default='yearly')
+    carry_forward_month = models.BooleanField(default=False)
+    carry_forward_year = models.BooleanField(default=False)
+    carry_forward_max = models.PositiveIntegerField(null=True, blank=True)
+    # Date the current policy version took effect; older versions live in LeavePolicyHistory.
+    effective_from = models.DateField(null=True, blank=True)
+
+    POLICY_FIELDS = ('count', 'accrual', 'carry_forward_month', 'carry_forward_year', 'carry_forward_max')
+
+    def at(self, d):
+        """Policy version active on date d (self or a LeavePolicyHistory snapshot)."""
+        if self.effective_from is None or d >= self.effective_from:
+            return self
+        if not hasattr(self, '_hist_cache'):
+            self._hist_cache = list(self.history.all())
+        for h in self._hist_cache:
+            if (h.valid_from is None or h.valid_from <= d) and d <= h.valid_to:
+                return h
+        return self
+
+    def applies_to(self, employee):
+        ids = {d.id for d in self.departments.all()}
+        return not ids or employee.department_id in ids
 
     def __str__(self):
         return f"{self.leave_name} ({'Paid' if self.is_paid else 'Unpaid'})"
+
+
+class LeavePolicyHistory(models.Model):
+    leave = models.ForeignKey(Leave, on_delete=models.CASCADE, related_name='history')
+    count = models.PositiveIntegerField(default=0)
+    accrual = models.CharField(max_length=10, default='yearly')
+    carry_forward_month = models.BooleanField(default=False)
+    carry_forward_year = models.BooleanField(default=False)
+    carry_forward_max = models.PositiveIntegerField(null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField()
+
+    class Meta:
+        ordering = ['valid_to']
 
 class EmpLeave(models.Model):
     leave_duration = models.CharField(max_length=20, choices=[('half_day', 'Half Day'), ('full_day', 'Full Day')], default='full_day')
@@ -669,8 +709,22 @@ class DepartmentWiseWorkingDays(models.Model):
     
     working_days = models.JSONField(default=list, blank=True, null=True)
     weekend_days = models.JSONField(default=list, blank=True, null=True)
+    off_day_rules = models.JSONField(default=list, blank=True, null=True)
     
     company = models.ForeignKey(Company, on_delete=models.CASCADE,null=True,blank=True)
+    # Date this version took effect; null = since the beginning. Older versions live in DepartmentWorkingDaysHistory.
+    effective_from = models.DateField(null=True, blank=True)
+
+    def at(self, d):
+        """Config version active on date d; None when no config existed yet (callers fall back to defaults)."""
+        if self.effective_from is None or d >= self.effective_from:
+            return self
+        if not hasattr(self, '_hist_cache'):
+            self._hist_cache = list(self.history.all())
+        for h in self._hist_cache:
+            if (h.valid_from is None or h.valid_from <= d) and d <= h.valid_to:
+                return h
+        return None
 
     def __str__(self):
         shifts_display = ", ".join(str(s) for s in self.shifts.all()) if self.shifts.exists() else "All"
@@ -678,6 +732,20 @@ class DepartmentWiseWorkingDays(models.Model):
 
     class Meta:
         verbose_name_plural = "Department Wise Working Days"
+
+
+class DepartmentWorkingDaysHistory(models.Model):
+    config = models.ForeignKey(DepartmentWiseWorkingDays, on_delete=models.CASCADE, related_name='history')
+    week_start_day = models.CharField(max_length=10, null=True, blank=True)
+    week_end_day = models.CharField(max_length=10, null=True, blank=True)
+    working_days = models.JSONField(default=list, blank=True, null=True)
+    weekend_days = models.JSONField(default=list, blank=True, null=True)
+    off_day_rules = models.JSONField(default=list, blank=True, null=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField()
+
+    class Meta:
+        ordering = ['valid_to']
         
 class CalendarEvent(models.Model):
     company = models.ForeignKey('Company', on_delete=models.CASCADE, null=True, blank=True)

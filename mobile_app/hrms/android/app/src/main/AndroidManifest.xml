@@ -64,6 +64,11 @@
             <data android:mimeType="text/plain"/>
         </intent>
         <package android:name="com.google.android.gms" />
+        <package android:name="com.microsoft.teams" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="msteams" />
+        </intent>
         <!-- Microsoft SSO (AppAuth): let the app find a browser / Custom Tabs on Android 11+ -->
         <intent>
             <action android:name="android.intent.action.VIEW" />

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from app.utils import leave_balance
 import os
 
 from app.models import (
@@ -380,41 +381,49 @@ class EmpLeaveSerializer(serializers.ModelSerializer):
 class LeaveSerializer(serializers.ModelSerializer):
     used_count = serializers.SerializerMethodField()
     remaining_count = serializers.SerializerMethodField()
+    carried_in = serializers.SerializerMethodField()
+    period_total = serializers.SerializerMethodField()
+    period_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Leave
-        fields = ['id', 'leave_name', 'count', 'is_paid', 'used_count', 'remaining_count']
+        fields = [
+            'id', 'leave_name', 'count', 'is_paid', 'used_count', 'remaining_count',
+            'accrual', 'carry_forward_month', 'carry_forward_year', 'carry_forward_max',
+            'carried_in', 'period_total', 'period_label',
+        ]
+
+    def _balance(self, obj):
+        cache = self.context.setdefault('_leave_balances', {})
+        if obj.pk not in cache:
+            request = self.context.get('request')
+            employee = getattr(getattr(request, 'user', None), 'employee_profile', None)
+            cache[obj.pk] = leave_balance(employee, obj) if employee else None
+        return cache[obj.pk]
 
     def get_used_count(self, obj):
-        request = self.context.get('request')
-        if request and hasattr(request.user, 'employee_profile'):
-            employee = request.user.employee_profile
-
-            # Get all approved leaves of this type for the employee
-            leaves = EmpLeave.objects.filter(
-                employee=employee,
-                leave_type=obj,
-                status='Approved'
-            )
-
-            total_days = 0.0
-            for leave in leaves:
-                if leave.from_date and leave.to_date:
-                    span = (leave.to_date - leave.from_date).days + 1
-                    if getattr(leave, 'leave_duration', None) == 'half_day' and leave.from_date == leave.to_date:
-                        total_days += 0.5
-                    else:
-                        total_days += float(max(span, 0))
-
-            return total_days
-
-        return 0
+        b = self._balance(obj)
+        return b['used'] if b else 0
 
     def get_remaining_count(self, obj):
-        used = self.get_used_count(obj)
-        return max(obj.count - used, 0)
-    
-    
+        b = self._balance(obj)
+        return b['remaining'] if b else obj.count
+
+    def get_carried_in(self, obj):
+        b = self._balance(obj)
+        return b['carried_in'] if b else 0
+
+    def get_period_total(self, obj):
+        b = self._balance(obj)
+        return b['total'] if b else obj.count
+
+    def get_period_label(self, obj):
+        b = self._balance(obj)
+        if not b:
+            return ''
+        return b['period_start'].strftime('%b %Y') if b['accrual'] == 'monthly' else str(b['period_start'].year)
+
+
 class EmpLearningCornerSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     video = serializers.SerializerMethodField()

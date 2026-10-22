@@ -21,7 +21,7 @@ import CountUp from 'react-countup';
 import PresenceCard, { Dot as PresenceDot, type Summary as PresenceSummary } from './PresenceCard';
 import Dropdown from '../../components/Dropdown';
 import IconXCircle from '../../components/Icon/IconXCircle';
-import { fetchMyLeaveRequests, type LeaveRequest } from './LeaveApplication/api';
+import { fetchMyLeaveRequests, fetchLeaveBalances, type LeaveRequest } from './LeaveApplication/api';
 
 import { openTeamsChat } from '../../utils/teams';
 import Button from '../../components/Common/Button';
@@ -155,6 +155,7 @@ const EmployeeDashboard = () => {
     const [geofenceRequired, setGeofenceRequired] = useState<boolean>(false);
     const [geoError, setGeoError] = useState<string | null>(null);
     const [latestLeave, setLatestLeave] = useState<LeaveRequest | null>(null);
+    const [leaveLeft, setLeaveLeft] = useState<number | null>(null);
     const [introBump, setIntroBump] = useState(0);
     const [checkinIntroHudClosed, setCheckinIntroHudClosed] = useState(false);
     const [checkinIntroAnchorRect, setCheckinIntroAnchorRect] = useState<DOMRect | null>(null);
@@ -381,6 +382,12 @@ const EmployeeDashboard = () => {
                 setLatestLeave(pickLatestLeaveRequest(results));
             } catch {
                 if (!cancelled) setLatestLeave(null);
+            }
+            try {
+                const balances = await fetchLeaveBalances();
+                if (!cancelled) setLeaveLeft(balances.reduce((sum, b) => sum + (b.remaining_count || 0), 0));
+            } catch {
+                if (!cancelled) setLeaveLeft(null);
             }
         })();
         return () => {
@@ -1064,7 +1071,7 @@ const EmployeeDashboard = () => {
                 <StatCard
                     label="Leave application"
                     value={latestLeave ? latestLeave.leave_type_name : 'No requests yet'}
-                    hint={latestLeave ? `${latestLeave.status} · ${formatLeaveDateRange(latestLeave.from_date, latestLeave.to_date)}` : 'Open leave application to submit'}
+                    hint={`${latestLeave ? `${latestLeave.status} · ${formatLeaveDateRange(latestLeave.from_date, latestLeave.to_date)}` : 'Open leave application to submit'}${leaveLeft !== null ? ` · ${leaveLeft} days left` : ''}`}
                     icon={<IconCalendar />}
                     tone="info"
                     to="/employee/leave-application"

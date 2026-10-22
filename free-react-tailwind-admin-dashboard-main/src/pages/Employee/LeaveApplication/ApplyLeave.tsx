@@ -158,7 +158,7 @@ const ApplyLeave = () => {
         }
     }, [leaveDuration, fromDate]);
 
-    const totalBalance = useMemo(() => leaveBalances.reduce((sum, leave) => sum + leave.count, 0), [leaveBalances]);
+    const totalBalance = useMemo(() => leaveBalances.reduce((sum, leave) => sum + (leave.period_total ?? leave.count), 0), [leaveBalances]);
     const totalRemaining = useMemo(() => leaveBalances.reduce((sum, leave) => sum + leave.remaining_count, 0), [leaveBalances]);
     const pendingCount = useMemo(() => leaveRequests.filter((request) => request.status === 'Pending').length, [leaveRequests]);
     const approvedCount = useMemo(() => leaveRequests.filter((request) => request.status === 'Approved').length, [leaveRequests]);
@@ -338,13 +338,15 @@ const ApplyLeave = () => {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                         {visibleLeaveBalances.map((leave) => {
-                            const percentUsed = leave.count ? Math.min(100, Math.round((leave.used_count / leave.count) * 100)) : 0;
+                            const total = leave.period_total ?? leave.count;
+                            const percentUsed = total ? Math.min(100, Math.round((leave.used_count / total) * 100)) : 0;
                             return (
                                 <div key={leave.id} className="rounded-md border border-white-light dark:border-[#1b2e4b] p-4 bg-white dark:bg-[#111c2d]">
                                     <div className="mb-3 flex items-start justify-between gap-2">
                                         <div>
                                             <p className="font-semibold">{leave.leave_name}</p>
-                                            <p className="text-sm text-white-dark mt-1">{leave.remaining_count} / {leave.count} remaining</p>
+                                            <p className="text-sm text-white-dark mt-1">{leave.remaining_count} / {total} remaining{leave.period_label ? ` (${leave.period_label})` : ''}</p>
+                                            {!!leave.carried_in && <p className="text-xs text-success mt-0.5">Includes {leave.carried_in} carried forward</p>}
                                         </div>
                                         <span className={`badge ${leave.is_paid ? 'bg-success-light text-success' : 'bg-dark-light text-white-dark'}`}>
                                             {leave.is_paid ? 'Paid' : 'Unpaid'}

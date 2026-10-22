@@ -5,6 +5,10 @@ class LeaveType {
   final bool isPaid;
   final double usedCount;
   final double remainingCount;
+  final String accrual;
+  final double carriedIn;
+  final double? periodTotal;
+  final String periodLabel;
 
   LeaveType({
     required this.id,
@@ -13,6 +17,10 @@ class LeaveType {
     required this.isPaid,
     required this.usedCount,
     required this.remainingCount,
+    this.accrual = 'yearly',
+    this.carriedIn = 0,
+    this.periodTotal,
+    this.periodLabel = '',
   });
 
   factory LeaveType.fromJson(Map<String, dynamic> json) {
@@ -23,6 +31,10 @@ class LeaveType {
       isPaid: json['is_paid'] ?? false,
       usedCount: (json['used_count'] ?? 0).toDouble(),
       remainingCount: (json['remaining_count'] ?? 0).toDouble(),
+      accrual: json['accrual'] ?? 'yearly',
+      carriedIn: (json['carried_in'] ?? 0).toDouble(),
+      periodTotal: json['period_total'] == null ? null : (json['period_total'] as num).toDouble(),
+      periodLabel: json['period_label'] ?? '',
     );
   }
 }

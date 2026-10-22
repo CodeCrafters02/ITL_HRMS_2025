@@ -172,18 +172,34 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Dialog(
-      backgroundColor: theme.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: SingleChildScrollView(
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.92),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -265,7 +281,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                     items: widget.leaveTypes.map((type) {
                       return DropdownMenuItem<int>(
                         value: type.id,
-                        child: Text(type.leaveName),
+                        child: Text('${type.leaveName} (${type.remainingCount == type.remainingCount.truncateToDouble() ? type.remainingCount.toInt() : type.remainingCount} left)'),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -579,6 +595,8 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
             ),
           ),
         ),
+        ),
+      ),
     );
   }
 }

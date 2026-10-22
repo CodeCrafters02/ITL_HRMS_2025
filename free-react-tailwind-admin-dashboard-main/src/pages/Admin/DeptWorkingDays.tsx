@@ -22,6 +22,9 @@ const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'S
 type Department = { id: number; department_name: string };
 type Shift = { id: number; shift_type: string; checkin: string; checkout: string };
 
+type OffRule = { weekday: string; weeks: number[] };
+const WEEK_OPTS: [number, string][] = [[1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [5, '5th'], [-1, 'Last']];
+
 type WorkingDay = {
     id: number;
     department: Department | number;
@@ -29,6 +32,8 @@ type WorkingDay = {
     working_days_count: number;
     working_days?: string[];
     weekend_days?: string[];
+    off_day_rules?: OffRule[];
+    effective_from?: string | null;
     week_start_day?: string;
     week_end_day?: string;
 };
@@ -36,6 +41,7 @@ type WorkingDay = {
 const AdminDeptWorkingDays = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<WorkingDay[]>([]);
+    const [configuredDepts, setConfiguredDepts] = useState<Set<number> | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [loading, setLoading] = useState(false);
@@ -50,6 +56,8 @@ const AdminDeptWorkingDays = () => {
         shift_id: '',
         working_days_count: 5,
         working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+        off_day_rules: [] as OffRule[],
+        effective_from: '',
     });
 
     useEffect(() => {
@@ -66,6 +74,13 @@ const AdminDeptWorkingDays = () => {
     const fetchAll = async () => {
         setLoading(true);
         try {
+            fetch(`${API_URL}?page_size=1000`, { headers: headers() })
+                .then((x) => x.json())
+                .then((d) => {
+                    const list: WorkingDay[] = Array.isArray(d) ? d : d?.results || [];
+                    setConfiguredDepts(new Set(list.map((c) => (typeof c.department === 'object' ? c.department?.id : c.department)).filter(Boolean) as number[]));
+                })
+                .catch(() => {});
             const url = new URL(API_URL);
             url.searchParams.append('page', String(page));
             url.searchParams.append('page_size', String(pageSize));
@@ -118,7 +133,9 @@ const AdminDeptWorkingDays = () => {
             department_id: '', 
             shift_id: '', 
             working_days_count: 5, 
-            working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] 
+            working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            off_day_rules: [],
+            effective_from: '',
         });
         setModalOpen(true);
     };
@@ -132,9 +149,34 @@ const AdminDeptWorkingDays = () => {
             shift_id: String(firstShift || ''),
             working_days_count: it.working_days_count || 5,
             working_days: Array.isArray(it.working_days) && it.working_days.length > 0 ? it.working_days : [],
+            off_day_rules: Array.isArray(it.off_day_rules) ? it.off_day_rules : [],
+            effective_from: '',
+            current_effective_from: it.effective_from || null,
         });
         setModalOpen(true);
     };
+
+    const [previewOffset, setPreviewOffset] = useState(0);
+    const preview = useMemo(() => {
+        const base = new Date();
+        const y = new Date(base.getFullYear(), base.getMonth() + previewOffset, 1);
+        const year = y.getFullYear();
+        const month = y.getMonth();
+        const total = new Date(year, month + 1, 0).getDate();
+        const working: string[] = (form.working_days || []).map((d: string) => d.toLowerCase());
+        const rules: OffRule[] = form.off_day_rules || [];
+        const cells = Array.from({ length: total }, (_, i) => {
+            const day = i + 1;
+            const name = DAYS_OF_WEEK[(new Date(year, month, day).getDay() + 6) % 7].toLowerCase();
+            const nth = Math.floor((day - 1) / 7) + 1;
+            const ruleOff = rules.some((x) => x.weekday === name && (!x.weeks.length || x.weeks.includes(nth) || (x.weeks.includes(-1) && day + 7 > total)));
+            return { day, off: !working.includes(name) || ruleOff, ruleOff };
+        });
+        return { label: y.toLocaleString('default', { month: 'long', year: 'numeric' }), lead: (y.getDay() + 6) % 7, cells, workingCount: cells.filter((c) => !c.off).length };
+    }, [previewOffset, form.working_days, form.off_day_rules]);
+
+    const setRule = (i: number, patch: Partial<OffRule>) =>
+        setForm({ ...form, off_day_rules: form.off_day_rules.map((x: OffRule, j: number) => (j === i ? { ...x, ...patch } : x)) });
 
     const toggleDay = (day: string) => {
         let newWorkingDays = [...(form.working_days || [])];
@@ -161,15 +203,43 @@ const AdminDeptWorkingDays = () => {
             const weekendDays = DAYS_OF_WEEK.filter(d => !selectedWorkingDays.includes(d));
 
             const payload: any = {
-                department: Number(form.department_id),
+                department: form.department_id === 'all' ? 0 : Number(form.department_id),
                 working_days_count: Number(form.working_days_count || 0),
                 working_days: selectedWorkingDays,
                 weekend_days: weekendDays,
+                effective_from: form.effective_from || undefined,
+                off_day_rules: (form.off_day_rules || []).filter((x: OffRule) => x.weeks.length > 0),
                 shifts: form.shift_id ? [Number(form.shift_id)] : [],
             };
             
-            if (!payload.department) {
+            const isAll = form.department_id === 'all';
+            if (!payload.department && !isAll) {
                 Swal.fire('Required', 'Department is required.', 'warning');
+                return;
+            }
+
+            if (isAll) {
+                const ok = await Swal.fire({ title: 'Apply to all departments?', text: 'Existing configs of every department will be overwritten with these working days and off-day rules.', showCancelButton: true, confirmButtonText: 'Apply' });
+                if (!ok.isConfirmed) return;
+                const existingRes = await fetch(`${API_URL}?page_size=1000`, { headers: headers() });
+                const existingData = await existingRes.json();
+                const existing: WorkingDay[] = Array.isArray(existingData) ? existingData : existingData?.results || [];
+                const deptOf = (i: WorkingDay) => (typeof i.department === 'object' ? i.department.id : i.department);
+                const calls = departments.flatMap((d) => {
+                    const mine = existing.filter((e) => deptOf(e) === d.id);
+                    if (!mine.length) return [fetch(API_URL, { method: 'POST', headers: headers(), body: JSON.stringify({ ...payload, department: d.id }) })];
+                    return mine.map((e) => fetch(`${API_URL}${e.id}/`, {
+                        method: 'PUT',
+                        headers: headers(),
+                        body: JSON.stringify({ ...payload, department: d.id, shifts: (e.shifts as any[]).map((x) => (typeof x === 'object' ? x.id : x)) }),
+                    }));
+                });
+                const results = await Promise.all(calls);
+                const failed = results.filter((x) => !x.ok).length;
+                setModalOpen(false);
+                await fetchAll();
+                if (failed) Swal.fire('Partially applied', `${failed} of ${results.length} configs failed to save.`, 'warning');
+                else Swal.fire('Done', `Applied to ${departments.length} department(s).`, 'success');
                 return;
             }
             
@@ -285,6 +355,12 @@ const AdminDeptWorkingDays = () => {
                 variant="indigo"
             />
 
+            {configuredDepts && departments.some((d) => !configuredDepts.has(d.id)) && (
+                <div className="rounded border border-warning bg-warning-light text-warning p-3 text-sm">
+                    <strong>Working days not defined</strong> for: {departments.filter((d) => !configuredDepts.has(d.id)).map((d) => d.department_name).join(', ')}. Default (Sat &amp; Sun off) applies to them.
+                </div>
+            )}
+
             <DataTable
                 columns={columns}
                 data={rows}
@@ -317,6 +393,7 @@ const AdminDeptWorkingDays = () => {
                                                             <label className="font-semibold">Department</label>
                                                             <select className="form-select" value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
                                                                 <option value="">Select department</option>
+                                                                <option value="all">All Departments</option>
                                                                 {departments.map((d) => (
                                                                     <option key={d.id} value={d.id}>
                                                                         {d.department_name}
@@ -369,6 +446,75 @@ const AdminDeptWorkingDays = () => {
                                                             </div>
                                                             <div className="text-xs text-white-dark mt-2">
                                                                 Selected <strong>{(form.working_days || []).length} / {form.working_days_count}</strong> days. Unselected days will automatically be evaluated as weekends.
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4">
+                                                            <label className="font-semibold">Effective From</label>
+                                                            <input className="form-input" type="date" value={form.effective_from || ''} min={form.current_effective_from ? new Date(new Date(form.current_effective_from).getTime() + 86400000).toISOString().slice(0, 10) : undefined} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} />
+                                                            <div className="text-xs text-white-dark mt-1">
+                                                                Changes apply from this date onward (blank = today). Earlier dates keep the previous working days, so past attendance and payroll don't change.
+                                                                {form.current_effective_from ? ` Current version started on ${form.current_effective_from}.` : ''}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4">
+                                                            <label className="font-semibold">Recurring Off Days (e.g. 2nd & 4th Saturday)</label>
+                                                            {(form.off_day_rules || []).map((rule: OffRule, i: number) => (
+                                                                <div key={i} className="flex flex-wrap items-center gap-2 mt-2">
+                                                                    <select className="form-select w-auto" value={rule.weekday} onChange={(e) => setRule(i, { weekday: e.target.value })}>
+                                                                        {DAYS_OF_WEEK.map((d) => (
+                                                                            <option key={d} value={d.toLowerCase()}>{d}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                    {WEEK_OPTS.map(([n, label]) => (
+                                                                        <button
+                                                                            key={n}
+                                                                            type="button"
+                                                                            className={`btn btn-sm ${rule.weeks.includes(n) ? 'btn-primary' : 'btn-outline-primary'}`}
+                                                                            onClick={() => setRule(i, { weeks: rule.weeks.includes(n) ? rule.weeks.filter((w) => w !== n) : [...rule.weeks, n] })}
+                                                                        >
+                                                                            {label}
+                                                                        </button>
+                                                                    ))}
+                                                                    <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => setForm({ ...form, off_day_rules: form.off_day_rules.filter((_: OffRule, j: number) => j !== i) })}>
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" className="btn btn-sm btn-outline-primary mt-2" onClick={() => setForm({ ...form, off_day_rules: [...(form.off_day_rules || []), { weekday: 'saturday', weeks: [2] }] })}>
+                                                                + Add rule
+                                                            </button>
+                                                            <div className="text-xs text-white-dark mt-2">Applies on top of the working days above; those dates are treated as holidays.</div>
+                                                        </div>
+
+                                                        <div className="mt-4">
+                                                            <div className="flex items-center justify-between">
+                                                                <label className="font-semibold">Preview – {preview.label}</label>
+                                                                <div className="flex gap-2">
+                                                                    <button type="button" className="btn btn-sm btn-outline-primary" disabled={previewOffset <= 0} onClick={() => setPreviewOffset(previewOffset - 1)}>&lt;</button>
+                                                                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setPreviewOffset(previewOffset + 1)}>&gt;</button>
+                                                                </div>
+                                                            </div>
+                                                            <div className="grid grid-cols-7 gap-1 mt-2 text-center text-xs">
+                                                                {DAYS_OF_WEEK.map((d) => (
+                                                                    <div key={d} className="font-semibold text-white-dark">{d.substring(0, 3)}</div>
+                                                                ))}
+                                                                {Array.from({ length: preview.lead }, (_, i) => (
+                                                                    <div key={`b${i}`} />
+                                                                ))}
+                                                                {preview.cells.map((c) => (
+                                                                    <div
+                                                                        key={c.day}
+                                                                        title={c.ruleOff ? 'Off (recurring rule)' : c.off ? 'Weekly off' : 'Working day'}
+                                                                        className={`rounded py-1 ${c.ruleOff ? 'bg-warning text-white' : c.off ? 'bg-danger-light text-danger' : 'bg-success-light text-success'}`}
+                                                                    >
+                                                                        {c.day}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="text-xs text-white-dark mt-2">
+                                                                <strong>{preview.workingCount}</strong> working / {preview.cells.length - preview.workingCount} off days. Green = working, red = weekly off, orange = recurring off rule.
                                                             </div>
                                                         </div>
 

@@ -92,12 +92,15 @@ def resolve_shift(employee, at):
 
 def is_working_day(employee, d):
     from app.models import CalendarEvent, DepartmentWiseWorkingDays, EmpLeave
+    from app.utils import is_rule_off_day
     weekend = {'Saturday', 'Sunday'}
+    dw = None
     if getattr(employee, 'department_id', None):
         dw = DepartmentWiseWorkingDays.objects.filter(department_id=employee.department_id).first()
-        if dw and getattr(dw, 'weekend_days', None):
-            weekend = set(dw.weekend_days)
-    if d.strftime('%A') in weekend:
+        dwd = dw.at(d) if dw else None
+        if dwd and getattr(dwd, 'weekend_days', None):
+            weekend = set(dwd.weekend_days)
+    if d.strftime('%A') in weekend or is_rule_off_day(dw, d):
         return False
     if CalendarEvent.objects.filter(company_id=employee.company_id, is_holiday=True, date=d).exists():
         return False

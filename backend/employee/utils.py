@@ -27,7 +27,9 @@ def get_missing_checkout(employee, today):
         from app.models import CalendarEvent, DepartmentWiseWorkingDays, Attendance
 
         # Weekend days from the employee's department config (default: Sat + Sun)
+        from app.utils import is_rule_off_day
         weekend_names = {'Saturday', 'Sunday'}
+        dwwd = None
         if getattr(employee, 'department_id', None):
             dwwd = DepartmentWiseWorkingDays.objects.filter(
                 department_id=employee.department_id
@@ -49,7 +51,9 @@ def get_missing_checkout(employee, today):
             check_date = today - timedelta(days=days_back)
 
             # Skip weekends
-            if _DAY_NAMES[check_date.weekday()] in weekend_names:
+            dwd = dwwd.at(check_date) if dwwd else None
+            wn = set(dwd.weekend_days) if dwd and dwd.weekend_days else {'Saturday', 'Sunday'}
+            if _DAY_NAMES[check_date.weekday()] in wn or is_rule_off_day(dwwd, check_date):
                 continue
 
             # Skip holidays

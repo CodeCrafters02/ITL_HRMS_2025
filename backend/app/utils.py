@@ -61,6 +61,113 @@ def number_to_words(n):
     return (result + ' Only').strip()
 
 
+def leave_units_in(lv, start, end):
+    """Leave days of an EmpLeave that fall within [start, end] (half day = 0.5)."""
+    if not lv.from_date or not lv.to_date:
+        return 0.0
+    if getattr(lv, 'leave_duration', None) == 'half_day' and lv.from_date == lv.to_date:
+        return 0.5 if start <= lv.from_date <= end else 0.0
+    s, e = max(lv.from_date, start), min(lv.to_date, end)
+    return float(max((e - s).days + 1, 0))
+
+
+def leave_period_bounds(leave, d):
+    """(start, end) of the entitlement period (month or year) containing d."""
+    import datetime as _dt
+    cfg = leave.at(d)
+    if cfg.accrual == 'monthly':
+        return _dt.date(d.year, d.month, 1), _dt.date(d.year, d.month, calendar.monthrange(d.year, d.month)[1])
+    return _dt.date(d.year, 1, 1), _dt.date(d.year, 12, 31)
+
+
+def leave_balance(employee, leave, on_date=None, leaves=None):
+    """
+    Leave balance of `employee` for `leave` in the period (month/year) containing on_date.
+    Carry-forward is derived from history, so nothing is stored. Returns dict:
+    accrual, base, carried_in, total, used, remaining, period_start, period_end.
+    """
+    import datetime as _dt
+    today = on_date or _dt.date.today()
+    start_year = today.year - 2
+    joined = getattr(employee, 'date_of_joining', None)
+    if joined and joined.year > start_year:
+        start_year = joined.year
+    start_year = min(start_year, today.year)
+    if leaves is None:
+        from app.models import EmpLeave
+        leaves = list(EmpLeave.objects.filter(
+            employee=employee, leave_type=leave, status='Approved',
+            to_date__gte=_dt.date(start_year, 1, 1), from_date__lte=_dt.date(today.year, 12, 31),
+        ))
+
+    def used_in(s, e):
+        return sum(leave_units_in(lv, s, e) for lv in leaves)
+
+    def cap(rem, cfg):
+        rem = max(rem, 0.0)
+        return min(rem, float(cfg.carry_forward_max)) if cfg.carry_forward_max is not None else rem
+
+    carry = 0.0
+    result = None
+    for year in range(start_year, today.year + 1):
+        ycfg = leave.at(_dt.date(year, 1, 1))
+        if ycfg.accrual == 'yearly':
+            s, e = _dt.date(year, 1, 1), _dt.date(year, 12, 31)
+            used = used_in(s, e)
+            total = float(ycfg.count) + carry
+            if year == today.year:
+                result = dict(accrual='yearly', base=float(ycfg.count), carried_in=carry, total=total, used=used, remaining=max(total - used, 0.0), period_start=s, period_end=e)
+                break
+            carry = cap(total - used, ycfg) if ycfg.carry_forward_year else 0.0
+            continue
+        for month in range(1, 13):
+            s = _dt.date(year, month, 1)
+            e = _dt.date(year, month, calendar.monthrange(year, month)[1])
+            mcfg = leave.at(s)
+            if mcfg.accrual != 'monthly':
+                carry = 0.0
+                continue
+            if joined and e < joined and not (year == today.year and month == today.month):
+                continue
+            used = used_in(s, e)
+            total = float(mcfg.count) + carry
+            if year == today.year and month == today.month:
+                result = dict(accrual='monthly', base=float(mcfg.count), carried_in=carry, total=total, used=used, remaining=max(total - used, 0.0), period_start=s, period_end=e)
+                break
+            keep = mcfg.carry_forward_month if month < 12 else mcfg.carry_forward_year
+            carry = cap(total - used, mcfg) if keep else 0.0
+        if result:
+            break
+    if result is None:
+        cfg = leave.at(today)
+        result = dict(accrual=cfg.accrual, base=float(cfg.count), carried_in=0.0, total=float(cfg.count), used=0.0, remaining=float(cfg.count), period_start=today, period_end=today)
+    return result
+
+
+def cfg_weekend_days(cfg, d):
+    """Lowercase weekly-off weekday names in effect on date d (default Sat + Sun)."""
+    c = cfg.at(d) if cfg is not None else None
+    return [x.lower() for x in c.weekend_days] if c and c.weekend_days else ['saturday', 'sunday']
+
+
+def is_rule_off_day(cfg, d):
+    """True if date d matches a recurring off-day rule, e.g. {"weekday": "saturday", "weeks": [2, 4]} (-1 = last, [] = every week)."""
+    cfg = cfg.at(d) if cfg is not None and hasattr(cfg, 'at') else cfg
+    rules = getattr(cfg, 'off_day_rules', None) if cfg else None
+    if not rules:
+        return False
+    name = d.strftime('%A').lower()
+    nth = (d.day - 1) // 7 + 1
+    is_last = d.day + 7 > calendar.monthrange(d.year, d.month)[1]
+    for r in rules:
+        if str(r.get('weekday', '')).lower() != name:
+            continue
+        weeks = r.get('weeks') or []
+        if not weeks or nth in weeks or (-1 in weeks and is_last):
+            return True
+    return False
+
+
 def compute_attendance_metrics(employee, start_date, end_date):
     """
     Computes attendance metrics for an employee between two dates.
@@ -75,7 +182,6 @@ def compute_attendance_metrics(employee, start_date, end_date):
     ).values_list('date', flat=True))
 
     cfg = DepartmentWiseWorkingDays.objects.filter(company=employee.company, department=employee.department).first()
-    weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
 
     shift = employee.shift_assigned
     s_full = shift.full_day_hours() if shift else 8.0
@@ -116,7 +222,7 @@ def compute_attendance_metrics(employee, start_date, end_date):
     while curr <= end_date:
         day_name = curr.strftime('%A').lower()
         is_holiday = curr in holiday_dates
-        is_weekend = day_name in weekend_days
+        is_weekend = day_name in cfg_weekend_days(cfg, curr) or is_rule_off_day(cfg, curr)
         is_work_day = not is_holiday and not is_weekend
 
         if is_work_day:

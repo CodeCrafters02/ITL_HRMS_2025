@@ -20,7 +20,7 @@ import os
 import mimetypes
 from django.http import FileResponse
 from django.utils import timezone
-from .utils import generate_letter_pdf, fill_placeholders, validate_geofence, compute_attendance_metrics, generate_payslip_pdf, compute_loan_emi, compute_asset_deductions, compute_loan_disbursement, compute_salary_structure_allowances
+from .utils import cfg_weekend_days, generate_letter_pdf, fill_placeholders, validate_geofence, compute_attendance_metrics, is_rule_off_day, generate_payslip_pdf, compute_loan_emi, compute_asset_deductions, compute_loan_disbursement, compute_salary_structure_allowances
 from decimal import Decimal, ROUND_HALF_UP
 from django.core.mail import EmailMessage
 from django.core.files.base import ContentFile
@@ -1407,13 +1407,36 @@ class LeaveViewSet(viewsets.ModelViewSet):
     search_fields = ['leave_name']
 
     def get_queryset(self):
-        return Leave.objects.filter(company=self.request.user.company)
+        return Leave.objects.filter(company=self.request.user.company).prefetch_related('departments')
 
     def perform_create(self, serializer):
         company = self.request.user.company
         if not company:
             raise serializers.ValidationError("No company found for your admin.")
         serializer.save(company=company)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+        changed = any(f in v and v[f] != getattr(instance, f) for f in Leave.POLICY_FIELDS)
+        eff = instance.effective_from
+        if changed:
+            raw = request.data.get('effective_from')
+            try:
+                eff = date.fromisoformat(str(raw)[:10]) if raw else date.today()
+            except ValueError:
+                return Response({'detail': 'Invalid effective date.'}, status=400)
+            if instance.effective_from and eff <= instance.effective_from:
+                return Response({'detail': f'Effective date must be after the current version started ({instance.effective_from}).'}, status=400)
+            LeavePolicyHistory.objects.create(
+                leave=instance, valid_from=instance.effective_from, valid_to=eff - timedelta(days=1),
+                **{f: getattr(instance, f) for f in Leave.POLICY_FIELDS},
+            )
+        serializer.save(effective_from=eff)
+        return Response(serializer.data)
 
 class LearningCornerViewSet(viewsets.ModelViewSet):
     queryset = LearningCorner.objects.all()
@@ -1539,12 +1562,28 @@ class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
             'week_end_day': request.data.get('week_end_day'),
             'working_days': request.data.get('working_days', []),
             'weekend_days': request.data.get('weekend_days', []),
+            'off_day_rules': request.data.get('off_day_rules', []),
             'company': company_id
         })
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        eff, eff_err = self._effective_date(request)
+        if eff_err:
+            return Response({'detail': eff_err}, status=400)
+        serializer.save(effective_from=eff)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @staticmethod
+    def _effective_date(request):
+        raw = request.data.get('effective_from')
+        if not raw:
+            return date.today(), None
+        try:
+            return date.fromisoformat(str(raw)[:10]), None
+        except ValueError:
+            return None, 'Invalid effective date.'
+
+    SCHEDULE_FIELDS = ('week_start_day', 'week_end_day', 'working_days', 'weekend_days', 'off_day_rules')
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -1561,7 +1600,23 @@ class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
         if err:
             return Response({'detail': err}, status=400)
             
-        return super().update(request, *args, **kwargs)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+        changed = any(f in v and (v[f] or None) != (getattr(instance, f) or None) for f in self.SCHEDULE_FIELDS)
+        eff = instance.effective_from
+        if changed:
+            eff, eff_err = self._effective_date(request)
+            if eff_err:
+                return Response({'detail': eff_err}, status=400)
+            if instance.effective_from and eff <= instance.effective_from:
+                return Response({'detail': f'Effective date must be after the current version started ({instance.effective_from}).'}, status=400)
+            DepartmentWorkingDaysHistory.objects.create(
+                config=instance, valid_from=instance.effective_from, valid_to=eff - timedelta(days=1),
+                **{f: getattr(instance, f) for f in self.SCHEDULE_FIELDS},
+            )
+        serializer.save(effective_from=eff)
+        return Response(serializer.data)
 
 
 class CalendarEventViewSet(viewsets.ModelViewSet):
@@ -2087,7 +2142,7 @@ class PayrollBatchViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'No Salary Structure found.'}, status=400)
 
             employees = Employee.objects.filter(company=batch.company)
-            total_days = salary_structure.total_working_days or 30
+            default_days = salary_structure.total_working_days or 30
 
             first_day = date(batch.year, batch.month, 1)
             last_day = date(batch.year, batch.month, calendar.monthrange(batch.year, batch.month)[1])
@@ -2104,6 +2159,7 @@ class PayrollBatchViewSet(viewsets.ModelViewSet):
                 special = gross * (salary_structure.special_percent or 0) / 100
                 service = gross * (salary_structure.service_charge_percent or 0) / 100
 
+                total_days = compute_attendance_metrics(emp, first_day, last_day)['expected_working_days'] or default_days
                 per_day_salary = gross / total_days if total_days else Decimal(0)
 
                 present_days = Attendance.objects.filter(
@@ -2127,7 +2183,7 @@ class PayrollBatchViewSet(viewsets.ModelViewSet):
                     to_date__lte=last_day
                 ).count()
 
-                days_paid = present_days + paid_leaves
+                days_paid = min(present_days + paid_leaves, total_days)
                 adjusted_gross = per_day_salary * Decimal(days_paid)
 
                 pf = basic * Decimal('0.12')
@@ -2254,7 +2310,7 @@ class GeneratePayrollView(APIView):
             return Response({'error': 'No Salary Structure found.'}, status=400)
 
         employees = Employee.objects.filter(company=company)
-        total_days = salary_structure.total_working_days or 30
+        default_days = salary_structure.total_working_days or 30
 
         first_day = today.replace(day=1)
         last_day = today.replace(day=calendar.monthrange(year, month)[1])
@@ -2271,6 +2327,7 @@ class GeneratePayrollView(APIView):
             special = gross * (salary_structure.special_percent or 0) / 100
             service = gross * (salary_structure.service_charge_percent or 0) / 100
 
+            total_days = compute_attendance_metrics(emp, first_day, last_day)['expected_working_days'] or default_days
             per_day_salary = gross / total_days if total_days else Decimal(0)
 
             present_days = Attendance.objects.filter(
@@ -2294,7 +2351,7 @@ class GeneratePayrollView(APIView):
                 to_date__lte=last_day
             ).count()
 
-            days_paid = present_days + paid_leaves
+            days_paid = min(present_days + paid_leaves, total_days)
             adjusted_gross = per_day_salary * Decimal(days_paid)
 
             pf = basic * Decimal('0.12')
@@ -2312,7 +2369,6 @@ class GeneratePayrollView(APIView):
             loans = LoanApplication.objects.filter(employee=emp.user, status='APPROVED')
             
             from datetime import timedelta
-            import calendar
             
             for l in loans:
                 start_dt = l.created_at.date()
@@ -3004,7 +3060,6 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             
             # ---- Compute attendance (same logic as PayrollAttendanceSummaryView) ----
             cfg = dept_configs.get(emp.department_id)
-            weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
             
             shift = emp.shift_assigned
             s_full = shift.full_day_hours() if shift else 8.0
@@ -3038,7 +3093,7 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
             while curr_date <= e_dt:
                 day_name = curr_date.strftime('%A').lower()
                 is_holiday = curr_date in holidays
-                is_weekend = day_name in weekend_days
+                is_weekend = day_name in cfg_weekend_days(cfg, curr_date) or is_rule_off_day(cfg, curr_date)
                 is_work_day = not is_holiday and not is_weekend
                 
                 if is_work_day:
@@ -3601,12 +3656,12 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         for emp in employees:
             emp_id = emp.id
             dw = DepartmentWiseWorkingDays.objects.filter(department=emp.department).first() if emp.department else None
-            valid_days = build_valid_days(dw.week_start_day, dw.week_end_day) if dw else []
-
             daily_records = {}
             for date in month_dates:
                 day_name = date.strftime('%A').lower()
-                if valid_days and day_name not in valid_days:
+                dwd = dw.at(date) if dw else None
+                valid_days = build_valid_days(dwd.week_start_day, dwd.week_end_day) if dwd else []
+                if (valid_days and day_name not in valid_days) or is_rule_off_day(dw, date):
                     continue
 
                 daily_records[str(date)] = {
@@ -3974,7 +4029,6 @@ class AttendanceLogView(APIView):
                 company=request.user.company
             ).first()
 
-            valid_weekday_names = self._valid_weekday_names(dept_working_days)
             
             # Determine working days for this employee (full month for reference)
             all_working_days = self._get_working_days_for_month(
@@ -4014,7 +4068,7 @@ class AttendanceLogView(APIView):
                 ad = att.date
                 if ad in holidays_dict:
                     continue
-                if ad.strftime('%A').lower() not in valid_weekday_names:
+                if ad.strftime('%A').lower() not in self._valid_weekday_names(dept_working_days, ad) or is_rule_off_day(dept_working_days, ad):
                     continue
                 daily_record = self._process_attendance_record(att, emp.company, teams_map.get((emp.id, att.date)))
                 daily_data.append(daily_record)
@@ -4118,18 +4172,18 @@ class AttendanceLogView(APIView):
 
             # Department off-days (weekdays not in working_days / weekend_days) show as Holiday (★)
             by_date = {d["date"]: i for i, d in enumerate(daily_data)}
-            wd_list = (dept_working_days.weekend_days or []) if dept_working_days else []
+            wd_list = []
             off_cursor = start_date
             while off_cursor <= end_date:
                 if off_cursor in holidays_dict:
                     off_cursor += timedelta(days=1)
                     continue
                 day_key = off_cursor.strftime('%A').lower()
-                if day_key in valid_weekday_names:
+                if day_key in self._valid_weekday_names(dept_working_days, off_cursor) and not is_rule_off_day(dept_working_days, off_cursor):
                     off_cursor += timedelta(days=1)
                     continue
                 iso = str(off_cursor)
-                remark = self._off_day_remark(off_cursor, wd_list)
+                remark = self._off_day_remark(off_cursor, wd_list, dept_working_days)
                 rec = {
                     "date": iso,
                     "status": "Holiday",
@@ -4292,8 +4346,10 @@ class AttendanceLogView(APIView):
             "results": paginated_result
         })
 
-    def _valid_weekday_names(self, dept_working_days):
-        """Lowercase weekday names that count as working days for the department."""
+    def _valid_weekday_names(self, dept_working_days, d=None):
+        """Lowercase weekday names that count as working days for the department (as configured on date d)."""
+        if d is not None and dept_working_days is not None:
+            dept_working_days = dept_working_days.at(d)
         weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
         if dept_working_days:
             wd = dept_working_days.working_days
@@ -4309,9 +4365,13 @@ class AttendanceLogView(APIView):
         # No department row: match prior behavior (Mon–Sat as working; Sunday off)
         return ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-    def _off_day_remark(self, d, weekend_days_list):
+    def _off_day_remark(self, d, weekend_days_list, cfg=None):
         """Tooltip text for a non-working weekday (dept schedule)."""
         long_name = d.strftime('%A')
+        c = cfg.at(d) if cfg is not None else None
+        weekend_days_list = (c.weekend_days or []) if c else []
+        if is_rule_off_day(cfg, d):
+            return f'Off day ({long_name}, week {(d.day - 1) // 7 + 1})'
         if isinstance(weekend_days_list, list):
             for entry in weekend_days_list:
                 if str(entry).lower() == long_name.lower():
@@ -4322,11 +4382,9 @@ class AttendanceLogView(APIView):
         """Dates in range that are working days for the department (excludes company holidays)."""
         working_days = []
         current_date = start_date
-        valid_weekdays = self._valid_weekday_names(dept_working_days)
-
         while current_date <= end_date:
             day_name = current_date.strftime('%A').lower()
-            if day_name in valid_weekdays and current_date not in holidays:
+            if day_name in self._valid_weekday_names(dept_working_days, current_date) and not is_rule_off_day(dept_working_days, current_date) and current_date not in holidays:
                 working_days.append(current_date)
             current_date += timedelta(days=1)
 
@@ -5488,12 +5546,11 @@ class SalaryDisbursementStatementView(APIView):
                     
                     # --- 1. Calculate Expected Working Days ---
                     cfg = dept_configs.get(emp.department_id)
-                    weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
                     
                     expected_days = 0
                     curr = from_dt
                     while curr <= to_dt:
-                        if curr.strftime('%A').lower() not in weekend_days and curr not in holiday_dates:
+                        if curr.strftime('%A').lower() not in cfg_weekend_days(cfg, curr) and not is_rule_off_day(cfg, curr) and curr not in holiday_dates:
                             expected_days += 1
                         curr += timedelta(days=1)
                     
@@ -5503,7 +5560,7 @@ class SalaryDisbursementStatementView(APIView):
                     emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
                     present_days, half_days, ot_hours = 0, 0, 0
                     for att in emp_atts:
-                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in weekend_days
+                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in cfg_weekend_days(cfg, att.date) or is_rule_off_day(cfg, att.date)
                         w_hours = att.total_work_duration.total_seconds() / 3600 if att.total_work_duration else 0
                         
                         if is_holiday_work:
@@ -5605,12 +5662,11 @@ class SalaryDisbursementStatementView(APIView):
                     # Default dynamic calculation (same as above but with all components enabled)
                     # --- 1. Calculate Expected Working Days ---
                     cfg = dept_configs.get(emp.department_id)
-                    weekend_days = [d.lower() for d in cfg.weekend_days] if cfg and cfg.weekend_days else ["saturday", "sunday"]
                     
                     expected_days = 0
                     curr = from_dt
                     while curr <= to_dt:
-                        if curr.strftime('%A').lower() not in weekend_days and curr not in holiday_dates:
+                        if curr.strftime('%A').lower() not in cfg_weekend_days(cfg, curr) and not is_rule_off_day(cfg, curr) and curr not in holiday_dates:
                             expected_days += 1
                         curr += timedelta(days=1)
                     
@@ -5621,7 +5677,7 @@ class SalaryDisbursementStatementView(APIView):
                     emp_atts = [a for a in attendances_qs if a.employee_id == emp.id]
                     present_days, half_days, ot_hours = 0, 0, 0
                     for att in emp_atts:
-                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in weekend_days
+                        is_holiday_work = att.date in holiday_dates or att.date.strftime('%A').lower() in cfg_weekend_days(cfg, att.date) or is_rule_off_day(cfg, att.date)
                         w_hours = (att.total_work_duration.total_seconds() / 3600) if att.total_work_duration else 0
                         
                         if is_holiday_work:

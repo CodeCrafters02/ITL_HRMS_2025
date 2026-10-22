@@ -1182,10 +1182,39 @@ class RecruitmentSerializer(serializers.ModelSerializer):
         
         
 class LeaveSerializer(serializers.ModelSerializer):
-    
+    departments = serializers.PrimaryKeyRelatedField(queryset=Department.objects.all(), many=True, required=False)
+    department_names = serializers.SerializerMethodField()
+
     class Meta:
         model = Leave
-        fields = ['id', 'leave_name', 'count', 'is_paid']
+        fields = [
+            'id', 'leave_name', 'count', 'is_paid', 'departments', 'department_names',
+            'accrual', 'carry_forward_month', 'carry_forward_year', 'carry_forward_max', 'effective_from',
+        ]
+        read_only_fields = ['effective_from']
+
+    def get_department_names(self, obj):
+        return [d.department_name for d in obj.departments.all()]
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        company = getattr(getattr(request, 'user', None), 'company', None)
+        name = (attrs.get('leave_name') or getattr(self.instance, 'leave_name', '') or '').strip().lower()
+        depts = attrs.get('departments')
+        if depts is None:
+            depts = list(self.instance.departments.all()) if self.instance else []
+        dept_ids = {d.id for d in depts}
+        if company and name:
+            clash = Leave.objects.filter(company=company, leave_name__iexact=name)
+            if self.instance:
+                clash = clash.exclude(pk=self.instance.pk)
+            for other in clash:
+                other_ids = {d.id for d in other.departments.all()}
+                if not dept_ids or not other_ids or dept_ids & other_ids:
+                    raise serializers.ValidationError('A leave type with this name already applies to one of the selected departments.')
+        if attrs.get('accrual', getattr(self.instance, 'accrual', 'yearly')) == 'yearly':
+            attrs['carry_forward_month'] = False
+        return attrs
 
 class FlexibleJSONField(serializers.JSONField):
     def to_internal_value(self, data):
@@ -1345,8 +1374,20 @@ class DepartmentWiseWorkingDaysSerializer(serializers.ModelSerializer):
         model = DepartmentWiseWorkingDays
         fields = [
             'id', 'department', 'shifts', 'working_days_count',
-            'week_start_day', 'week_end_day', 'working_days', 'weekend_days', 'company'
+            'week_start_day', 'week_end_day', 'working_days', 'weekend_days', 'off_day_rules', 'effective_from', 'company'
         ]
+        read_only_fields = ['effective_from']
+
+    def validate_off_day_rules(self, value):
+        days = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
+        out = []
+        for r in value or []:
+            wd = str(r.get('weekday', '')).lower() if isinstance(r, dict) else ''
+            weeks = r.get('weeks') or [] if isinstance(r, dict) else []
+            if wd not in days or not isinstance(weeks, list) or any(w not in (1, 2, 3, 4, 5, -1) for w in weeks):
+                raise serializers.ValidationError('Invalid off day rule.')
+            out.append({'weekday': wd, 'weeks': sorted(set(weeks))})
+        return out
 
 
 class CalendarEventSerializer(serializers.ModelSerializer):

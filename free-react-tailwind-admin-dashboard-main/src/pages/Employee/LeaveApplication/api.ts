@@ -7,6 +7,13 @@ export interface LeaveBalance {
     is_paid: boolean;
     used_count: number;
     remaining_count: number;
+    accrual?: 'yearly' | 'monthly';
+    carry_forward_month?: boolean;
+    carry_forward_year?: boolean;
+    carry_forward_max?: number | null;
+    carried_in?: number;
+    period_total?: number;
+    period_label?: string;
 }
 
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';

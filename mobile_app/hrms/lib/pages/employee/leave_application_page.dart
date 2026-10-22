@@ -119,8 +119,10 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   }
 
   Future<void> _handleApplyLeave() async {
-    final result = await showDialog<bool>(
+    final result = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => LeaveApplicationFormDialog(
         leaveTypes: _leaveTypes,
       ),
@@ -386,7 +388,12 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
-          _buildLeaveInfoRow('Total', leaveType.count.toString()),
+          _buildLeaveInfoRow(
+            leaveType.periodLabel.isEmpty ? 'Total' : 'Total (${leaveType.periodLabel})',
+            _formatDays(leaveType.periodTotal ?? leaveType.count.toDouble()),
+          ),
+          if (leaveType.carriedIn > 0)
+            _buildLeaveInfoRow('Carried fwd', _formatDays(leaveType.carriedIn)),
           _buildLeaveInfoRow('Used', _formatDays(leaveType.usedCount)),
           _buildLeaveInfoRow('Remaining', _formatDays(leaveType.remainingCount)),
           const Spacer(),
