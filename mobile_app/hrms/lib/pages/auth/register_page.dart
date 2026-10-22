@@ -535,6 +535,7 @@ class _StatusSheetState extends State<_StatusSheet> {
     final (IconData icon, Color color, String title, String body) = switch (s) {
       'approved' => (Icons.verified_rounded, const Color(0xFF16A34A), 'Approved', 'You have joined ${_result?['company_name'] ?? 'the company'}. You can sign in now.'),
       'pending' => (Icons.hourglass_top_rounded, const Color(0xFFD97706), 'Awaiting approval', 'An admin has not reviewed your request yet.'),
+      'registered' => (Icons.how_to_reg_rounded, const Color(0xFF16A34A), 'Account found', 'This email already has an account${_result?['company_name'] != null ? ' at ${_result?['company_name']}' : ''}. Sign in with it.'),
       'not_found' => (Icons.search_off_rounded, AppStitchTheme.lightOnSurfaceMuted, 'Not found', 'No registration request with this email.'),
       _ => (Icons.info_outline_rounded, AppStitchTheme.lightOnSurfaceMuted, '', ''),
     };

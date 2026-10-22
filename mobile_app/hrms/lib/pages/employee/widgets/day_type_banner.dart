@@ -1,7 +1,69 @@
 import 'package:flutter/material.dart';
 import '../../../models/dashboard_model.dart';
+import '../../../theme/app_stitch_theme.dart';
+import '../../../widgets/glass_card.dart';
 
-/// "Today is a holiday / weekly off / leave / working day" strip for the employee dashboard.
+/// Small pill describing what today is, e.g. Working day or Holiday with the holiday's name.
+class DayTypePill extends StatelessWidget {
+  const DayTypePill({super.key, required this.info});
+
+  final DayInfo info;
+
+  static Color colorFor(String type) {
+    switch (type) {
+      case 'holiday':
+        return const Color(0xFF0EA5E9);
+      case 'weekly_off':
+        return const Color(0xFF64748B);
+      case 'leave':
+      case 'half_day_leave':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF10B981);
+    }
+  }
+
+  static String labelFor(DayInfo info) {
+    switch (info.type) {
+      case 'holiday':
+        return 'Holiday';
+      case 'weekly_off':
+        return 'Weekly off';
+      case 'leave':
+        return 'On leave';
+      case 'half_day_leave':
+        return 'Half-day leave';
+      default:
+        return 'Working day';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = colorFor(info.type);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              info.type != 'working' && info.detail.isNotEmpty ? '${labelFor(info)} · ${info.detail}' : labelFor(info),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact TODAY card with the day-type pill, used when there is no hours progress to show (holiday, weekly off, leave).
 class DayTypeBanner extends StatelessWidget {
   const DayTypeBanner({super.key, required this.info});
 
@@ -9,61 +71,17 @@ class DayTypeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    late final Color color;
-    late final IconData icon;
-    late final String text;
-    final d = info.detail.isEmpty ? '' : ' — ${info.detail}';
-    switch (info.type) {
-      case 'holiday':
-        color = const Color(0xFF0EA5E9);
-        icon = Icons.celebration_rounded;
-        text = 'Holiday$d';
-        break;
-      case 'weekly_off':
-        color = const Color(0xFF64748B);
-        icon = Icons.weekend_rounded;
-        text = 'Weekly off$d';
-        break;
-      case 'leave':
-        color = const Color(0xFFF59E0B);
-        icon = Icons.beach_access_rounded;
-        text = "You're on leave today$d";
-        break;
-      case 'half_day_leave':
-        color = const Color(0xFFF59E0B);
-        icon = Icons.timelapse_rounded;
-        text = 'Half-day leave today$d';
-        break;
-      default:
-        color = const Color(0xFF10B981);
-        icon = Icons.work_rounded;
-        text = 'Working day';
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
+    return GlassCard(
+      borderRadius: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, size: 20, color: color),
+          const Text(
+            'TODAY',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: AppStitchTheme.lightOnSurfaceMuted),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('TODAY', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 0.8, color: color)),
-                const SizedBox(height: 2),
-                Text(text, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: color)),
-              ],
-            ),
-          ),
+          const SizedBox(width: 10),
+          Flexible(child: DayTypePill(info: info)),
         ],
       ),
     );

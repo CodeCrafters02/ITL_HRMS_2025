@@ -70,7 +70,6 @@ class PresenceCard extends StatelessWidget {
                 Text('Teams: $cur', style: val),
                 if (presence.currentSince != null) Text('  since ${presence.currentSince}', style: muted),
               ]),
-              if (presence.workingLabel != null) pair('Working', presence.workingLabel!),
               if (sh != null)
                 sh.assigned
                     ? pair('In shift ${sh.start}–${sh.end}', sh.workingLabel ?? '')

@@ -99,6 +99,12 @@ class RegistrationRequestViewSet(viewsets.GenericViewSet):
         email = (request.query_params.get('email') or '').strip().lower()
         req = RegistrationRequest.objects.filter(email__iexact=email).first() if email else None
         if not req:
+            # No self-registration request: the email may still belong to an account an admin created.
+            user = UserRegister.objects.filter(email__iexact=email).first() if email else None
+            emp = Employee.objects.filter(email__iexact=email).select_related('company').first() if email else None
+            if user or emp:
+                company = (user.company if user and user.company_id else None) or (emp.company if emp else None)
+                return Response({'status': 'registered', 'company_name': company.name if company else None})
             return Response({'status': 'not_found'})
         return Response({'status': req.status, 'company_name': req.company.name if req.company else None})
 
