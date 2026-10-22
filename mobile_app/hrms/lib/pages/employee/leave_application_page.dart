@@ -119,6 +119,9 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
   }
 
   Future<void> _handleApplyLeave() async {
+    // Types may still be loading or have failed earlier; retry before opening the form.
+    if (_leaveTypes.isEmpty) await _fetchLeaveTypes();
+    if (!mounted) return;
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -338,7 +341,24 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
 
   Widget _buildLeaveTypesSection() {
     if (_leaveTypes.isEmpty) {
-      return const SizedBox.shrink();
+      return GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: AppStitchTheme.lightOnSurfaceMuted),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No leave types are available for you yet. Please contact your admin.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppStitchTheme.lightOnSurfaceMuted,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Column(
@@ -621,6 +641,17 @@ class _LeaveApplicationPageState extends State<LeaveApplicationPage> {
                     color: Color(0xFF111827),
                   ),
                 ),
+                if (leave.status == 'Rejected' && (leave.rejectionReason ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Rejected: ${leave.rejectionReason}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFEF4444),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -302,6 +302,7 @@ const Sidebar = () => {
                                                   loanApprovals: unreadCount('loanApprovals', employeeCounts.loanApprovals),
                                                   reimbursementApprovals: unreadCount('reimbursementApprovals', employeeCounts.reimbursementApprovals),
                                                   leaveApprovals: unreadLeaveApprovalCount,
+                                                  leaveApplication: unreadCount('leaveApplicationUpdates', employeeCounts.leaveApplicationUpdates),
                                                   assignTask: unreadCount('assignTask', employeeCounts.assignTask),
                                                   requestsFolder: unreadRequestsFolderCount,
                                                   reimbursementFolder: unreadReimbursementFolderCount,

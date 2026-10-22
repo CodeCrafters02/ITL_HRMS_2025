@@ -1413,7 +1413,7 @@ class LeaveViewSet(viewsets.ModelViewSet):
         company = self.request.user.company
         if not company:
             raise serializers.ValidationError("No company found for your admin.")
-        serializer.save(company=company)
+        serializer.save(company=company, effective_from=date.today())
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)

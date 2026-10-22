@@ -585,7 +585,12 @@ class Leave(models.Model):
         for h in self._hist_cache:
             if (h.valid_from is None or h.valid_from <= d) and d <= h.valid_to:
                 return h
-        return self
+        # Before the oldest recorded version: use that oldest version.
+        return self._hist_cache[0] if self._hist_cache else self
+
+    def refresh_from_db(self, *args, **kwargs):
+        self.__dict__.pop('_hist_cache', None)
+        super().refresh_from_db(*args, **kwargs)
 
     def applies_to(self, employee):
         ids = {d.id for d in self.departments.all()}

@@ -1150,9 +1150,10 @@ class EmployeeService {
       }
 
       final uri = Uri.parse(ApiConfig.employeeLeaveCreateUrl);
-      final finalUri = status != null
-          ? uri.replace(queryParameters: {'status': status})
-          : uri;
+      final finalUri = uri.replace(queryParameters: {
+        'page_size': '100', // backend default is 10 per page
+        if (status != null) 'status': status,
+      });
 
       final response = await http.get(
         finalUri,

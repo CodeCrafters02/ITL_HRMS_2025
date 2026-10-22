@@ -49,6 +49,7 @@ class AppliedLeave {
   final String status;
   final String createdAt;
   final String? leaveDuration;
+  final String? rejectionReason;
 
   AppliedLeave({
     required this.id,
@@ -60,6 +61,7 @@ class AppliedLeave {
     required this.status,
     required this.createdAt,
     this.leaveDuration,
+    this.rejectionReason,
   });
 
   factory AppliedLeave.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class AppliedLeave {
       status: json['status'] ?? 'Pending',
       createdAt: json['created_at'] ?? '',
       leaveDuration: json['leave_duration'],
+      rejectionReason: json['rejection_reason'],
     );
   }
 }

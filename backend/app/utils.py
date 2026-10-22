@@ -100,6 +100,14 @@ def leave_balance(employee, leave, on_date=None, leaves=None):
             to_date__gte=_dt.date(start_year, 1, 1), from_date__lte=_dt.date(today.year, 12, 31),
         ))
 
+    # Policy start: a leave type created on a date doesn't accrue for earlier months.
+    hist = list(leave.history.all())
+    if hist:
+        first = min(hist, key=lambda h: h.valid_from or _dt.date.min)
+        policy_start = first.valid_from
+    else:
+        policy_start = leave.effective_from
+
     def used_in(s, e):
         return sum(leave_units_in(lv, s, e) for lv in leaves)
 
@@ -128,6 +136,8 @@ def leave_balance(employee, leave, on_date=None, leaves=None):
                 carry = 0.0
                 continue
             if joined and e < joined and not (year == today.year and month == today.month):
+                continue
+            if policy_start and e < policy_start and not (year == today.year and month == today.month):
                 continue
             used = used_in(s, e)
             total = float(mcfg.count) + carry

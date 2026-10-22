@@ -37,6 +37,7 @@ export interface EmployeeNavCounts {
     loanApprovals: number;
     reimbursementApprovals: number;
     leaveApprovals: number;
+    leaveApplication: number;
     assignTask: number;
     requestsFolder: number;
     reimbursementFolder: number;
@@ -126,6 +127,7 @@ export const buildEmployeeNav = (mode: EmployeeNavMode, t: TFunction, c: Employe
             title: t('Time & Pay'),
             items: [
                 { label: t('Attendance History'), to: '/employee/attendance-history', icon: <IconMenuCharts /> },
+                { label: t('Leave Application'), to: '/employee/leave-application', icon: <IconMenuCalendar />, badge: c.leaveApplication },
                 { label: t('My Payslips'), to: '/employee/my-payslips', icon: <IconMenuInvoice /> },
                 {
                     key: 'reimbursement',

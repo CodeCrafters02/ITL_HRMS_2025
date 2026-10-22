@@ -246,15 +246,13 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                     ),
                     child: const Row(
                       children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                        Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFF6B7280)),
                         SizedBox(width: 10),
-                        Text(
-                          'Loading leave types...',
-                          style: TextStyle(fontSize: 14, color: Color(0xFF9CA3AF)),
+                        Expanded(
+                          child: Text(
+                            'No leave types are available for you yet. Please contact your admin.',
+                            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                          ),
                         ),
                       ],
                     ),
@@ -566,7 +564,7 @@ class _LeaveApplicationFormDialogState extends State<LeaveApplicationFormDialog>
                     ),
                     const SizedBox(width: 12),
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _submitLeave,
+                      onPressed: (_isLoading || widget.leaveTypes.isEmpty) ? null : _submitLeave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4F46E5),
                         foregroundColor: Colors.white,
