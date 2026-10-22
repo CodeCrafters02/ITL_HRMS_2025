@@ -17,6 +17,7 @@ const API_URL = `${API_BASE_URL}/app/department-working-days/`;
 const API_DEPTS = `${API_BASE_URL}/app/departments/?page_size=1000`;
 const API_SHIFTS = `${API_BASE_URL}/app/shift-policies/`;
 
+const todayISO = () => new Date().toLocaleDateString('en-CA');
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 type Department = { id: number; department_name: string };
@@ -57,7 +58,7 @@ const AdminDeptWorkingDays = () => {
         working_days_count: 5,
         working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
         off_day_rules: [] as OffRule[],
-        effective_from: '',
+        effective_from: todayISO(),
     });
 
     useEffect(() => {
@@ -135,7 +136,7 @@ const AdminDeptWorkingDays = () => {
             working_days_count: 5, 
             working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
             off_day_rules: [],
-            effective_from: '',
+            effective_from: todayISO(),
         });
         setModalOpen(true);
     };
@@ -150,7 +151,7 @@ const AdminDeptWorkingDays = () => {
             working_days_count: it.working_days_count || 5,
             working_days: Array.isArray(it.working_days) && it.working_days.length > 0 ? it.working_days : [],
             off_day_rules: Array.isArray(it.off_day_rules) ? it.off_day_rules : [],
-            effective_from: '',
+            effective_from: todayISO(),
             current_effective_from: it.effective_from || null,
         });
         setModalOpen(true);
@@ -453,7 +454,7 @@ const AdminDeptWorkingDays = () => {
                                                             <label className="font-semibold">Effective From</label>
                                                             <input className="form-input" type="date" value={form.effective_from || ''} min={form.current_effective_from ? new Date(new Date(form.current_effective_from).getTime() + 86400000).toISOString().slice(0, 10) : undefined} onChange={(e) => setForm({ ...form, effective_from: e.target.value })} />
                                                             <div className="text-xs text-white-dark mt-1">
-                                                                Changes apply from this date onward (blank = today). Earlier dates keep the previous working days, so past attendance and payroll don't change.
+                                                                Changes apply from this date onward (defaults to today). Earlier dates keep the previous working days, so past attendance and payroll don't change.
                                                                 {form.current_effective_from ? ` Current version started on ${form.current_effective_from}.` : ''}
                                                             </div>
                                                         </div>
