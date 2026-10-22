@@ -13,6 +13,7 @@ class MonthlyAttendance {
   final String breakTime;
   final String source;
   final double? requiredFullHours;
+  final String? holidayName;
   final double? requiredHalfHours;
 
   MonthlyAttendance({
@@ -30,6 +31,7 @@ class MonthlyAttendance {
     required this.breakTime,
     this.source = 'manual',
     this.requiredFullHours,
+    this.holidayName,
     this.requiredHalfHours,
   });
 
@@ -48,6 +50,7 @@ class MonthlyAttendance {
       overtimeHours: json['overtime_hours']?.toString() ?? '-',
       breakTime: json['break_time'] ?? '-',
       source: json['source']?.toString() ?? 'manual',
+      holidayName: json['holiday_name']?.toString(),
       requiredFullHours: (json['required_full_hours'] as num?)?.toDouble(),
       requiredHalfHours: (json['required_half_hours'] as num?)?.toDouble(),
     );

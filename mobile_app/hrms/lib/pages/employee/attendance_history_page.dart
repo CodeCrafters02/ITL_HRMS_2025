@@ -137,9 +137,18 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     return DateTime(d.year, d.month, d.day).isAfter(DateTime(n.year, n.month, n.day));
   }
 
+  bool _isHoliday(MonthlyAttendance r) => (r.holidayName ?? '').isNotEmpty || r.status.toLowerCase() == 'holiday';
+
   bool _isOffDay(MonthlyAttendance r) {
     final s = r.status.toLowerCase();
-    return r.isWeekend || s == 'weekend' || s == 'holiday';
+    return r.isWeekend || s == 'weekend' || _isHoliday(r);
+  }
+
+  /// Visual style of a day: company holiday > weekend/weekly off > the attendance status.
+  _StatusStyle _dayStyle(MonthlyAttendance r) {
+    if (_isHoliday(r)) return _style('holiday');
+    if (r.isWeekend || r.status.toLowerCase() == 'weekend') return _style('weekend');
+    return _style(r.status);
   }
 
   String _clock(String v) => (v.isEmpty || v == '-') ? '—' : v;
@@ -624,7 +633,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                 runSpacing: 6,
                 alignment: WrapAlignment.center,
                 children: [
-                  for (final s in ['present', 'half_day', 'leave', 'absent', 'holiday'])
+                  for (final s in ['present', 'half_day', 'leave', 'absent', 'holiday', 'weekend'])
                     Row(mainAxisSize: MainAxisSize.min, children: [
                       Container(width: 9, height: 9, decoration: BoxDecoration(color: _style(s).color, shape: BoxShape.circle)),
                       const SizedBox(width: 5),
@@ -655,17 +664,27 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   Widget _calendarCell(int day, DateTime date, MonthlyAttendance? rec, String key) {
     final today = _isToday(date);
     final future = _isFuture(date);
-    final off = rec != null && _isOffDay(rec);
-    final style = rec == null ? null : _style(off && rec.status.toLowerCase() != 'holiday' ? 'weekend' : rec.status);
-    final filled = rec != null && !off && !future && style != null;
+    final holiday = rec != null && _isHoliday(rec);
+    final weekend = rec != null && !holiday && _isOffDay(rec);
+    final style = rec == null ? null : _dayStyle(rec);
+    // Holidays and weekends are always marked (even in the future); attendance colours only for past/today.
+    final filled = style != null && (holiday || weekend || !future);
     final isSel = _selectedDateStr == key;
+    final worked = weekend && rec.checkIn != '-' && rec.checkIn.isNotEmpty;
+    final numberColor = holiday
+        ? style!.color
+        : weekend
+            ? const Color(0xFF64748B)
+            : future
+                ? _muted.withValues(alpha: 0.55)
+                : (filled ? style.color : _ink);
     return GestureDetector(
       onTap: rec == null ? null : () => setState(() => _selectedDateStr = isSel ? null : key),
       child: Container(
         height: 42,
         margin: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
-          color: filled ? style.color.withValues(alpha: isSel ? 0.30 : 0.16) : (isSel ? AppStitchTheme.primary.withValues(alpha: 0.10) : Colors.transparent),
+          color: filled ? style.color.withValues(alpha: isSel ? 0.32 : (weekend ? 0.18 : 0.16)) : (isSel ? AppStitchTheme.primary.withValues(alpha: 0.10) : Colors.transparent),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: today ? AppStitchTheme.primary : (isSel ? AppStitchTheme.primary.withValues(alpha: 0.6) : Colors.transparent),
@@ -680,19 +699,16 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: today || filled ? FontWeight.w900 : FontWeight.w600,
-                color: future || (off && rec.status.toLowerCase() != 'holiday')
-                    ? _muted.withValues(alpha: 0.55)
-                    : (filled ? style.color : _ink),
+                color: numberColor,
               ),
             ),
             const SizedBox(height: 3),
+            // holiday: blue dot; weekend: grey dot (green when worked); working day: attendance dot
             Container(
               width: 5,
               height: 5,
               decoration: BoxDecoration(
-                color: filled
-                    ? style.color
-                    : (rec != null && off && rec.status.toLowerCase() == 'holiday' ? _style('holiday').color : Colors.transparent),
+                color: filled ? (worked ? _style('present').color : style.color) : Colors.transparent,
                 shape: BoxShape.circle,
               ),
             ),
@@ -805,9 +821,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     final today = _isToday(date);
     final future = _isFuture(date);
     final off = _isOffDay(r);
-    final holiday = r.status.toLowerCase() == 'holiday';
-    final st = _style(off && !holiday ? 'weekend' : r.status);
-    final accent = future ? const Color(0xFF94A3B8) : st.color;
+    final holiday = _isHoliday(r);
+    final st = _dayStyle(r);
+    final accent = future && !off ? const Color(0xFF94A3B8) : st.color;
     final hasTimes = r.checkIn != '-' || r.checkOut != '-';
 
     return Padding(
@@ -851,7 +867,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                           runSpacing: 4,
                           crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
-                            _pill(future ? 'Upcoming' : st.label, future ? const Color(0xFF94A3B8) : st.color, icon: future ? null : st.icon),
+                            _pill(holiday && (r.holidayName ?? '').isNotEmpty ? 'Holiday · ${r.holidayName}' : (future && !off ? 'Upcoming' : st.label), future && !off ? const Color(0xFF94A3B8) : st.color, icon: future && !off ? null : st.icon),
                             if (today) _pill('Today', AppStitchTheme.primary, solid: true),
                             if (r.isLate && !future) _pill(r.lateDuration != null && r.lateDuration!.isNotEmpty ? 'Late ${r.lateDuration}' : 'Late', const Color(0xFFEC4899)),
                           ],
@@ -929,8 +945,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   void _showRecordDetails(MonthlyAttendance r) {
     final date = _parse(r.date);
     final off = _isOffDay(r);
-    final holiday = r.status.toLowerCase() == 'holiday';
-    final st = _style(off && !holiday ? 'weekend' : r.status);
+    final st = _dayStyle(r);
     final overtime = r.overtimeHours != '-' && r.overtimeHours != '0' && r.overtimeHours.isNotEmpty;
 
     showModalBottomSheet(
@@ -970,7 +985,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
                       ],
                     ),
                   ),
-                  _pill(_isFuture(date) ? 'Upcoming' : st.label, st.color, icon: st.icon),
+                  _pill(_isFuture(date) && !off ? 'Upcoming' : st.label, st.color, icon: st.icon),
                 ],
               ),
               const SizedBox(height: 18),
@@ -989,6 +1004,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
               if (overtime) _noteBanner(Icons.bolt_rounded, 'Overtime: ${r.overtimeHours}', const Color(0xFF8B5CF6)),
               const SizedBox(height: 4),
               _infoRow(Icons.schedule_rounded, 'Shift', _clock(r.shift)),
+              if (_isHoliday(r) && (r.holidayName ?? '').isNotEmpty) _infoRow(Icons.celebration_rounded, 'Holiday', r.holidayName!),
               if (r.requiredFullHours != null && !off)
                 _infoRow(
                   Icons.rule_rounded,

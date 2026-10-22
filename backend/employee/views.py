@@ -975,6 +975,12 @@ class AttendanceHistoryAPIView(APIView):
         # Index by date
         att_map = {att.date: att for att in attendances}
 
+        # Company holidays in range, so every client can mark them the same way
+        holiday_names = {
+            h.date: (h.name or 'Holiday')
+            for h in CalendarEvent.objects.filter(company=employee.company, is_holiday=True, date__range=(start_date, end_date))
+        }
+
         # Teams presence per day (punch times + working hours) when the company is Teams-managed
         from types import SimpleNamespace
         from employee import presence_engine as _pe
@@ -1148,7 +1154,9 @@ class AttendanceHistoryAPIView(APIView):
                                 late_duration = str(late_delta).split('.')[0]
             else:
                 # No attendance record
-                if not is_weekend and day not in approved_leave_days:
+                if not is_weekend and day in holiday_names and day not in approved_leave_days:
+                    status = 'holiday'  # company holiday: not absent, not a working day
+                elif not is_weekend and day not in approved_leave_days:
                     # Only mark as absent if it's a past working day or today
                     if day <= today:
                         status = 'absent'
@@ -1169,6 +1177,8 @@ class AttendanceHistoryAPIView(APIView):
                 'required_full_hours': shift.full_day_hours() if shift else 8.0,
                 'required_half_hours': shift.half_day_hours() if shift else 4.0,
                 'is_weekend': is_weekend,
+                'is_holiday': day in holiday_names,
+                'holiday_name': holiday_names.get(day),
                 'status': status,
                 'is_late': is_late,
                 'late_duration': late_duration,
@@ -1178,7 +1188,7 @@ class AttendanceHistoryAPIView(APIView):
                 'source': ('admin' if getattr(att, '_edited', False) else row_source),
             })
 
-            if not is_weekend:
+            if not is_weekend and status != 'holiday':
                 stats['working_days'] += 1
 
             day += timedelta(days=1)

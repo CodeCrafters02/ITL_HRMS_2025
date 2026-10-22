@@ -1,7 +1,7 @@
 import { authFetch } from '../../../utils/authFetch';
 import type { Summary as PresenceSummary } from '../PresenceCard';
 
-export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day' | 'weekend' | 'checked_in' | 'no_data';
+export type AttendanceStatus = 'present' | 'absent' | 'leave' | 'half_day' | 'weekend' | 'holiday' | 'checked_in' | 'no_data';
 
 export interface AttendanceDayRecord {
     date: string;

@@ -14,6 +14,7 @@ const statusClassMap: Record<AttendanceStatus, string> = {
     leave: 'bg-info-light text-info',
     half_day: 'bg-warning-light text-warning',
     weekend: 'bg-dark-light text-white-dark',
+    holiday: 'bg-info-light text-info',
     checked_in: 'bg-primary-light text-primary',
     no_data: 'bg-secondary-light text-secondary',
 };
@@ -24,6 +25,7 @@ const statusLabelMap: Record<AttendanceStatus, string> = {
     leave: 'Leave',
     half_day: 'Half Day',
     weekend: 'Weekend',
+    holiday: 'Holiday',
     checked_in: 'Checked In',
     no_data: 'No Data',
 };
@@ -34,6 +36,7 @@ const statusDotMap: Record<AttendanceStatus, string> = {
     leave: 'bg-info',
     half_day: 'bg-warning',
     weekend: 'bg-dark-light',
+    holiday: 'bg-info',
     checked_in: 'bg-primary',
     no_data: 'bg-secondary',
 };
