@@ -259,9 +259,12 @@ def compute_attendance_metrics(employee, start_date, end_date):
                     elif att.check_in and att.check_out:
                         w_hours = (att.check_out - att.check_in).total_seconds() / 3600
 
-                    if w_hours >= s_full:
+                    day_shift = shift.at(curr) if shift else None
+                    day_full = day_shift.full_day_hours() if day_shift else s_full
+                    day_half = day_shift.half_day_hours() if day_shift else s_half
+                    if w_hours >= day_full:
                         present_days += 1
-                    elif w_hours >= s_half:
+                    elif w_hours >= day_half:
                         half_days += 1
                     else:
                         absent_days += 1

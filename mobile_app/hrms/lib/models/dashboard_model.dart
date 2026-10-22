@@ -2,6 +2,52 @@ import 'break_model.dart';
 import 'overtime_model.dart';
 import 'payroll_model.dart';
 
+/// What kind of day today is for the employee.
+class DayInfo {
+  final String type; // holiday | weekly_off | leave | half_day_leave | working
+  final String label;
+  final String detail;
+
+  const DayInfo({required this.type, required this.label, required this.detail});
+
+  factory DayInfo.fromJson(Map<String, dynamic> j) => DayInfo(
+        type: j['type'] ?? 'working',
+        label: j['label'] ?? 'Working day',
+        detail: j['detail'] ?? '',
+      );
+}
+
+/// Today's progress towards the shift's half day / full day hours.
+class DayProgress {
+  final String state; // not_started | in_progress | half_day | full_day | off_day
+  final int workedSeconds;
+  final int halfDaySeconds;
+  final int fullDaySeconds;
+  final bool running;
+  final DateTime fetchedAt;
+
+  DayProgress({
+    required this.state,
+    required this.workedSeconds,
+    required this.halfDaySeconds,
+    required this.fullDaySeconds,
+    required this.running,
+    DateTime? fetchedAt,
+  }) : fetchedAt = fetchedAt ?? DateTime.now();
+
+  factory DayProgress.fromJson(Map<String, dynamic> j) => DayProgress(
+        state: j['state'] ?? 'not_started',
+        workedSeconds: (j['worked_seconds'] ?? 0).toInt(),
+        halfDaySeconds: (j['half_day_seconds'] ?? 4 * 3600).toInt(),
+        fullDaySeconds: (j['full_day_seconds'] ?? 8 * 3600).toInt(),
+        running: j['running'] ?? false,
+      );
+
+  /// Worked seconds including time elapsed since the data was fetched while the clock is running.
+  int liveSeconds() =>
+      workedSeconds + (running ? DateTime.now().difference(fetchedAt).inSeconds : 0);
+}
+
 class DashboardData {
   final String? employeeName;
   final String? employeePhoto;
@@ -22,6 +68,8 @@ class DashboardData {
   final String? totalWorkDurationWeek;
   final String? todayWorkDuration;
   final int attendanceScore;
+  final DayProgress? dayProgress;
+  final DayInfo? dayInfo;
 
   DashboardData({
     this.employeeName,
@@ -43,6 +91,8 @@ class DashboardData {
     this.totalWorkDurationWeek,
     this.todayWorkDuration,
     required this.attendanceScore,
+    this.dayProgress,
+    this.dayInfo,
   });
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
@@ -76,6 +126,12 @@ class DashboardData {
       totalWorkDurationWeek: json['total_work_duration_week'],
       todayWorkDuration: json['today_work_duration'],
       attendanceScore: json['attendance_score'] ?? 0,
+      dayProgress: json['day_progress'] is Map<String, dynamic>
+          ? DayProgress.fromJson(json['day_progress'] as Map<String, dynamic>)
+          : null,
+      dayInfo: json['day_info'] is Map<String, dynamic>
+          ? DayInfo.fromJson(json['day_info'] as Map<String, dynamic>)
+          : null,
     );
   }
 

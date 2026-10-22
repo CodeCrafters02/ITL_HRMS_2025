@@ -606,6 +606,67 @@ class ShiftPolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = ShiftPolicy
         fields = '__all__'
+        read_only_fields = ['effective_from', 'pending_effective_from', 'pending_data']
+
+    def validate(self, attrs):
+        import datetime as _dt
+        inst = self.instance
+        get = lambda k: attrs.get(k, getattr(inst, k, None))
+        checkin, checkout = get('checkin'), get('checkout')
+        grace, half, full = get('grace_period'), get('half_day'), get('full_day')
+        errs = {}
+
+        # Defaults: full day = check-in to check-out, half day = half of the full day
+        if checkin and checkout and checkin != checkout:
+            _w = _dt.datetime.combine(_dt.date.min, checkout) - _dt.datetime.combine(_dt.date.min, checkin)
+            if _w <= _dt.timedelta(0):
+                _w += _dt.timedelta(days=1)
+            if full is None:
+                full = attrs['full_day'] = _w
+            if half is None:
+                half = attrs['half_day'] = full / 2
+
+        window = None
+        if checkin and checkout:
+            if checkin == checkout:
+                errs['checkout'] = 'Check-out must be different from check-in.'
+            else:
+                window = _dt.datetime.combine(_dt.date.min, checkout) - _dt.datetime.combine(_dt.date.min, checkin)
+                if window <= _dt.timedelta(0):
+                    window += _dt.timedelta(days=1)  # overnight shift
+                if window < _dt.timedelta(hours=1):
+                    errs['checkout'] = 'Shift must be at least 1 hour long.'
+                elif window > _dt.timedelta(hours=16):
+                    errs['checkout'] = 'Shift cannot exceed 16 hours.'
+
+        if full is not None:
+            if full <= _dt.timedelta(0):
+                errs['full_day'] = 'Full day hours must be greater than zero.'
+            elif window and full > window:
+                errs['full_day'] = 'Full day hours cannot be more than the shift duration (check-in to check-out).'
+        if half is not None:
+            if half <= _dt.timedelta(0):
+                errs['half_day'] = 'Half day hours must be greater than zero.'
+            elif full is not None and half >= full:
+                errs['half_day'] = 'Half day hours must be less than the full day hours.'
+            elif full is None and window and half >= window:
+                errs['half_day'] = 'Half day hours must be less than the shift duration.'
+        if grace is not None:
+            if grace < _dt.timedelta(0) or grace > _dt.timedelta(hours=2):
+                errs['grace_period'] = 'Grace period must be between 0 and 2 hours.'
+            elif window and grace >= window:
+                errs['grace_period'] = 'Grace period must be shorter than the shift.'
+
+        name = (attrs.get('shift_type') or '').strip()
+        request = self.context.get('request')
+        company = getattr(getattr(request, 'user', None), 'company', None)
+        if name and company and (inst is None or inst.shift_type.strip().lower() != name.lower()):
+            if ShiftPolicy.objects.filter(company=company, shift_type__iexact=name).exists():
+                errs['shift_type'] = 'A shift with this name already exists.'
+
+        if errs:
+            raise serializers.ValidationError(errs)
+        return attrs
 
 
        
@@ -1598,6 +1659,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     def get_is_late(self, obj):
         check_in = obj.check_in
         shift = obj.employee.shift_assigned if obj.employee else None
+        shift = shift.at(obj.date) if shift else None
 
         if not (check_in and shift and shift.checkin and shift.grace_period):
             return False

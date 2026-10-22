@@ -1496,11 +1496,56 @@ class ShiftPolicyViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['shift_type']
 
-    def get_queryset(self):
-        return ShiftPolicy.objects.filter(company=self.request.user.company)
-
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
+
+    def update(self, request, *args, **kwargs):
+        ShiftPolicy.promote_due()
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+        policy = {f: v[f] for f in ShiftPolicy.POLICY_FIELDS if f in v}
+        changed = any(val != getattr(instance, f) for f, val in policy.items())
+
+        if changed:
+            raw = request.data.get('effective_from')
+            today = timezone.localdate()
+            try:
+                eff = date.fromisoformat(str(raw)[:10]) if raw else today + timedelta(days=1)
+            except ValueError:
+                return Response({'detail': 'Invalid effective date.'}, status=400)
+            if eff <= today:
+                return Response({'detail': 'Shift changes apply to upcoming days only. Choose tomorrow or a later date.'}, status=400)
+            if instance.effective_from and eff <= instance.effective_from:
+                return Response({'detail': f'Effective date must be after the current version started ({instance.effective_from}).'}, status=400)
+            # Non-schedule fields (name) are saved now; the timings wait for their date.
+            for k, val in v.items():
+                if k not in ShiftPolicy.POLICY_FIELDS:
+                    setattr(instance, k, val)
+            full = {f: policy.get(f, getattr(instance, f)) for f in ShiftPolicy.POLICY_FIELDS}
+            secs = lambda d_: None if d_ is None else int(d_.total_seconds())
+            instance.pending_effective_from = eff
+            instance.pending_data = {
+                'checkin': full['checkin'].strftime('%H:%M:%S'), 'checkout': full['checkout'].strftime('%H:%M:%S'),
+                'grace_period': secs(full['grace_period']), 'half_day': secs(full['half_day']), 'full_day': secs(full['full_day']),
+            }
+            instance.save()
+            return Response(self.get_serializer(instance).data)
+
+        # Timings equal the live ones: save other fields; this also cancels any pending change.
+        for k, val in v.items():
+            setattr(instance, k, val)
+        if instance.pending_effective_from and policy:
+            instance.pending_effective_from = None
+            instance.pending_data = None
+        instance.save()
+        return Response(self.get_serializer(instance).data)
+
+    def get_queryset(self):
+        ShiftPolicy.promote_due()
+        return ShiftPolicy.objects.filter(company=self.request.user.company)
 
 
 class DepartmentWiseWorkingDaysViewSet(viewsets.ModelViewSet):
@@ -3118,9 +3163,12 @@ class PayslipViewSet(viewsets.ReadOnlyModelViewSet):
                             elif att_rec.check_in and att_rec.check_out:
                                 w_hours = (att_rec.check_out - att_rec.check_in).total_seconds() / 3600
                             
-                            if w_hours >= s_full:
+                            day_shift = shift.at(curr_date) if shift else None
+                            day_full = day_shift.full_day_hours() if day_shift else s_full
+                            day_half = day_shift.half_day_hours() if day_shift else s_half
+                            if w_hours >= day_full:
                                 present_days += 1
-                            elif w_hours >= s_half:
+                            elif w_hours >= day_half:
                                 half_days += 1
                             else:
                                 absent_days += 1
@@ -3596,6 +3644,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
         """Check if an employee was late for their shift"""
         check_in = attendance.check_in
         shift = getattr(attendance.employee, 'shift_assigned', None)
+        shift = shift.at(attendance.date) if shift else None
 
         if not (check_in and shift and shift.checkin):
             return False
@@ -3721,6 +3770,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
                 continue
 
             shift = getattr(record.employee, 'shift_assigned', None)
+            shift = shift.at(record.date) if shift else None
 
             if record.check_in and shift:
                 shift_start = timezone.make_aware(datetime.combine(record.date, shift.checkin))
@@ -3754,6 +3804,7 @@ class AttendanceViewSet(viewsets.ModelViewSet):
 
                 shift_record = attendance_qs.filter(employee__id=emp_id, date=date).first()
                 shift = getattr(shift_record.employee, 'shift_assigned', None) if shift_record else None
+                shift = shift.at(shift_record.date) if shift else None
 
                 if not shift:
                     continue
@@ -3923,7 +3974,7 @@ class AttendanceLogView(APIView):
                               'worked_seconds': worked_s, 'reason': (remarks or '')[:255], 'edited_by': request.user},
                 )
                 att.total_work_duration = timedelta(seconds=worked_s)
-                sh = emp.shift_assigned
+                sh = emp.shift_assigned.at(att.date) if emp.shift_assigned else None
                 att.overtime_duration = max(att.total_work_duration - timedelta(hours=sh.full_day_hours()), timedelta()) if sh else timedelta()
                 att.save(update_fields=['total_work_duration', 'overtime_duration'])
             else:
@@ -4399,6 +4450,8 @@ class AttendanceLogView(APIView):
         # If no shift assigned, get company's default shift
         if not shift_policy:
             shift_policy = ShiftPolicy.objects.filter(company=company).first()
+        if shift_policy:
+            shift_policy = shift_policy.at(attendance.date)
         
         # Calculate basic worked hours
         worked_hours = 0.0
@@ -5566,8 +5619,9 @@ class SalaryDisbursementStatementView(APIView):
                         if is_holiday_work:
                             ot_hours += w_hours # Entire work on holiday is OT
                         else:
-                            s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
-                            s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                            _sh = emp.shift_assigned.at(att.date) if emp.shift_assigned else None
+                            s_full = _sh.full_day_hours() if _sh else 8.0
+                            s_half = _sh.half_day_hours() if _sh else 4.0
                             if w_hours >= s_full: present_days += 1
                             elif w_hours >= s_half: half_days += 1
                             if att.overtime_duration:
@@ -5683,8 +5737,9 @@ class SalaryDisbursementStatementView(APIView):
                         if is_holiday_work:
                             ot_hours += w_hours
                         else:
-                            s_full = emp.shift_assigned.full_day_hours() if emp.shift_assigned else 8.0
-                            s_half = emp.shift_assigned.half_day_hours() if emp.shift_assigned else 4.0
+                            _sh = emp.shift_assigned.at(att.date) if emp.shift_assigned else None
+                            s_full = _sh.full_day_hours() if _sh else 8.0
+                            s_half = _sh.half_day_hours() if _sh else 4.0
                             if w_hours >= s_full: present_days += 1
                             elif w_hours >= s_half: half_days += 1
                             if att.overtime_duration:

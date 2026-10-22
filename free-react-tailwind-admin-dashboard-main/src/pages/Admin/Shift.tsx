@@ -23,6 +23,19 @@ type ShiftPolicy = {
     grace_period: string;
     half_day: string;
     full_day: string;
+    effective_from?: string | null;
+    pending_effective_from?: string | null;
+    pending_data?: { checkin: string; checkout: string; grace_period: number | null; half_day: number | null; full_day: number | null } | null;
+};
+
+const tomorrowISO = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toLocaleDateString('en-CA');
+};
+const secsToHHMMSS = (sec: number | null | undefined) => {
+    const t = Math.max(0, Math.round(sec || 0));
+    return `${String(Math.floor(t / 3600)).padStart(2, '0')}:${String(Math.floor((t % 3600) / 60)).padStart(2, '0')}:00`;
 };
 
 // ─── Time helpers ───
@@ -108,6 +121,9 @@ const calcHalfDay = (fullDayHHMMSS: string): string => {
     return minutesToHHMMSS(Math.floor(totalMins / 2));
 };
 
+// Defaults: full day = check-in to check-out, half day = half of the full day (on the 15-minute grid)
+const defaultHalfMins = (fullMins: number) => Math.max(15, Math.floor(fullMins / 2 / 15) * 15);
+
 const AdminShift = () => {
     const dispatch = useDispatch();
     const [items, setItems] = useState<ShiftPolicy[]>([]);
@@ -119,6 +135,9 @@ const AdminShift = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [editing, setEditing] = useState<ShiftPolicy | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [effectiveFrom, setEffectiveFrom] = useState<string>(tomorrowISO());
+    // true once the admin picks their own value; until then the hours follow check-in/check-out
+    const [custom, setCustom] = useState({ full: false, half: false });
 
     useEffect(() => {
         dispatch(setPageTitle('Shift'));
@@ -168,17 +187,24 @@ const AdminShift = () => {
     // ─── Auto-calculate full_day when checkin/checkout changes ───
     useEffect(() => {
         if (!editing) return;
-        const fullDay = calcTotalHours(editing.checkin, editing.checkout);
-        const totalMins = timeToMinutes(fullDay);
-        // If half_day exceeds total, reset it
+        const windowMins = timeToMinutes(calcTotalHours(editing.checkin, editing.checkout));
+        // Full day follows the shift length unless the admin chose a custom value that still fits
+        const fullMins = timeToMinutes(editing.full_day);
+        const keepFull = custom.full && fullMins > 0 && fullMins <= windowMins;
+        const newFullMins = keepFull ? fullMins : windowMins;
+        // Half day follows half of the full day unless customised (and still below full day)
         const halfMins = timeToMinutes(editing.half_day);
-        const newHalfDay = halfMins > totalMins ? minutesToHHMMSS(Math.floor(totalMins / 2)) : editing.half_day;
-        setEditing((p) => (p ? { ...p, full_day: fullDay, half_day: newHalfDay } : p));
+        const keepHalf = custom.half && halfMins > 0 && halfMins < newFullMins;
+        const newHalfMins = keepHalf ? halfMins : defaultHalfMins(newFullMins);
+        if (!keepFull && custom.full) setCustom((c) => ({ ...c, full: false }));
+        if (!keepHalf && custom.half) setCustom((c) => ({ ...c, half: false }));
+        setEditing((p) => (p ? { ...p, full_day: minutesToHHMMSS(newFullMins), half_day: minutesToHHMMSS(newHalfMins) } : p));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editing?.checkin, editing?.checkout]);
 
     const openAdd = () => {
         setErrors({});
+        setCustom({ full: false, half: false });
         setEditing({
             id: 0,
             shift_type: '',
@@ -193,7 +219,20 @@ const AdminShift = () => {
 
     const openEdit = (s: ShiftPolicy) => {
         setErrors({});
-        setEditing({ ...s });
+        // If a change is already scheduled, edit that version so saving doesn't silently cancel it
+        const pd = s.pending_data;
+        setEditing(
+            pd
+                ? { ...s, checkin: pd.checkin, checkout: pd.checkout, grace_period: secsToHHMMSS(pd.grace_period), half_day: secsToHHMMSS(pd.half_day), full_day: secsToHHMMSS(pd.full_day) }
+                : { ...s }
+        );
+        setEffectiveFrom(s.pending_effective_from || tomorrowISO());
+        {
+            const e = pd ? { checkin: pd.checkin, checkout: pd.checkout, full: secsToHHMMSS(pd.full_day), half: secsToHHMMSS(pd.half_day) } : { checkin: s.checkin, checkout: s.checkout, full: s.full_day, half: s.half_day };
+            const win = timeToMinutes(calcTotalHours(e.checkin, e.checkout));
+            const full = timeToMinutes(e.full);
+            setCustom({ full: full !== win, half: timeToMinutes(e.half) !== defaultHalfMins(full) });
+        }
         setModalOpen(true);
     };
 
@@ -226,12 +265,21 @@ const AdminShift = () => {
             errs.checkout = 'Shift cannot exceed 16 hours';
         }
 
-        // Half day validation
+        // Full day / half day validation
+        const fullMins = timeToMinutes(editing.full_day);
+        if (fullMins <= 0) {
+            errs.full_day = 'Full day hours are required';
+        } else if (fullMins > totalMins) {
+            errs.full_day = `Full day cannot be more than the shift duration (${formatDuration(minutesToHHMMSS(totalMins))})`;
+        }
         const halfMins = timeToMinutes(editing.half_day);
         if (halfMins <= 0) {
             errs.half_day = 'Half day hours are required';
-        } else if (halfMins >= totalMins) {
-            errs.half_day = `Half day must be less than total hours (${formatDuration(minutesToHHMMSS(totalMins))})`;
+        } else if (fullMins > 0 && halfMins >= fullMins) {
+            errs.half_day = `Half day must be less than the full day hours (${formatDuration(minutesToHHMMSS(fullMins))})`;
+        }
+        if (timeToMinutes(editing.grace_period) >= totalMins) {
+            errs.grace_period = 'Grace period must be shorter than the shift';
         }
 
         setErrors(errs);
@@ -247,6 +295,7 @@ const AdminShift = () => {
             grace_period: editing.grace_period.length === 5 ? `${editing.grace_period}:00` : editing.grace_period,
             half_day: editing.half_day,
             full_day: editing.full_day,
+            effective_from: editing.id ? effectiveFrom : undefined,
         };
         try {
             const isEdit = !!editing.id;
@@ -323,7 +372,7 @@ const AdminShift = () => {
         },
         {
             key: 'full_day',
-            title: 'Total Hours',
+            title: 'Full Day Hours',
             render: (val) => (
                 <span className="badge badge-outline-success font-mono px-2.5 py-1">
                     {formatDuration(val)}
@@ -475,6 +524,17 @@ const AdminShift = () => {
                                                             </div>
                                                         </div>
 
+                                                        {editing?.id ? (
+                                                            <div className="rounded-xl border border-warning/40 bg-warning-light/40 p-4">
+                                                                <label className="font-semibold text-sm mb-1 block">Effective From</label>
+                                                                <input className="form-input" type="date" min={tomorrowISO()} value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
+                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                    Timing and hour changes apply to upcoming days only (from this date, tomorrow at the earliest). Earlier days keep the previous timings and hours.
+                                                                    {editing.pending_effective_from ? ` A change is already scheduled for ${editing.pending_effective_from}; saving replaces it.` : ''}
+                                                                </p>
+                                                            </div>
+                                                        ) : null}
+
                                                         {/* Auto-calculated Total Hours (read-only display) */}
                                                         <div className="bg-gray-50 dark:bg-[#1a2941] rounded-xl p-4">
                                                             <div className="flex items-center gap-3">
@@ -490,6 +550,45 @@ const AdminShift = () => {
                                                             </div>
                                                         </div>
 
+                                                        {/* Full Day — editable dropdown (hours needed to be marked Present) */}
+                                                        <div>
+                                                            <label className="font-semibold text-sm mb-1 block">
+                                                                Full Day Hours (Present) <span className="text-danger">*</span>
+                                                            </label>
+                                                            <select
+                                                                className={`form-select font-mono ${errors.full_day ? 'border-danger' : ''}`}
+                                                                value={toHHMM(editing?.full_day || computedTotal)}
+                                                                onChange={(e) => {
+                                                                    const full = timeToMinutes(`${e.target.value}:00`);
+                                                                    const isDefault = full === timeToMinutes(computedTotal);
+                                                                    setCustom((c) => ({ ...c, full: !isDefault }));
+                                                                    setEditing((p) => {
+                                                                        if (!p) return p;
+                                                                        const half = timeToMinutes(p.half_day);
+                                                                        const followHalf = !custom.half || half >= full;
+                                                                        return { ...p, full_day: `${e.target.value}:00`, half_day: followHalf ? minutesToHHMMSS(defaultHalfMins(full)) : p.half_day };
+                                                                    });
+                                                                    if (!custom.half || timeToMinutes(editing?.half_day || '00:00') >= full) setCustom((c) => ({ ...c, half: false }));
+                                                                    setErrors((prev) => ({ ...prev, full_day: '', half_day: '' }));
+                                                                }}
+                                                            >
+                                                                {(() => {
+                                                                    const totalMins = timeToMinutes(computedTotal);
+                                                                    const opts: string[] = [];
+                                                                    for (let m = 30; m <= totalMins; m += 15) {
+                                                                        opts.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+                                                                    }
+                                                                    return opts.map((t) => (
+                                                                        <option key={`fd-${t}`} value={t}>
+                                                                            {formatDuration(`${t}:00`)}
+                                                                        </option>
+                                                                    ));
+                                                                })()}
+                                                            </select>
+                                                            {errors.full_day && <p className="text-danger text-xs mt-1">{errors.full_day}</p>}
+                                                            <p className="text-xs text-gray-400 mt-1">Default is the full shift ({formatDuration(computedTotal)}, check-in to check-out) and follows the timings until you change it. Cannot exceed the shift duration.</p>
+                                                        </div>
+
                                                         {/* Half Day — editable dropdown */}
                                                         <div>
                                                             <label className="font-semibold text-sm mb-1 block">
@@ -499,12 +598,14 @@ const AdminShift = () => {
                                                                 className={`form-select font-mono ${errors.half_day ? 'border-danger' : ''}`}
                                                                 value={toHHMM(editing?.half_day || '04:00')}
                                                                 onChange={(e) => {
+                                                                    const isDefault = timeToMinutes(`${e.target.value}:00`) === defaultHalfMins(timeToMinutes(editing?.full_day || computedTotal));
+                                                                    setCustom((c) => ({ ...c, half: !isDefault }));
                                                                     setEditing((p) => (p ? { ...p, half_day: `${e.target.value}:00` } : p));
                                                                     setErrors((prev) => ({ ...prev, half_day: '' }));
                                                                 }}
                                                             >
                                                                 {(() => {
-                                                                    const totalMins = timeToMinutes(computedTotal);
+                                                                    const totalMins = timeToMinutes(editing?.full_day || computedTotal);
                                                                     const opts: string[] = [];
                                                                     for (let m = 15; m < totalMins; m += 15) {
                                                                         const hh = Math.floor(m / 60);
@@ -519,7 +620,7 @@ const AdminShift = () => {
                                                                 })()}
                                                             </select>
                                                             {errors.half_day && <p className="text-danger text-xs mt-1">{errors.half_day}</p>}
-                                                            <p className="text-xs text-gray-400 mt-1">Must be less than total shift hours ({formatDuration(computedTotal)})</p>
+                                                            <p className="text-xs text-gray-400 mt-1">Default is half of the full day ({formatDuration(minutesToHHMMSS(defaultHalfMins(timeToMinutes(editing?.full_day || computedTotal))))}) and follows the full day until you change it. Between this and the full day = Half Day; below this = Absent. Must be less than the full day hours.</p>
                                                         </div>
 
                                                         {/* Grace Period */}

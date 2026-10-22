@@ -9,6 +9,8 @@ export interface AttendanceDayRecord {
     check_in: string;
     check_out: string;
     shift: string;
+    required_full_hours?: number;
+    required_half_hours?: number;
     is_weekend: boolean;
     status: AttendanceStatus;
     is_late: boolean;

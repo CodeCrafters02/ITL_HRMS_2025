@@ -12,6 +12,8 @@ class MonthlyAttendance {
   final String overtimeHours;
   final String breakTime;
   final String source;
+  final double? requiredFullHours;
+  final double? requiredHalfHours;
 
   MonthlyAttendance({
     required this.date,
@@ -27,6 +29,8 @@ class MonthlyAttendance {
     required this.overtimeHours,
     required this.breakTime,
     this.source = 'manual',
+    this.requiredFullHours,
+    this.requiredHalfHours,
   });
 
   factory MonthlyAttendance.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,8 @@ class MonthlyAttendance {
       overtimeHours: json['overtime_hours']?.toString() ?? '-',
       breakTime: json['break_time'] ?? '-',
       source: json['source']?.toString() ?? 'manual',
+      requiredFullHours: (json['required_full_hours'] as num?)?.toDouble(),
+      requiredHalfHours: (json['required_half_hours'] as num?)?.toDouble(),
     );
   }
 }

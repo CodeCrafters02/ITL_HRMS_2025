@@ -759,6 +759,8 @@ class DashboardAPIView(APIView):
             # Teams-managed company: punch, hours, overtime and lateness come from Teams presence
             from employee import presence_engine as _pe
             _status_override = None
+            _teams_worked_secs = None
+            _teams_live = None
             if _pe.teams_managed(employee):
                 _now = timezone.now()
                 _t = _pe.day_summary(employee, today, _now)
@@ -766,6 +768,8 @@ class DashboardAPIView(APIView):
                 punch_out = None if _t['live'] or not _t['last'] else _t['last']
                 _status_override = 'online' if _t['live'] else 'offline'
                 _w = int(_t['worked'].total_seconds() // 60)
+                _teams_worked_secs = int(_t['worked'].total_seconds())
+                _teams_live = bool(_t['live'])
                 today_work_duration = f"{_w // 60}h {_w % 60}m" if punch_in else None
                 _since = _pe.teams_since(employee)
                 _wk = 0.0
@@ -792,8 +796,40 @@ class DashboardAPIView(APIView):
                     overtime = None
                     is_late = False
 
+            # Half day / full day progress for today, using the shift version active today
+            _day_shift = shift.at(today) if shift else None
+            _half_secs = int(((_day_shift.half_day_hours() if _day_shift else 4.0)) * 3600)
+            _full_secs = int(((_day_shift.full_day_hours() if _day_shift else 8.0)) * 3600)
+            if _teams_worked_secs is not None:
+                _worked_secs = _teams_worked_secs
+                _running = bool(_teams_live)
+            else:
+                _worked_secs = calculate_effective_time(punch_in, total_break_minutes_live, punch_out, now)['seconds'] if punch_in else 0
+                _running = bool(punch_in and not punch_out and not active_break)
+            _day_info = _pe.day_type(employee, today)
+            if _day_info['type'] in ('holiday', 'weekly_off', 'leave') and not punch_in:
+                _day_state = 'off_day'
+            elif not punch_in:
+                _day_state = 'not_started'
+            elif _worked_secs >= _full_secs:
+                _day_state = 'full_day'
+            elif _worked_secs >= _half_secs:
+                _day_state = 'half_day'
+            else:
+                _day_state = 'in_progress'
+            day_progress = {
+                'state': _day_state,
+                'worked_seconds': int(_worked_secs),
+                'half_day_seconds': _half_secs,
+                'full_day_seconds': _full_secs,
+                'running': _running,
+                'checked_out': bool(punch_out),
+            }
+
             # Dashboard response
             dashboard_data = {
+                'day_progress': day_progress,
+                'day_info': _day_info,
                 'employee_name': f"{employee.first_name} {employee.last_name}",
                 'employee_photo': request.build_absolute_uri(employee.photo.url) if employee.photo else None,
                 'status': _status_override or employee.status,
@@ -1008,6 +1044,7 @@ class AttendanceHistoryAPIView(APIView):
 
             # Get shift from employee
             shift = getattr(employee, 'shift_assigned', None)
+            shift = shift.at(day) if shift else None
 
             # Always compute completed break time when attendance exists, even on leave days.
             if att and att.check_in:
@@ -1129,6 +1166,8 @@ class AttendanceHistoryAPIView(APIView):
                 'check_in': att.check_in.astimezone(tz).strftime('%H:%M:%S') if att and att.check_in else '-',
                 'check_out': att.check_out.astimezone(tz).strftime('%H:%M:%S') if att and att.check_out else '-',
                 'shift': str(shift) if shift else '-',
+                'required_full_hours': shift.full_day_hours() if shift else 8.0,
+                'required_half_hours': shift.half_day_hours() if shift else 4.0,
                 'is_weekend': is_weekend,
                 'status': status,
                 'is_late': is_late,

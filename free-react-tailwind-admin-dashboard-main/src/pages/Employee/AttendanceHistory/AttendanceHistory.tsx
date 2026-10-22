@@ -365,6 +365,12 @@ const AttendanceHistory = () => {
                                     <div><span className="text-white-dark">Total Break:</span> <span className="font-semibold">{selectedDayRow?.break_time || '-'}</span></div>
                                     <div><span className="text-white-dark">Shift:</span> <span className="font-semibold">{selectedDayRow?.shift || '-'}</span></div>
                                     <div><span className="text-white-dark">Overtime:</span> <span className="font-semibold">{selectedDayRow?.overtime_hours ?? '-'}</span></div>
+                                    {selectedDayRow?.required_full_hours !== undefined && (
+                                        <div className="sm:col-span-2">
+                                            <span className="text-white-dark">Required that day:</span>{' '}
+                                            <span className="font-semibold">Present ≥ {selectedDayRow.required_full_hours}h · Half day ≥ {selectedDayRow.required_half_hours}h</span>
+                                        </div>
+                                    )}
                                     <div><span className="text-white-dark">Late:</span> <span className="font-semibold">{selectedDayRow?.late_duration || (selectedDayRow?.is_late ? 'Yes' : 'No')}</span></div>
                                 </div>
                             )}

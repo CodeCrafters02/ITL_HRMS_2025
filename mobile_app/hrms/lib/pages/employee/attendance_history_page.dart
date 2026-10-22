@@ -989,6 +989,12 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
               if (overtime) _noteBanner(Icons.bolt_rounded, 'Overtime: ${r.overtimeHours}', const Color(0xFF8B5CF6)),
               const SizedBox(height: 4),
               _infoRow(Icons.schedule_rounded, 'Shift', _clock(r.shift)),
+              if (r.requiredFullHours != null && !off)
+                _infoRow(
+                  Icons.rule_rounded,
+                  'Required that day',
+                  'Present ≥ ${_num(r.requiredFullHours!)}h · Half ≥ ${_num(r.requiredHalfHours ?? 0)}h',
+                ),
               if (r.breakTime != '-' && r.breakTime.isNotEmpty) _infoRow(Icons.coffee_rounded, 'Break time', r.breakTime),
               _infoRow(
                 r.source == 'teams' ? Icons.groups_rounded : (r.source == 'admin' ? Icons.admin_panel_settings_rounded : Icons.touch_app_rounded),

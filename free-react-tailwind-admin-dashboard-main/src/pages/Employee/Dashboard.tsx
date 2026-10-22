@@ -89,6 +89,15 @@ interface DashboardData {
     break_quota_used_percent?: number;
     server_time: string;
     birthday_message: string | null;
+    day_info?: { type: 'holiday' | 'weekly_off' | 'leave' | 'half_day_leave' | 'working'; label: string; detail: string };
+    day_progress?: {
+        state: 'not_started' | 'in_progress' | 'half_day' | 'full_day' | 'off_day';
+        worked_seconds: number;
+        half_day_seconds: number;
+        full_day_seconds: number;
+        running: boolean;
+        checked_out: boolean;
+    };
 }
 
 interface BreakConfig {
@@ -105,6 +114,12 @@ interface CalendarEventType {
     description: string;
     is_holiday: boolean;
 }
+
+const fmtHM = (totalMinutes: number) => {
+    const m = Math.max(0, Math.round(totalMinutes));
+    const h = Math.floor(m / 60);
+    return h > 0 ? `${h}h ${m % 60}m` : `${m % 60}m`;
+};
 
 const parseDurationToMinutes = (duration: string | null | undefined) => {
     if (!duration) return 0;
@@ -1066,6 +1081,77 @@ const EmployeeDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {data.day_info && (() => {
+                const di = data.day_info;
+                const tone = {
+                    working: { cls: 'border-success/40 bg-success-light/50 text-success', icon: '💼', text: 'Working day' },
+                    holiday: { cls: 'border-info/40 bg-info-light/50 text-info', icon: '🎉', text: `Holiday${di.detail ? ` — ${di.detail}` : ''}` },
+                    weekly_off: { cls: 'border-slate-300 bg-dark-light text-dark', icon: '🛋️', text: `Weekly off${di.detail ? ` — ${di.detail}` : ''}` },
+                    leave: { cls: 'border-warning/40 bg-warning-light/50 text-warning', icon: '🏖️', text: `You're on leave today${di.detail ? ` — ${di.detail}` : ''}` },
+                    half_day_leave: { cls: 'border-warning/40 bg-warning-light/50 text-warning', icon: '🌗', text: `Half-day leave today${di.detail ? ` — ${di.detail}` : ''}` },
+                }[di.type];
+                return (
+                    <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${tone.cls}`}>
+                        <span className="text-xl">{tone.icon}</span>
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide opacity-80">Today</p>
+                            <p className="text-sm font-bold">{tone.text}</p>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {data.day_progress && data.day_progress.state !== 'off_day' && (() => {
+                const dp = data.day_progress;
+                const halfMin = Math.round(dp.half_day_seconds / 60);
+                const fullMin = Math.round(dp.full_day_seconds / 60);
+                const workedMin = checkin_time ? productiveMinutes : 0;
+                const state = !checkin_time ? 'not_started' : workedMin >= fullMin ? 'full_day' : workedMin >= halfMin ? 'half_day' : 'in_progress';
+                const meta = {
+                    not_started: { label: 'Not started', cls: 'bg-dark-light text-dark', bar: 'bg-slate-400' },
+                    in_progress: { label: 'In progress', cls: 'bg-warning-light text-warning', bar: 'bg-warning' },
+                    half_day: { label: 'Half day completed', cls: 'bg-info-light text-info', bar: 'bg-info' },
+                    full_day: { label: 'Full day completed', cls: 'bg-success-light text-success', bar: 'bg-success' },
+                }[state];
+                const pct = fullMin > 0 ? Math.min(100, (workedMin / fullMin) * 100) : 0;
+                const halfPct = fullMin > 0 ? Math.min(100, (halfMin / fullMin) * 100) : 50;
+                const step = (done: boolean, title: string, target: number) => (
+                    <div className={`flex-1 rounded-xl border p-3 ${done ? 'border-success/40 bg-success-light/40' : 'border-slate-200 dark:border-slate-700'}`}>
+                        <div className="flex items-center gap-2">
+                            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${done ? 'bg-success text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700'}`}>{done ? '✓' : '•'}</span>
+                            <span className="text-sm font-semibold">{title}</span>
+                            <span className="ml-auto text-xs text-white-dark">{fmtHM(target)}</span>
+                        </div>
+                        <p className="mt-1 text-xs text-white-dark">{done ? 'Completed' : state === 'not_started' ? 'Check in to start counting' : `${fmtHM(target - workedMin)} to go`}</p>
+                    </div>
+                );
+                return (
+                    <div className="panel !p-4 rounded-2xl">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h5 className="text-base font-bold">Today&apos;s attendance status</h5>
+                                <p className="text-xs text-white-dark">Worked {fmtHM(workedMin)} so far{dp.running ? ' · counting live' : checkin_time && !checkout_time ? ' · paused (on break)' : ''}</p>
+                            </div>
+                            <span className={`badge ${meta.cls} px-3 py-1 text-xs font-bold`}>{meta.label}</span>
+                        </div>
+                        <div className="relative h-3 rounded-full bg-[#ebedf2] dark:bg-[#1b2e4b]">
+                            <div className={`h-full rounded-full transition-all ${meta.bar}`} style={{ width: `${pct}%` }} />
+                            <span className="absolute -top-1 h-5 w-0.5 bg-slate-500/70" style={{ left: `${halfPct}%` }} title={`Half day ${fmtHM(halfMin)}`} />
+                        </div>
+                        <div className="mt-1 flex justify-between text-[11px] text-white-dark">
+                            <span>0</span>
+                            <span style={{ marginLeft: `${Math.max(0, halfPct - 8)}%` }}>Half day</span>
+                            <span>Full day</span>
+                        </div>
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                            {step(workedMin >= halfMin && !!checkin_time, 'Half day', halfMin)}
+                            {step(workedMin >= fullMin && !!checkin_time, 'Full day', fullMin)}
+                        </div>
+                        <p className="mt-2 text-[11px] text-white-dark">Below the half-day hours is marked Absent; at or above the full-day hours is marked Present.</p>
+                    </div>
+                );
+            })()}
 
             <StatGrid cols={6} className="!mb-0">
                 <StatCard

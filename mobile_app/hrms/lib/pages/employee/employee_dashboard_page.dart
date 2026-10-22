@@ -20,6 +20,8 @@ import '../../services/notification_service.dart';
 import '../../widgets/glass_card.dart';
 import 'widgets/timer_widget.dart';
 import 'widgets/presence_card.dart';
+import 'widgets/day_progress_card.dart';
+import 'widgets/day_type_banner.dart';
 
 class EmployeeDashboardPage extends StatefulWidget {
   const EmployeeDashboardPage({super.key});
@@ -629,6 +631,14 @@ class _EmployeeDashboardPageState extends State<EmployeeDashboardPage> {
                     onCheckInOut: _handleCheckInOut,
                     presence: pr,
                   ),
+                  if (d.dayInfo != null) ...[
+                    const SizedBox(height: 10),
+                    DayTypeBanner(info: d.dayInfo!),
+                  ],
+                  if (d.dayProgress != null && d.dayProgress!.state != 'off_day') ...[
+                    const SizedBox(height: 10),
+                    DayProgressCard(progress: d.dayProgress!, checkedIn: isCheckedIn || d.checkoutTime != null, onBreak: hasActiveBreak),
+                  ],
                   if (pr != null && pr.isVisible) ...[
                     const SizedBox(height: 10),
                     PresenceCard(presence: pr),

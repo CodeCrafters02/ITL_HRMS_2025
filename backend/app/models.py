@@ -135,14 +135,96 @@ class ShiftPolicy(models.Model):
     def __str__(self):
         return f"{self.shift_type} Shift ({self.checkin} - {self.checkout})"
 
-    def full_day_hours(self):
-        return round(self.full_day.total_seconds() / 3600, 2) if self.full_day else 8.0
+    # Date the current timings/thresholds took effect; older versions live in ShiftPolicyHistory.
+    effective_from = models.DateField(null=True, blank=True)
+    # A scheduled change for upcoming days; promoted to the live fields once its date arrives.
+    pending_effective_from = models.DateField(null=True, blank=True)
+    pending_data = models.JSONField(null=True, blank=True)
 
-    def half_day_hours(self):
-        return round(self.half_day.total_seconds() / 3600, 2) if self.half_day else 4.0
+    POLICY_FIELDS = ('checkin', 'checkout', 'grace_period', 'half_day', 'full_day')
+
+    full_day_hours = lambda self: round(self.full_day.total_seconds() / 3600, 2) if self.full_day else 8.0
+    half_day_hours = lambda self: round(self.half_day.total_seconds() / 3600, 2) if self.half_day else 4.0
 
     def grace(self):
         return self.grace_period if self.grace_period else timedelta(minutes=0)
+
+    def at(self, d):
+        """Shift version active on date d (self, or a ShiftPolicyHistory snapshot with the same helpers)."""
+        if d is None or self.effective_from is None or d >= self.effective_from:
+            return self
+        if not hasattr(self, '_hist_cache'):
+            self._hist_cache = list(self.history.all())
+        for h in self._hist_cache:
+            if (h.valid_from is None or h.valid_from <= d) and d <= h.valid_to:
+                return h
+        return self._hist_cache[0] if self._hist_cache else self
+
+    def refresh_from_db(self, *args, **kwargs):
+        self.__dict__.pop('_hist_cache', None)
+        super().refresh_from_db(*args, **kwargs)
+
+    def pending_values(self):
+        """Pending data parsed into model values (None when nothing is scheduled)."""
+        d = self.pending_data
+        if not d:
+            return None
+        from datetime import time as _t, timedelta as _td
+        t = lambda s: _t(*[int(x) for x in str(s).split(':')[:3]])
+        dur = lambda sec: None if sec is None else _td(seconds=sec)
+        return dict(checkin=t(d['checkin']), checkout=t(d['checkout']), grace_period=dur(d.get('grace_period')),
+                    half_day=dur(d.get('half_day')), full_day=dur(d.get('full_day')))
+
+    @classmethod
+    def promote_due(cls, today=None):
+        """Make scheduled changes live once their effective date has arrived; archives the old version."""
+        from django.utils import timezone as _tz
+        from datetime import timedelta as _td
+        today = today or _tz.localdate()
+        n = 0
+        for s in cls.objects.filter(pending_effective_from__isnull=False, pending_effective_from__lte=today):
+            vals = s.pending_values()
+            if vals:
+                ShiftPolicyHistory.objects.create(
+                    shift=s, valid_from=s.effective_from, valid_to=s.pending_effective_from - _td(days=1),
+                    **{f: getattr(s, f) for f in cls.POLICY_FIELDS},
+                )
+                for k, v in vals.items():
+                    setattr(s, k, v)
+                s.effective_from = s.pending_effective_from
+            s.pending_effective_from = None
+            s.pending_data = None
+            s.save()
+            n += 1
+        return n
+
+
+class ShiftPolicyHistory(models.Model):
+    shift = models.ForeignKey(ShiftPolicy, on_delete=models.CASCADE, related_name='history')
+    checkin = models.TimeField()
+    checkout = models.TimeField()
+    grace_period = models.DurationField(null=True, blank=True)
+    half_day = models.DurationField(null=True, blank=True)
+    full_day = models.DurationField(null=True, blank=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField()
+
+    class Meta:
+        ordering = ['valid_to']
+
+    @property
+    def shift_type(self):
+        return self.shift.shift_type
+
+    def __str__(self):
+        return f"{self.shift_type} Shift ({self.checkin} - {self.checkout})"
+
+    full_day_hours = ShiftPolicy.full_day_hours
+    half_day_hours = ShiftPolicy.half_day_hours
+    grace = ShiftPolicy.grace
+
+    def at(self, d):
+        return self
 
 
 class Employee(models.Model):

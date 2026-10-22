@@ -57,6 +57,7 @@ def fetch_presences(entra_ids):
 # ---------------------------------------------------------------- shift ----
 
 def _window(shift, d):
+    shift = shift.at(d)
     start = TZ.localize(datetime.combine(d, shift.checkin))
     end = TZ.localize(datetime.combine(d, shift.checkout))
     if shift.checkin >= shift.checkout:
@@ -107,6 +108,39 @@ def is_working_day(employee, d):
     return not EmpLeave.objects.filter(
         employee=employee, status='Approved', leave_duration='full_day', from_date__lte=d, to_date__gte=d
     ).exists()
+
+
+def day_type(employee, d):
+    """What kind of day d is for this employee: holiday, weekly_off, leave, half_day_leave or working."""
+    from app.models import CalendarEvent, DepartmentWiseWorkingDays, EmpLeave
+    from app.utils import is_rule_off_day
+
+    holiday = CalendarEvent.objects.filter(company_id=employee.company_id, is_holiday=True, date=d).first()
+    if holiday:
+        return {'type': 'holiday', 'label': 'Holiday', 'detail': holiday.name}
+
+    weekend = {'Saturday', 'Sunday'}
+    dw = None
+    if getattr(employee, 'department_id', None):
+        dw = DepartmentWiseWorkingDays.objects.filter(department_id=employee.department_id).first()
+        dwd = dw.at(d) if dw else None
+        if dwd and getattr(dwd, 'weekend_days', None):
+            weekend = set(dwd.weekend_days)
+    name = d.strftime('%A')
+    if name in weekend:
+        return {'type': 'weekly_off', 'label': 'Weekly off', 'detail': name}
+    if is_rule_off_day(dw, d):
+        nth = (d.day - 1) // 7 + 1
+        ordinal = {1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th'}[nth]
+        return {'type': 'weekly_off', 'label': 'Weekly off', 'detail': f'{ordinal} {name}'}
+
+    lv = EmpLeave.objects.filter(employee=employee, status='Approved', from_date__lte=d, to_date__gte=d).select_related('leave_type').first()
+    if lv:
+        leave_name = lv.leave_type.leave_name if lv.leave_type else 'Leave'
+        if lv.leave_duration == 'half_day':
+            return {'type': 'half_day_leave', 'label': 'Half-day leave', 'detail': leave_name}
+        return {'type': 'leave', 'label': 'On leave', 'detail': leave_name}
+    return {'type': 'working', 'label': 'Working day', 'detail': ''}
 
 
 def geofence_blocks(employee):
@@ -478,6 +512,7 @@ def refresh_live_totals(att, now=None):
         return
     worked = worked_time(att.employee, att, now)
     sh = info.shift or att.employee.shift_assigned
+    sh = sh.at(att.date) if sh else None
     std = timedelta(hours=sh.full_day_hours()) if sh else timedelta(hours=8)
     Attendance.objects.filter(pk=att.pk).update(total_work_duration=worked, overtime_duration=max(worked - std, timedelta()))
 
@@ -542,7 +577,7 @@ def sync_attendance_rows(company_id, d, now=None):
         if eid in edited or not t['first']:
             continue
         emp = emps[eid]
-        sh = emp.shift_assigned
+        sh = emp.shift_assigned.at(d) if emp.shift_assigned else None
         ot = max(t['worked'] - timedelta(hours=sh.full_day_hours()), timedelta()) if sh else timedelta()
         att = Attendance.objects.filter(employee=emp, date=d).order_by('-check_in', 'id').first()
         if att and att.leave_id:
