@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/calendar_model.dart';
 import '../../models/calendar_event_model.dart';
+import '../../models/chat_user_model.dart';
+import '../../services/chat_service.dart';
 import '../../services/employee_service.dart';
 import '../../services/outlook_calendar_service.dart';
 import '../../services/storage_service.dart';
@@ -36,12 +39,17 @@ class _OutlookCreateEventSheetState extends State<_OutlookCreateEventSheet> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _guestsCtrl = TextEditingController();
+  final _locationCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
+  final Map<int, ChatUser> _picked = {};
+  List<ChatUser> _results = [];
+  Timer? _debounce;
 
   late DateTime _date;
-  bool _allDay = true;
+  bool _allDay = false;
   TimeOfDay _start = const TimeOfDay(hour: 10, minute: 0);
   TimeOfDay _end = const TimeOfDay(hour: 11, minute: 0);
-  bool _meet = false;
+  bool _meet = true;
   bool _saving = false;
 
   @override
@@ -56,7 +64,24 @@ class _OutlookCreateEventSheetState extends State<_OutlookCreateEventSheet> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _guestsCtrl.dispose();
+    _locationCtrl.dispose();
+    _searchCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearch(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() => _results = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      try {
+        final r = await ChatService().searchUsers(q);
+        if (mounted) setState(() => _results = r.where((u) => u.email.isNotEmpty && !_picked.containsKey(u.id)).take(6).toList());
+      } catch (_) {}
+    });
   }
 
   Future<void> _pickDate() async {
@@ -110,14 +135,15 @@ class _OutlookCreateEventSheetState extends State<_OutlookCreateEventSheet> {
 
     setState(() => _saving = true);
     try {
-      final guests = _parseGuests(_guestsCtrl.text);
+      final guests = {..._picked.values.map((u) => u.email.toLowerCase()), ..._parseGuests(_guestsCtrl.text).map((e) => e.toLowerCase())}.toList();
       await OutlookCalendarService.createEvent(
         title: title,
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
         start: start,
         end: end,
         allDay: _allDay,
-        withMeet: _meet,
+        withMeet: _meet && !_allDay,
+        location: _locationCtrl.text,
         guests: guests,
       );
       if (!mounted) return;
@@ -255,9 +281,49 @@ class _OutlookCreateEventSheetState extends State<_OutlookCreateEventSheet> {
                             ],
                             const SizedBox(height: 10),
                             TextField(
+                              controller: _locationCtrl,
+                              decoration: const InputDecoration(labelText: 'Location (optional)'),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _searchCtrl,
+                              onChanged: _onSearch,
+                              decoration: const InputDecoration(
+                                labelText: 'Invite colleagues (search name or email)',
+                                prefixIcon: Icon(Icons.search_rounded),
+                              ),
+                            ),
+                            if (_picked.isNotEmpty)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Wrap(
+                                  spacing: 6,
+                                  children: [
+                                    for (final u in _picked.values)
+                                      InputChip(
+                                        label: Text(u.displayName),
+                                        onDeleted: () => setState(() => _picked.remove(u.id)),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            for (final u in _results)
+                              ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(u.displayName),
+                                subtitle: Text(u.email),
+                                onTap: () => setState(() {
+                                  _picked[u.id] = u;
+                                  _results = [];
+                                  _searchCtrl.clear();
+                                }),
+                              ),
+                            const SizedBox(height: 10),
+                            TextField(
                               controller: _guestsCtrl,
                               decoration: const InputDecoration(
-                                labelText: 'Guests (emails, comma separated)',
+                                labelText: 'External guests (emails, comma separated)',
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -390,6 +456,12 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
         _outlookError = e.toString();
       });
     }
+  }
+
+  List<OutlookCalendarEvent> _outlookOn(DateTime d) {
+    final s = DateTime(d.year, d.month, d.day);
+    final n = s.add(const Duration(days: 1));
+    return _outlookEvents.where((e) => e.start.isBefore(n) && (e.end.isAfter(s) || e.start == s)).toList();
   }
 
   void _updateSelectedDateEvents() {
@@ -569,7 +641,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
       ),
       floatingActionButton: _tabIndex == 0
           ? FloatingActionButton(
-              onPressed: () => _addEvent(null),
+              onPressed: _showAddChooser,
               backgroundColor: AppStitchTheme.primary,
               child: const Icon(Icons.add, color: Colors.white),
             )
@@ -891,6 +963,44 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
     }
   }
 
+  Future<void> _showAddChooser() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.videocam_rounded, color: Color(0xFF0078D4)),
+                  title: const Text('Schedule meeting'),
+                  subtitle: const Text('Outlook calendar with Teams link'),
+                  onTap: () => Navigator.pop(ctx, 'meeting'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.event_note_rounded, color: AppStitchTheme.primary),
+                  title: const Text('Add personal event'),
+                  onTap: () => Navigator.pop(ctx, 'event'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'event') return _addEvent(null);
+    if (!_outlookConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Outlook calendar is not connected yet.')));
+      return;
+    }
+    await _openCreateOutlookEventSheet();
+  }
+
   Future<void> _openCreateOutlookEventSheet() async {
     if (!_outlookConnected) return;
     await showModalBottomSheet(
@@ -1129,7 +1239,8 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
 
     final personalCount = day.personalEvents.length;
     final adminCount = day.adminEvents.length;
-    final totalCount = personalCount + adminCount;
+    final outlookCount = day.date == null ? 0 : _outlookOn(day.date!).length;
+    final totalCount = personalCount + adminCount + outlookCount;
 
     final isInactive = day.date == null;
     final hasEvents = totalCount > 0;
@@ -1209,6 +1320,17 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                         shape: BoxShape.circle,
                       ),
                     ),
+                  if (outlookCount > 0) ...[
+                    if (personalCount + adminCount > 0) const SizedBox(width: 3),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.white : const Color(0xFF0078D4),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
                   if (totalCount >= 3) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -1444,7 +1566,7 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
                 ),
               ),
             )
-          else if (_selectedDateEvents.isEmpty)
+          else if (_selectedDateEvents.isEmpty && _outlookOn(_selectedDate!).isEmpty)
             Expanded(
               child: Center(
                 child: Column(
@@ -1481,14 +1603,47 @@ class _PersonalCalendarPageState extends State<PersonalCalendarPage> {
           else
             Expanded(
               child: ListView.builder(
-                itemCount: _selectedDateEvents.length,
+                itemCount: _selectedDateEvents.length + _outlookOn(_selectedDate!).length,
                 itemBuilder: (context, index) {
-                  final event = _selectedDateEvents[index];
-                  return _buildEventCard(event);
+                  if (index < _selectedDateEvents.length) return _buildEventCard(_selectedDateEvents[index]);
+                  return _buildOutlookDayCard(_outlookOn(_selectedDate!)[index - _selectedDateEvents.length]);
                 },
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOutlookDayCard(OutlookCalendarEvent e) {
+    final time = e.allDay ? 'All day' : '${DateFormat('h:mm a').format(e.start)} - ${DateFormat('h:mm a').format(e.end)}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassCard(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: InkWell(
+          onTap: () => _openOutlookEventDetails(e),
+          child: Row(
+            children: [
+              const Icon(Icons.event_rounded, color: Color(0xFF0078D4)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900, color: AppStitchTheme.lightOnSurface)),
+                    Text('Outlook · $time',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppStitchTheme.lightOnSurfaceMuted, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              if (e.meetingLink != null) const Icon(Icons.videocam_rounded, size: 18, color: Color(0xFF0078D4)),
+            ],
+          ),
+        ),
       ),
     );
   }

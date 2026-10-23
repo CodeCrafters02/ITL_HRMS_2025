@@ -49,6 +49,7 @@ class OutlookCalendarService {
     required bool allDay,
     String? description,
     bool withMeet = false,
+    String? location,
     List<String> guests = const [],
   }) async {
     String d(DateTime v) => v.toIso8601String().split('T').first;
@@ -62,6 +63,7 @@ class OutlookCalendarService {
         'start': allDay ? d(start) : start.toUtc().toIso8601String(),
         'end': allDay ? d(end) : end.toUtc().toIso8601String(),
         'online_meeting': withMeet,
+        if (location != null && location.trim().isNotEmpty) 'location': location.trim(),
         'guests': guests,
       }),
     );

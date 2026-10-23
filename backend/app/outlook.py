@@ -599,6 +599,8 @@ def _event_body(d, partial=False):
         body["end"] = {"dateTime": fmt(d["end"]), "timeZone": "UTC"}
     if d.get("guests"):
         body["attendees"] = [{**a, "type": "required"} for a in _parse_recipients(d["guests"], "Guests")]
+    if "location" in d:
+        body["location"] = {"displayName": str(d.get("location") or "").strip()[:255]}
     if d.get("online_meeting"):
         body["isOnlineMeeting"] = True
         body["onlineMeetingProvider"] = "teamsForBusiness"
