@@ -27,16 +27,10 @@ class Command(BaseCommand):
         scheduler = BlockingScheduler(timezone='Asia/Kolkata')
         scheduler.add_jobstore(DjangoJobStore(), 'default')
 
-        # Every 30 minutes — check for missing checkouts 2h past shift end
-        scheduler.add_job(
-            job_missing_checkout_alerts,
-            trigger=IntervalTrigger(minutes=30),
-            id='missing_checkout_alerts',
-            name='Send missing checkout alerts (every 30 min)',
-            replace_existing=True,
-            max_instances=1,
-            misfire_grace_time=120,
-        )
+        try:
+            scheduler.remove_job('missing_checkout_alerts')
+        except Exception:
+            pass
 
         # Daily at 06:00 IST — flag yesterday missed checkouts
         scheduler.add_job(
@@ -50,7 +44,6 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(self.style.SUCCESS('Scheduler started. Jobs:'))
-        self.stdout.write('  - Missing checkout alerts  : every 30 minutes')
         self.stdout.write('  - Flag missing checkouts   : daily 06:00 IST')
         self.stdout.write('Press Ctrl+C to stop.\n')
 

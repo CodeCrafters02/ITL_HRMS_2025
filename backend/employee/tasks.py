@@ -116,6 +116,9 @@ def send_missing_checkout_alerts():
     2+ hours ago and who still hasn't checked out, sends FCM push + email.
     Idempotent per employee: skips anyone already flagged MISSING_CHECKOUT_ALERTED.
     """
+    from django.conf import settings
+    if not getattr(settings, 'CHECKOUT_REMINDER_ENABLED', False):
+        return {'alerted': 0, 'disabled': True}
     from app.models import ShiftPolicy
     tz = pytz.timezone('Asia/Kolkata')
     now = timezone.now()

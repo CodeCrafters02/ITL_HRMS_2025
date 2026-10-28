@@ -33,26 +33,8 @@ class Command(BaseCommand):
             )
         )
 
-        # --- Every 30 minutes ---
-        interval_schedule, _ = IntervalSchedule.objects.get_or_create(
-            every=30,
-            period=IntervalSchedule.MINUTES,
-        )
-
-        task_interval, created = PeriodicTask.objects.update_or_create(
-            name='Send missing checkout alerts (every 30 min)',
-            defaults={
-                'task': 'employee.tasks.send_missing_checkout_alerts',
-                'interval': interval_schedule,
-                'crontab': None,
-                'args': json.dumps([]),
-                'enabled': True,
-            },
-        )
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"{'Created' if created else 'Updated'}: {task_interval.name}"
-            )
-        )
+        PeriodicTask.objects.filter(
+            task='employee.tasks.send_missing_checkout_alerts'
+        ).update(enabled=False)
 
         self.stdout.write(self.style.SUCCESS("Periodic tasks registered successfully."))

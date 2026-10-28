@@ -123,18 +123,11 @@ class EmployeeConfig(AppConfig):
                               CronTrigger(day_of_week='mon-fri', hour=10, minute=0, timezone='Asia/Kolkata'),
                               id='teams_pending_approvals_digest', replace_existing=True, misfire_grace_time=600)
 
-            # Checks every 2 minutes — fires 10s after startup then repeats.
-            # 10s delay gives Django time to fully initialize DB before first run.
-            # NOTE: Change minutes=2 to minutes=30 in production.
-            scheduler.add_job(
-                _missing_checkout_alerts,
-                trigger=IntervalTrigger(minutes=2),
-                id='missing_checkout_alerts',
-                replace_existing=True,
-                max_instances=1,
-                misfire_grace_time=60,
-                next_run_time=datetime.now(tz) + timedelta(seconds=10),  # ← fire 10s after boot
-            )
+            # Checkout reminder disabled (set CHECKOUT_REMINDER_ENABLED=True to re-enable).
+            try:
+                scheduler.remove_job('missing_checkout_alerts')
+            except Exception:
+                pass
 
             # Daily at 06:00 IST: flag yesterday's unchecked-out attendances
             scheduler.add_job(
